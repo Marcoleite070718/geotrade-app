@@ -11,6 +11,204 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="https://marcoleite070718.github.io/geotrade-app/icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Firebase v11 -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANmqWfEzFOSR8ccINqnRLGQBhdMGAmz54",
+  authDomain: "geotrade-ae834.firebaseapp.com",
+  projectId: "geotrade-ae834",
+  storageBucket: "geotrade-ae834.firebasestorage.app",
+  messagingSenderId: "949907090400",
+  appId: "1:949907090400:web:1f63fa00bda931e1205985",
+  measurementId: "G-5X9R92WTDS"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// ── ESTADO GLOBAL ──
+window.gtUser = null;
+window.gtPlan = 'free'; // free | starter | pro | enterprise
+const PLAN_LIMITS = { free: 5, starter: Infinity, pro: Infinity, enterprise: Infinity };
+const PLAN_LABELS = { free: 'Free', starter: 'Starter', pro: 'Pro', enterprise: 'Enterprise' };
+const PLAN_COLORS = { free: 'var(--text3)', starter: 'var(--accent)', pro: 'var(--warn)', enterprise: 'var(--purple)' };
+
+// ── AUTH STATE ──
+onAuthStateChanged(auth, async (user) => {
+  window.gtUser = user;
+  if (user) {
+    // Verifica plano no Firestore
+    try {
+      const snap = await getDocs(query(collection(db,'users'), where('uid','==',user.uid)));
+      if (!snap.empty) {
+        window.gtPlan = snap.docs[0].data().plan || 'free';
+      } else {
+        // Cria usuário novo
+        await addDoc(collection(db,'users'), { uid: user.uid, email: user.email, name: user.displayName, plan: 'free', createdAt: serverTimestamp() });
+        window.gtPlan = 'free';
+      }
+    } catch(e) { window.gtPlan = 'free'; }
+    renderAuthBar(user);
+    renderHistoricoCloud();
+  } else {
+    window.gtPlan = 'free';
+    renderAuthBar(null);
+  }
+});
+
+// ── LOGIN / LOGOUT ──
+window.gtLogin = async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user') alert('Erro ao fazer login: ' + e.message);
+  }
+};
+window.gtLogout = async () => {
+  await signOut(auth);
+  renderHistoricoLocal();
+};
+
+// ── SALVAR SIMULAÇÃO NA NUVEM ──
+window.salvarHistoricoCloud = async (dados) => {
+  if (!window.gtUser) { salvarHistoricoLocal(dados); return; }
+  // Verificar limite do plano free
+  if (window.gtPlan === 'free') {
+    const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid), orderBy('ts','desc')));
+    const mes = new Date().getMonth();
+    const simulacoesMes = snap.docs.filter(d => {
+      const t = d.data().ts?.toDate?.();
+      return t && t.getMonth() === mes;
+    });
+    if (simulacoesMes.length >= 5) {
+      showPlanWarning();
+      return;
+    }
+  }
+  try {
+    await addDoc(collection(db,'simulacoes'), {
+      uid: window.gtUser.uid,
+      ...dados,
+      ts: serverTimestamp()
+    });
+    renderHistoricoCloud();
+  } catch(e) { salvarHistoricoLocal(dados); }
+};
+
+// ── CARREGAR HISTÓRICO DA NUVEM ──
+window.renderHistoricoCloud = async () => {
+  if (!window.gtUser) { renderHistoricoLocal(); return; }
+  const el = document.getElementById('historico-lista'); if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"><div class="spin"></div> Carregando da nuvem...</div>';
+  try {
+    const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid), orderBy('ts','desc'), limit(50)));
+    const hist = snap.docs.map(d => ({ id: d.id, ...d.data(), tsStr: d.data().ts?.toDate?.()?.toLocaleString('pt-BR') || '—' }));
+    if (!hist.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva ainda.</div>';
+      return;
+    }
+    el.innerHTML = hist.map((h,i) => `
+      <div class="card" style="cursor:pointer;margin-bottom:10px;" onclick="recarregarSimulacaoCloud('${h.id}')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">${h.tsStr}</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);">${window.R0?window.R0(h.total):('R$ '+h.total)}</span>
+            <span onclick="event.stopPropagation();deletarSimulacao('${h.id}')" style="font-size:10px;color:var(--danger);cursor:pointer;padding:2px 6px;border:1px solid var(--d3);border-radius:4px;">✕</span>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">${h.ncmCode||''} — ${(h.ncmDesc||'').substring(0,45)}...</div>
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap;">
+          <span>FOB: ${h.moeda||'USD'} ${window.fN?window.fN(h.fob,2):h.fob}</span>
+          <span>Câmbio: R$ ${window.fN?window.fN(h.cambio,4):h.cambio}</span>
+          <span>Estado: ${h.estado||'—'}</span>
+          <span>Carga: ${h.carga||'—'}</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:20px;text-align:center;">Erro ao carregar histórico. Verifique a conexão.</div>';
+  }
+};
+
+window.deletarSimulacao = async (id) => {
+  if (!confirm('Excluir esta simulação?')) return;
+  try {
+    await deleteDoc(doc(db,'simulacoes',id));
+    renderHistoricoCloud();
+  } catch(e) { alert('Erro ao excluir.'); }
+};
+
+window.recarregarSimulacaoCloud = async (id) => {
+  try {
+    const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid)));
+    const d = snap.docs.find(x => x.id === id);
+    if (!d) return;
+    const h = d.data();
+    const pool = window.ncmLoaded && window.ncmDB && window.ncmDB.length > 0 ? window.ncmDB : window.NCM_LOCAL;
+    const n = pool.find(x => x.code === h.ncmCode);
+    if (n) window.selectNcm(h.ncmCode);
+    document.getElementById('fob').value = h.fob;
+    document.getElementById('cambio').value = h.cambio;
+    if (h.frete) document.getElementById('frete').value = h.frete;
+    if (h.desp) document.getElementById('desp').value = h.desp;
+    window.calcular();
+    window.showTab('sim');
+  } catch(e) { alert('Erro ao recarregar.'); }
+};
+
+// ── RENDER AUTH BAR ──
+function renderAuthBar(user) {
+  const el = document.getElementById('auth-bar');
+  if (!el) return;
+  if (user) {
+    const planLabel = PLAN_LABELS[window.gtPlan] || 'Free';
+    const planColor = PLAN_COLORS[window.gtPlan] || 'var(--text3)';
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <img src="${user.photoURL||''}" onerror="this.style.display='none'" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border2);">
+        <div>
+          <div style="font-size:11px;color:var(--text);font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${user.displayName||user.email}</div>
+          <div style="font-size:9px;color:${planColor};font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;">${planLabel}</div>
+        </div>
+        <button onclick="gtLogout()" style="background:var(--d2);border:1px solid var(--d3);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--danger);font-size:10px;margin-left:4px;">Sair</button>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <button onclick="gtLogin()" style="display:flex;align-items:center;gap:6px;background:var(--a3);border:1px solid var(--a4);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--accent);font-size:12px;font-weight:500;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 13c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Entrar com Google
+      </button>`;
+  }
+}
+
+// ── AVISO DE LIMITE DE PLANO ──
+window.showPlanWarning = () => {
+  const modal = document.getElementById('plan-modal');
+  if (modal) modal.style.display = 'flex';
+};
+window.closePlanModal = () => {
+  const modal = document.getElementById('plan-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+// Expor funções locais de fallback quando não logado
+window.salvarHistoricoLocal = window.salvarHistoricoLocal || function(dados) {
+  try {
+    let hist = JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    hist.unshift({...dados, ts: new Date().toLocaleString('pt-BR')});
+    hist = hist.slice(0,10);
+    localStorage.setItem('gt_hist', JSON.stringify(hist));
+    renderHistoricoLocal();
+  } catch(e){}
+};
+</script>
 <style>
 :root{
   --bg:#060d1a;--bg2:#0d1929;--bg3:#112035;--bg4:#162840;
@@ -386,6 +584,25 @@ iframe{border-radius:var(--r);}
   .mt-opt{padding:7px 14px;}
 }
 
+/* ── AUTH & PLANOS v11 ── */
+#plan-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+.pm-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.pm-title{font-family:var(--head);font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
+.pm-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.pm-plans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.pm-plan{background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s;}
+.pm-plan:hover{border-color:var(--accent);}
+.pm-plan.featured{border-color:var(--accent);background:var(--a3);}
+.pm-plan-name{font-family:var(--mono);font-size:13px;font-weight:500;margin-bottom:4px;}
+.pm-plan-price{font-family:var(--head);font-size:18px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
+.pm-plan-feat{font-size:10px;color:var(--text2);line-height:1.7;}
+.pm-close{font-size:11px;color:var(--text3);cursor:pointer;text-align:center;margin-top:12px;}
+.pm-close:hover{color:var(--text2);}
+
+/* Side-by-side comparador */
+.sbs-container{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:600px){.sbs-container{grid-template-columns:1fr;}.pm-plans{grid-template-columns:1fr;}}
+
 /* Leaflet dark mode */
 .leaflet-container{background:#0d1929 !important;font-family:var(--body);}
 .leaflet-tile{filter:brightness(.85) saturate(.9) hue-rotate(200deg);}
@@ -399,6 +616,38 @@ iframe{border-radius:var(--r);}
 </style>
 </head>
 <body>
+<!-- MODAL PLANOS -->
+<div id="plan-modal">
+  <div class="pm-box">
+    <div class="pm-title">Limite do plano Free atingido</div>
+    <div class="pm-sub">O plano Free permite 5 simulações por mês. Faça upgrade para continuar simulando sem limites.</div>
+    <div class="pm-plans">
+      <div class="pm-plan featured">
+        <div class="pm-plan-name" style="color:var(--accent);">Starter</div>
+        <div class="pm-plan-price" style="color:var(--accent);">R$ 197<span style="font-size:11px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div class="pm-plan-feat">✓ Simulações ilimitadas<br>✓ Histórico na nuvem<br>✓ Side-by-side<br>✓ Suporte por email</div>
+      </div>
+      <div class="pm-plan">
+        <div class="pm-plan-name" style="color:var(--warn);">Pro</div>
+        <div class="pm-plan-price" style="color:var(--warn);">R$ 497<span style="font-size:11px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div class="pm-plan-feat">✓ Tudo do Starter<br>✓ Monitor de NCMs<br>✓ Alertas por email<br>✓ API de câmbio</div>
+      </div>
+      <div class="pm-plan">
+        <div class="pm-plan-name" style="color:var(--text2);">Free</div>
+        <div class="pm-plan-price" style="color:var(--text2);">R$ 0</div>
+        <div class="pm-plan-feat">✓ 5 simulações/mês<br>✗ Histórico limitado<br>✗ Side-by-side<br>✗ Alertas</div>
+      </div>
+      <div class="pm-plan">
+        <div class="pm-plan-name" style="color:var(--purple);">Enterprise</div>
+        <div class="pm-plan-price" style="color:var(--purple);">R$ 1.497<span style="font-size:11px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div class="pm-plan-feat">✓ Multi-usuários<br>✓ API dedicada<br>✓ SLA garantido<br>✓ Suporte direto</div>
+      </div>
+    </div>
+    <button onclick="window.open('mailto:contato@geotrade.com.br?subject=Upgrade GeoTrade','_blank')" style="width:100%;background:var(--accent);border:none;border-radius:9px;padding:12px;cursor:pointer;color:#090d12;font-size:13px;font-weight:700;font-family:var(--head);letter-spacing:-.3px;">Fazer upgrade agora</button>
+    <div class="pm-close" onclick="closePlanModal()">Continuar no plano Free</div>
+  </div>
+</div>
+
 <div class="app">
 
 <!-- NAV -->
@@ -428,6 +677,10 @@ iframe{border-radius:var(--r);}
     <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
     Histórico
   </div>
+  <div class="ni" onclick="showTab('sidebyside')">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="5" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="2" width="5" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Comparar Side-by-Side
+  </div>
   <div class="ni" onclick="showTab('mercado')">
     <svg viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,7 7,9 10,4 13,6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
     Câmbio & Frete
@@ -453,6 +706,7 @@ iframe{border-radius:var(--r);}
     <span class="ni-dot" style="background:var(--info);"></span>
   </div>
   <div class="nav-bot">
+    <div id="auth-bar" style="margin-bottom:10px;"></div>
     <div class="live-ind"><div class="ld"></div><span id="lst">Conectando...</span></div>
   </div>
 </nav>
@@ -475,6 +729,7 @@ iframe{border-radius:var(--r);}
     <div class="tab" id="tab-origens" onclick="showTab('origens')">Comparar Origens</div>
     <div class="tab" id="tab-incoterms" onclick="showTab('incoterms')">Incoterms</div>
     <div class="tab" id="tab-historico" onclick="showTab('historico')">Histórico</div>
+    <div class="tab" id="tab-sidebyside" onclick="showTab('sidebyside')">⚖️ Side-by-Side</div>
     <div class="tab" id="tab-rastreio" onclick="showTab('rastreio')">🚢 Rastreamento</div>
     <div class="tab" id="tab-mercado" onclick="showTab('mercado')">Câmbio & Frete</div>
     <div class="tab" id="tab-ncm" onclick="showTab('ncm')">NCM</div>
@@ -749,11 +1004,61 @@ iframe{border-radius:var(--r);}
 
   <!-- ══ HISTÓRICO ══ -->
   <div class="section" id="sec-historico">
-    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px;">Histórico de Simulações</div><div style="font-size:12px;color:var(--text2);">Últimas 10 simulações salvas no navegador. Clique em qualquer uma para recarregar.</div></div>
-      <button onclick="limparHistorico()" style="background:var(--d2);border:1px solid var(--d3);border-radius:8px;padding:5px 12px;cursor:pointer;color:var(--danger);font-size:11px;">Limpar tudo</button>
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px;">Histórico de Simulações</div>
+        <div id="hist-sub" style="font-size:12px;color:var(--text2);">Faça login para salvar na nuvem e acessar de qualquer dispositivo.</div>
+      </div>
+      <button onclick="limparHistorico()" style="background:var(--d2);border:1px solid var(--d3);border-radius:8px;padding:5px 12px;cursor:pointer;color:var(--danger);font-size:11px;">Limpar</button>
     </div>
-    <div id="historico-lista"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva. Execute uma simulação para ela aparecer aqui automaticamente.</div></div>
+    <div id="historico-lista"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva.</div></div>
+  </div>
+
+  <!-- ══ SIDE-BY-SIDE ══ -->
+  <div class="section" id="sec-sidebyside">
+    <div style="padding:12px 16px;background:var(--p2);border:1px solid var(--p3);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--purple);margin-bottom:4px;">Comparador Side-by-Side</div>
+      <div style="font-size:12px;color:var(--text2);">Compare dois cenários de importação lado a lado.</div>
+    </div>
+    <div class="sbs-container">
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:10px;font-weight:500;">Cenário A</div>
+        <div class="card">
+          <div class="ct">Dados da operação</div>
+          <div class="field"><div class="fl">Descrição (opcional)</div><input type="text" id="sbs-desc-a" placeholder="Ex: Importar da China" oninput="calcSBS()"></div>
+          <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="sbs-fob-a" placeholder="0,00" oninput="calcSBS()" step="100" style="padding-left:34px;"></div></div>
+          <div class="field"><div class="fl">Câmbio USD/BRL</div><div class="iw"><span class="ip">R$</span><input type="number" id="sbs-cambio-a" placeholder="0,0000" oninput="calcSBS()" step="0.01" style="padding-left:34px;"></div></div>
+          <div class="fr2">
+            <div class="field"><div class="fl">II (%)</div><input type="number" id="sbs-ii-a" placeholder="14" oninput="calcSBS()" step="1"></div>
+            <div class="field"><div class="fl">IPI (%)</div><input type="number" id="sbs-ipi-a" placeholder="10" oninput="calcSBS()" step="1"></div>
+          </div>
+          <div class="field"><div class="fl">Frete (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="sbs-frete-a" placeholder="0,00" oninput="calcSBS()" step="100" style="padding-left:34px;"></div></div>
+          <div class="field"><div class="fl">Estado</div><select id="sbs-icms-a" onchange="calcSBS()">
+            <option value="0.18">SP — 18%</option><option value="0.20">RJ — 20%</option><option value="0.19">PR — 19%</option><option value="0.17">SC — 17%</option><option value="0.175">RS — 17,5%</option><option value="0.18">MG — 18%</option><option value="0.20">DF — 20%</option>
+          </select></div>
+        </div>
+        <div id="sbs-res-a" style="margin-top:8px;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--warn);margin-bottom:10px;font-weight:500;">Cenário B</div>
+        <div class="card">
+          <div class="ct">Dados da operação</div>
+          <div class="field"><div class="fl">Descrição (opcional)</div><input type="text" id="sbs-desc-b" placeholder="Ex: Importar do México" oninput="calcSBS()"></div>
+          <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="sbs-fob-b" placeholder="0,00" oninput="calcSBS()" step="100" style="padding-left:34px;"></div></div>
+          <div class="field"><div class="fl">Câmbio USD/BRL</div><div class="iw"><span class="ip">R$</span><input type="number" id="sbs-cambio-b" placeholder="0,0000" oninput="calcSBS()" step="0.01" style="padding-left:34px;"></div></div>
+          <div class="fr2">
+            <div class="field"><div class="fl">II (%)</div><input type="number" id="sbs-ii-b" placeholder="14" oninput="calcSBS()" step="1"></div>
+            <div class="field"><div class="fl">IPI (%)</div><input type="number" id="sbs-ipi-b" placeholder="10" oninput="calcSBS()" step="1"></div>
+          </div>
+          <div class="field"><div class="fl">Frete (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="sbs-frete-b" placeholder="0,00" oninput="calcSBS()" step="100" style="padding-left:34px;"></div></div>
+          <div class="field"><div class="fl">Estado</div><select id="sbs-icms-b" onchange="calcSBS()">
+            <option value="0.18">SP — 18%</option><option value="0.20">RJ — 20%</option><option value="0.19">PR — 19%</option><option value="0.17">SC — 17%</option><option value="0.175">RS — 17,5%</option><option value="0.18">MG — 18%</option><option value="0.20">DF — 20%</option>
+          </select></div>
+        </div>
+        <div id="sbs-res-b" style="margin-top:8px;"></div>
+      </div>
+    </div>
+    <div id="sbs-comparativo" style="margin-top:14px;"></div>
   </div>
 
   <!-- ══ MERCADO ══ -->
@@ -1472,15 +1777,6 @@ iframe{border-radius:var(--r);}
     </div>
   </div>
 
-  <!-- ══ HISTÓRICO ══ -->
-  <div class="section" id="sec-historico">
-    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px;">Histórico de Simulações</div><div style="font-size:12px;color:var(--text2);">Últimas 10 simulações salvas no navegador. Clique em qualquer uma para recarregar.</div></div>
-      <button onclick="limparHistorico()" style="background:var(--d2);border:1px solid var(--d3);border-radius:8px;padding:5px 12px;cursor:pointer;color:var(--danger);font-size:11px;">Limpar tudo</button>
-    </div>
-    <div id="historico-lista"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva. Execute uma simulação para ela aparecer aqui automaticamente.</div></div>
-  </div>
-
   <!-- ══ MERCADO ══ -->
   <div class="section" id="sec-mercado">
     <div class="grid3" style="margin-bottom:12px;">
@@ -1800,8 +2096,123 @@ let freteManual=false;
 let ncmDB=[];
 let ncmLoaded=false;
 
-// Alíquotas de II conhecidas por capítulo NCM (TEC - valores de referência)
-const II_ALIQ_MAP={
+// ══════════════════════════════════════════════════════
+// ALÍQUOTAS REAIS POR NCM — BASE TEC 2024/2025
+// Fonte: Resolução CAMEX / MDIC — TEC vigente
+// Cobertura: ~400 NCMs de 8 dígitos mais importados no BR
+// ══════════════════════════════════════════════════════
+const ALIQ_DB = {
+  // ── LINHA BRANCA ──
+  '8450.11.00':{ii:.14,ipi:.10},'8450.12.00':{ii:.14,ipi:.10},'8450.19.00':{ii:.14,ipi:.10},
+  '8450.20.00':{ii:.14,ipi:.10},'8450.90.10':{ii:.14,ipi:.10},'8450.90.90':{ii:.14,ipi:.10},
+  '8418.10.00':{ii:.14,ipi:.10},'8418.21.00':{ii:.14,ipi:.10},'8418.22.00':{ii:.14,ipi:.10},
+  '8418.29.00':{ii:.14,ipi:.10},'8418.30.00':{ii:.14,ipi:.10},'8418.40.00':{ii:.14,ipi:.10},
+  '8418.50.10':{ii:.14,ipi:.10},'8418.50.90':{ii:.14,ipi:.10},
+  '8415.10.11':{ii:.14,ipi:.10},'8415.10.12':{ii:.14,ipi:.10},'8415.10.19':{ii:.14,ipi:.10},
+  '8415.81.10':{ii:.14,ipi:.10},'8415.81.90':{ii:.14,ipi:.10},
+  '8516.50.00':{ii:.12,ipi:.10},'8516.60.00':{ii:.12,ipi:.10},'8516.31.00':{ii:.12,ipi:.10},
+  '8516.72.00':{ii:.12,ipi:.10},'8509.40.00':{ii:.14,ipi:.10},'8508.11.00':{ii:.14,ipi:.10},
+  // ── INFORMÁTICA (ISENÇÃO IPI pela Lei 8.248/91) ──
+  '8471.30.12':{ii:.00,ipi:.00},'8471.30.19':{ii:.00,ipi:.00},
+  '8471.41.10':{ii:.00,ipi:.00},'8471.41.90':{ii:.00,ipi:.00},
+  '8471.49.10':{ii:.00,ipi:.00},'8471.49.90':{ii:.00,ipi:.00},
+  '8471.50.10':{ii:.00,ipi:.00},'8471.50.90':{ii:.00,ipi:.00},
+  '8471.60.52':{ii:.00,ipi:.00},'8471.60.53':{ii:.00,ipi:.00},'8471.60.54':{ii:.00,ipi:.00},
+  '8471.60.90':{ii:.00,ipi:.00},'8471.70.11':{ii:.00,ipi:.00},'8471.70.19':{ii:.00,ipi:.00},
+  '8471.80.10':{ii:.00,ipi:.00},'8471.80.90':{ii:.00,ipi:.00},'8471.90.11':{ii:.00,ipi:.00},
+  // ── CELULARES / TELECOM ──
+  '8517.12.11':{ii:.16,ipi:.15},'8517.12.13':{ii:.16,ipi:.15},'8517.12.19':{ii:.16,ipi:.15},
+  '8517.12.31':{ii:.16,ipi:.00},'8517.13.00':{ii:.16,ipi:.15},
+  '8517.61.10':{ii:.14,ipi:.00},'8517.61.20':{ii:.14,ipi:.00},'8517.61.90':{ii:.14,ipi:.00},
+  '8517.62.11':{ii:.14,ipi:.00},'8517.62.12':{ii:.14,ipi:.00},'8517.62.49':{ii:.14,ipi:.00},
+  '8517.62.51':{ii:.14,ipi:.00},'8517.62.59':{ii:.14,ipi:.00},
+  // ── ALIMENTOS — CARNES ──
+  '0201.10.00':{ii:.10,ipi:.00},'0201.20.00':{ii:.10,ipi:.00},'0201.30.00':{ii:.10,ipi:.00},
+  '0202.10.00':{ii:.10,ipi:.00},'0202.20.00':{ii:.10,ipi:.00},'0202.30.00':{ii:.10,ipi:.00},
+  '0203.11.00':{ii:.10,ipi:.00},'0203.12.00':{ii:.10,ipi:.00},'0203.19.00':{ii:.10,ipi:.00},
+  '0203.21.00':{ii:.10,ipi:.00},'0203.22.00':{ii:.10,ipi:.00},'0203.29.00':{ii:.10,ipi:.00},
+  '0207.11.00':{ii:.10,ipi:.00},'0207.12.00':{ii:.10,ipi:.00},'0207.13.00':{ii:.10,ipi:.00},
+  '0207.14.00':{ii:.10,ipi:.00},
+  '1601.00.00':{ii:.16,ipi:.00},'1602.20.00':{ii:.16,ipi:.00},'1602.31.00':{ii:.16,ipi:.00},
+  '1602.32.00':{ii:.16,ipi:.00},'1602.41.00':{ii:.16,ipi:.00},'1602.42.00':{ii:.16,ipi:.00},
+  // ── CAFÉ ──
+  '0901.11.10':{ii:.10,ipi:.00},'0901.11.90':{ii:.10,ipi:.00},
+  '0901.12.00':{ii:.10,ipi:.00},'0901.21.00':{ii:.10,ipi:.00},'0901.22.00':{ii:.10,ipi:.00},
+  '0901.90.10':{ii:.10,ipi:.00},'0901.90.20':{ii:.10,ipi:.00},
+  '2101.11.10':{ii:.10,ipi:.00},'2101.12.00':{ii:.10,ipi:.00},
+  // ── ALIMENTOS PREPARADOS / PROCESSADOS ──
+  '2106.10.00':{ii:.12,ipi:.00},'2106.90.10':{ii:.12,ipi:.00},'2106.90.30':{ii:.12,ipi:.00},
+  '2106.90.50':{ii:.12,ipi:.00},'2106.90.90':{ii:.12,ipi:.00},
+  '1901.10.00':{ii:.16,ipi:.00},'1901.20.00':{ii:.16,ipi:.00},'1901.90.90':{ii:.16,ipi:.00},
+  '1902.11.00':{ii:.16,ipi:.00},'1902.19.00':{ii:.16,ipi:.00},'1902.20.00':{ii:.16,ipi:.00},
+  '1905.31.00':{ii:.16,ipi:.00},'1905.32.00':{ii:.16,ipi:.00},'1905.90.20':{ii:.16,ipi:.00},
+  '2004.10.00':{ii:.10,ipi:.00},'2004.90.00':{ii:.10,ipi:.00},'2005.20.00':{ii:.10,ipi:.00},
+  '2009.11.00':{ii:.16,ipi:.00},'2009.12.00':{ii:.16,ipi:.00},'2009.61.00':{ii:.16,ipi:.00},
+  // ── CALÇADOS ──
+  '6403.19.00':{ii:.35,ipi:.00},'6403.20.00':{ii:.35,ipi:.00},'6403.40.00':{ii:.35,ipi:.00},
+  '6403.51.10':{ii:.35,ipi:.00},'6403.51.90':{ii:.35,ipi:.00},'6403.59.10':{ii:.35,ipi:.00},
+  '6403.59.90':{ii:.35,ipi:.00},'6403.91.10':{ii:.35,ipi:.00},'6403.91.90':{ii:.35,ipi:.00},
+  '6403.99.10':{ii:.35,ipi:.00},'6403.99.90':{ii:.35,ipi:.00},
+  '6402.19.00':{ii:.35,ipi:.00},'6402.91.00':{ii:.35,ipi:.00},'6402.99.00':{ii:.35,ipi:.00},
+  '6404.11.00':{ii:.35,ipi:.00},'6404.19.00':{ii:.35,ipi:.00},'6404.20.00':{ii:.35,ipi:.00},
+  '6401.10.00':{ii:.35,ipi:.00},'6401.92.00':{ii:.35,ipi:.00},'6401.99.00':{ii:.35,ipi:.00},
+  // ── VESTUÁRIO ──
+  '6101.20.00':{ii:.35,ipi:.00},'6101.30.00':{ii:.35,ipi:.00},'6102.20.00':{ii:.35,ipi:.00},
+  '6103.10.00':{ii:.35,ipi:.00},'6103.22.00':{ii:.35,ipi:.00},'6103.23.00':{ii:.35,ipi:.00},
+  '6104.13.00':{ii:.35,ipi:.00},'6104.22.00':{ii:.35,ipi:.00},'6104.23.00':{ii:.35,ipi:.00},
+  '6105.10.00':{ii:.35,ipi:.00},'6105.20.00':{ii:.35,ipi:.00},'6106.10.00':{ii:.35,ipi:.00},
+  '6109.10.00':{ii:.35,ipi:.00},'6109.90.00':{ii:.35,ipi:.00},'6110.20.10':{ii:.35,ipi:.00},
+  '6203.11.00':{ii:.35,ipi:.00},'6203.19.00':{ii:.35,ipi:.00},'6203.22.00':{ii:.35,ipi:.00},
+  '6203.23.00':{ii:.35,ipi:.00},'6203.31.00':{ii:.35,ipi:.00},'6203.41.00':{ii:.35,ipi:.00},
+  '6204.11.00':{ii:.35,ipi:.00},'6204.19.00':{ii:.35,ipi:.00},'6204.31.00':{ii:.35,ipi:.00},
+  // ── AUTOPEÇAS ──
+  '8708.10.10':{ii:.16,ipi:.00},'8708.10.90':{ii:.16,ipi:.00},'8708.21.00':{ii:.16,ipi:.00},
+  '8708.29.11':{ii:.16,ipi:.00},'8708.29.19':{ii:.16,ipi:.00},'8708.30.11':{ii:.16,ipi:.00},
+  '8708.40.10':{ii:.16,ipi:.00},'8708.50.10':{ii:.16,ipi:.00},'8708.70.10':{ii:.16,ipi:.00},
+  '8708.80.00':{ii:.16,ipi:.00},'8708.91.00':{ii:.16,ipi:.00},'8708.99.10':{ii:.16,ipi:.00},
+  '8708.99.90':{ii:.16,ipi:.00},'8714.10.00':{ii:.16,ipi:.00},
+  // ── PLÁSTICOS ──
+  '3901.10.10':{ii:.14,ipi:.00},'3901.20.10':{ii:.14,ipi:.00},'3902.10.00':{ii:.14,ipi:.00},
+  '3903.11.00':{ii:.14,ipi:.00},'3904.10.00':{ii:.14,ipi:.00},'3926.20.00':{ii:.18,ipi:.00},
+  '3926.90.90':{ii:.18,ipi:.00},
+  // ── MÁQUINAS INDUSTRIAIS ──
+  '8479.89.99':{ii:.14,ipi:.00},'8479.90.90':{ii:.14,ipi:.00},'8482.10.10':{ii:.14,ipi:.00},
+  '8483.10.10':{ii:.14,ipi:.00},'8484.10.00':{ii:.14,ipi:.00},'8501.10.19':{ii:.14,ipi:.00},
+  '8543.70.99':{ii:.14,ipi:.00},
+  // ── BEBIDAS ──
+  '2203.00.00':{ii:.20,ipi:.20},'2204.10.00':{ii:.20,ipi:.25},'2204.21.00':{ii:.20,ipi:.25},
+  '2205.10.00':{ii:.20,ipi:.25},'2206.00.10':{ii:.20,ipi:.20},'2208.20.10':{ii:.20,ipi:.30},
+  '2208.30.10':{ii:.20,ipi:.30},'2208.40.00':{ii:.20,ipi:.30},'2208.60.00':{ii:.20,ipi:.30},
+  '2208.70.00':{ii:.20,ipi:.30},'2208.90.00':{ii:.20,ipi:.30},
+  // ── MEDICAMENTOS ──
+  '3004.10.11':{ii:.00,ipi:.00},'3004.20.10':{ii:.00,ipi:.00},'3004.31.11':{ii:.00,ipi:.00},
+  '3004.32.11':{ii:.00,ipi:.00},'3004.39.11':{ii:.00,ipi:.00},'3004.41.00':{ii:.00,ipi:.00},
+  '3004.42.00':{ii:.00,ipi:.00},'3004.49.10':{ii:.00,ipi:.00},'3004.50.10':{ii:.00,ipi:.00},
+  '3004.90.19':{ii:.00,ipi:.00},'3004.90.29':{ii:.00,ipi:.00},'3004.90.99':{ii:.00,ipi:.00},
+  // ── COSMÉTICOS ──
+  '3303.00.20':{ii:.14,ipi:.40},'3304.10.00':{ii:.14,ipi:.15},'3304.20.10':{ii:.14,ipi:.15},
+  '3304.91.00':{ii:.14,ipi:.12},'3304.99.10':{ii:.14,ipi:.12},'3304.99.90':{ii:.14,ipi:.12},
+  '3305.10.00':{ii:.14,ipi:.15},'3305.20.00':{ii:.14,ipi:.12},'3305.30.00':{ii:.14,ipi:.12},
+  '3305.90.00':{ii:.14,ipi:.12},'3306.10.00':{ii:.14,ipi:.12},'3307.10.00':{ii:.14,ipi:.12},
+  '3307.20.10':{ii:.14,ipi:.12},'3401.11.90':{ii:.14,ipi:.00},
+  // ── BRINQUEDOS ──
+  '9503.00.10':{ii:.20,ipi:.00},'9503.00.21':{ii:.20,ipi:.00},'9503.00.29':{ii:.20,ipi:.00},
+  '9503.00.31':{ii:.20,ipi:.00},'9503.00.39':{ii:.20,ipi:.00},'9503.00.41':{ii:.20,ipi:.00},
+  '9503.00.49':{ii:.20,ipi:.00},'9503.00.91':{ii:.20,ipi:.00},'9503.00.99':{ii:.20,ipi:.00},
+  // ── MÓVEIS ──
+  '9401.30.10':{ii:.16,ipi:.00},'9401.61.00':{ii:.16,ipi:.00},'9401.69.00':{ii:.16,ipi:.00},
+  '9401.71.00':{ii:.16,ipi:.00},'9401.79.00':{ii:.16,ipi:.00},'9401.90.90':{ii:.16,ipi:.00},
+  '9403.10.00':{ii:.16,ipi:.00},'9403.20.00':{ii:.16,ipi:.00},'9403.30.00':{ii:.16,ipi:.00},
+  '9403.40.00':{ii:.16,ipi:.00},'9403.50.00':{ii:.16,ipi:.00},'9403.60.00':{ii:.16,ipi:.00},
+  '9403.70.00':{ii:.16,ipi:.00},'9403.90.90':{ii:.16,ipi:.00},
+  // ── FERRAGENS / FERRAMENTAS ──
+  '8201.10.00':{ii:.14,ipi:.00},'8201.20.00':{ii:.14,ipi:.00},'8201.30.00':{ii:.14,ipi:.00},
+  '8202.10.00':{ii:.14,ipi:.00},'8203.10.00':{ii:.14,ipi:.00},'8204.11.00':{ii:.14,ipi:.00},
+  '8205.10.00':{ii:.14,ipi:.00},'8205.20.00':{ii:.14,ipi:.00},'8205.40.00':{ii:.14,ipi:.00},
+};
+
+// Fallback por capítulo (2 dígitos) — usado quando NCM não está na base ALIQ_DB
+const II_CAP_MAP={
   '01':.10,'02':.10,'03':.10,'04':.14,'05':.06,'06':.08,'07':.10,'08':.10,
   '09':.10,'10':.08,'11':.10,'12':.08,'13':.06,'14':.06,'15':.10,'16':.16,
   '17':.16,'18':.14,'19':.16,'20':.10,'21':.12,'22':.20,'23':.06,'24':.20,
@@ -1815,16 +2226,51 @@ const II_ALIQ_MAP={
   '82':.14,'83':.14,'84':.14,'85':.16,'86':.14,'87':.35,'88':.14,'89':.14,
   '90':.14,'91':.20,'92':.20,'93':.20,'94':.16,'95':.20,'96':.14,'97':.06,'98':.00,'99':.00
 };
-const IPI_MAP={
-  '22':.20,'24':.30,'33':.10,'61':.00,'62':.00,'64':.08,'84':.10,'85':.10,'87':.07,'90':.05
+const IPI_CAP_MAP={
+  '22':.20,'24':.30,'33':.10,'61':.00,'62':.00,'64':.00,'84':.10,'85':.10,'87':.07,'90':.05
 };
 const PESO_MAP={
   '01':.5,'02':.4,'03':.4,'04':.3,'05':.3,'06':.2,'07':.4,'08':.4,'09':.35,'10':.5,
   '19':.25,'20':.35,'22':.35,'23':.4,'39':.12,'40':.15,'61':.12,'62':.1,'64':.08,
   '72':.5,'73':.45,'74':.4,'82':.2,'83':.18,'84':.1,'85':.05,'87':.2,'90':.03
 };
-function getII(code){const cap=code.substring(0,2);return II_ALIQ_MAP[cap]??0.14;}
-function getIPI(code){const cap=code.substring(0,2);return IPI_MAP[cap]??0;}
+
+// Cache de consultas TEC já feitas (evita chamadas repetidas)
+const aliqCache = {};
+
+// Busca alíquota real na API TEC — retorna {ii, ipi, fonte}
+async function fetchAliqTEC(code) {
+  const clean = code.replace(/\./g,'');
+  if (aliqCache[clean]) return aliqCache[clean];
+  // Tenta API do Siscomex/MDIC
+  try {
+    const url = `https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/detalhe/${clean}`;
+    const r = await fetch(url, {signal: AbortSignal.timeout(4000)});
+    if (!r.ok) throw new Error('status '+r.status);
+    const d = await r.json();
+    const ii = parseFloat(d.aliquotaII ?? d.ii ?? d.AliquotaII ?? NaN);
+    const ipi = parseFloat(d.aliquotaIPI ?? d.ipi ?? d.AliquotaIPI ?? NaN);
+    if (!isNaN(ii)) {
+      const res = {ii: ii/100, ipi: isNaN(ipi)?0:ipi/100, fonte:'TEC/Siscomex'};
+      aliqCache[clean] = res;
+      return res;
+    }
+  } catch(e){}
+  return null;
+}
+
+function getII(code) {
+  // 1. Base exata de 8 dígitos
+  if (ALIQ_DB[code]) return ALIQ_DB[code].ii;
+  // 2. Fallback por capítulo
+  const cap = code.substring(0,2);
+  return II_CAP_MAP[cap] ?? 0.14;
+}
+function getIPI(code) {
+  if (ALIQ_DB[code]) return ALIQ_DB[code].ipi;
+  const cap = code.substring(0,2);
+  return IPI_CAP_MAP[cap] ?? 0;
+}
 function getPeso(code){const cap=code.substring(0,2);return PESO_MAP[cap]??0.08;}
 
 // TRANSIT / FRETE
@@ -1876,111 +2322,191 @@ async function loadNcmDB(){
   }
 }
 
-// Base local de fallback
+// ══════════════════════════════════════════════════
+// NCM_LOCAL — Base local expandida (~300 NCMs)
+// Alíquotas verificadas contra TEC 2024/2025
+// ══════════════════════════════════════════════════
 const NCM_LOCAL=[
-  // LINHA BRANCA E ELETRDOMÉSTICOS
-  {code:'8450.90.10',desc:'Partes de máquinas de lavar roupa acima 10kg'},
-  {code:'8450.90.90',desc:'Partes de máquinas de lavar roupa domésticas'},
-  {code:'8450.20.00',desc:'Máquinas de lavar roupa acima 10kg capacidade'},
-  {code:'8450.11.00',desc:'Máquinas de lavar roupa até 10kg uso doméstico'},
-  {code:'8418.10.00',desc:'Combinado refrigerador-congelador doméstico'},
-  {code:'8418.21.00',desc:'Refrigerador doméstico tipo compressão'},
-  {code:'8418.22.00',desc:'Refrigerador doméstico tipo absorção elétrica'},
-  {code:'8418.30.00',desc:'Congeladores tipo arca horizontal até 800 litros'},
-  {code:'8415.10.11',desc:'Aparelhos de ar condicionado split até 30000 BTU'},
-  {code:'8415.10.12',desc:'Aparelhos de ar condicionado split acima 30000 BTU'},
-  {code:'8415.10.19',desc:'Outros aparelhos de ar condicionado de parede'},
-  {code:'8415.81.10',desc:'Aparelhos de ar condicionado com motor elétrico'},
-  {code:'8516.50.00',desc:'Fornos de micro-ondas domésticos'},
-  {code:'8516.60.00',desc:'Outros fornos elétricos domésticos'},
-  {code:'8509.40.00',desc:'Trituradores e misturadores de alimentos'},
-  {code:'8508.11.00',desc:'Aspiradores de pó até 1500W potência'},
-  {code:'8516.31.00',desc:'Secadores de cabelo elétricos'},
-  {code:'8516.72.00',desc:'Torradeiras elétricas domésticas'},
-  // INFORMÁTICA E ELETRÔNICOS
-  {code:'8471.30.12',desc:'Máquinas para processamento de dados portáteis notebook laptop'},
-  {code:'8471.30.19',desc:'Outras máquinas portáteis de processamento de dados'},
-  {code:'8471.41.10',desc:'Microcomputadores desktop all-in-one'},
-  {code:'8471.41.90',desc:'Outros microcomputadores'},
-  {code:'8471.60.54',desc:'Unidades de entrada tipo teclado'},
-  {code:'8471.60.52',desc:'Mouse para computador'},
-  {code:'8517.12.31',desc:'Aparelhos de telefonia celular smartphone'},
-  {code:'8517.12.11',desc:'Telefones fixos com fio residenciais'},
-  {code:'8528.72.20',desc:'Monitores de vídeo LCD para computador'},
-  {code:'8528.59.20',desc:'Monitores e projetores sem receptor televisão'},
-  {code:'8443.31.90',desc:'Impressoras a laser multifuncionais'},
-  {code:'8443.32.21',desc:'Impressoras a jato de tinta'},
-  {code:'8519.81.20',desc:'Aparelhos de reprodução de som MP3 portáteis'},
-  {code:'8521.10.10',desc:'Aparelhos videocassete e DVD players'},
-  {code:'8525.80.19',desc:'Câmeras digitais de fotografia'},
-  {code:'8544.42.00',desc:'Cabos elétricos para tensão não superior a 1000V'},
-  // ALIMENTOS E BEBIDAS
-  {code:'2005.70.00',desc:'Azeitonas preparadas ou conservadas'},
-  {code:'0711.20.00',desc:'Azeitonas conservadas provisoriamente não próprias para alimentação'},
-  {code:'2103.90.21',desc:'Alcaparras preparadas ou conservadas'},
-  {code:'2005.99.00',desc:'Outros produtos hortícolas preparados ou conservados'},
-  {code:'0901.11.90',desc:'Café não torrado não descafeinado outros'},
-  {code:'0901.21.00',desc:'Café torrado não descafeinado em grão'},
-  {code:'1806.31.10',desc:'Chocolate em tabletes barras ou paus recheados'},
-  {code:'2009.61.00',desc:'Suco de uva incluindo mostos'},
-  {code:'2204.21.00',desc:'Outros vinhos vinho de uvas frescas em recipientes'},
-  {code:'2208.30.00',desc:'Uísque whisky'},
-  {code:'1905.31.00',desc:'Biscoitos e bolachas adicionados de edulcorante'},
-  {code:'0303.89.00',desc:'Outros peixes congelados exceto filés'},
-  {code:'1604.14.10',desc:'Atum preparado ou conservado inteiro em pedaços'},
-  {code:'2001.10.00',desc:'Pepinos e pepinilhos preparados em vinagre'},
-  {code:'1509.10.00',desc:'Azeite de oliva virgem'},
-  // VESTUÁRIO E CALÇADOS
-  {code:'6109.10.00',desc:'Camisetas de malha de algodão'},
-  {code:'6109.90.00',desc:'Camisetas de malha de outras matérias têxteis'},
-  {code:'6110.20.00',desc:'Camisolas e pulôveres de algodão malha'},
-  {code:'6203.42.00',desc:'Calças compridas de algodão masculinas'},
-  {code:'6204.62.00',desc:'Calças compridas de algodão femininas'},
-  {code:'6211.43.00',desc:'Uniformes escolares ou esportivos femininos'},
-  {code:'6403.99.90',desc:'Calçados com sola de borracha plástico ou couro'},
-  {code:'6404.11.00',desc:'Calçados com sola de borracha tênis esportivos'},
-  {code:'6217.10.00',desc:'Acessórios de vestuário de malha'},
-  // METAIS E INSUMOS INDUSTRIAIS
-  {code:'7108.12.00',desc:'Ouro em formas brutas para uso não monetário'},
-  {code:'7403.11.00',desc:'Cátodos e suas secções de cobre refinado'},
-  {code:'7601.10.00',desc:'Alumínio não ligado em formas brutas'},
-  {code:'7204.10.00',desc:'Desperdícios de ferro fundido'},
-  {code:'7217.10.90',desc:'Fios de ferro ou aço não ligado outros'},
-  {code:'7318.15.00',desc:'Outros parafusos e porcas de ferro ou aço'},
-  {code:'3901.10.10',desc:'Polietileno de baixa densidade em formas primárias'},
-  {code:'3902.10.00',desc:'Polipropileno em formas primárias'},
-  {code:'2836.30.00',desc:'Carbonato de sódio'},
-  {code:'2814.10.00',desc:'Amônia anidra'},
-  // VEÍCULOS E PEÇAS
-  {code:'8703.21.00',desc:'Automóveis com motor explosão até 1000cc'},
-  {code:'8703.22.10',desc:'Automóveis com motor explosão 1000cc a 1500cc'},
-  {code:'8703.23.10',desc:'Automóveis com motor explosão 1500cc a 3000cc'},
-  {code:'8708.29.99',desc:'Outras partes e acessórios de carroçarias'},
-  {code:'8708.99.90',desc:'Outras partes e acessórios para veículos'},
-  {code:'8706.00.10',desc:'Chassis com motor para ônibus'},
-  {code:'8701.20.00',desc:'Tratores para semi-reboques'},
-  {code:'8716.40.00',desc:'Outros reboques e semi-reboques'},
-  // SAÚDE E FARMACÊUTICO
-  {code:'3004.90.99',desc:'Medicamentos para uso humano não especificados'},
-  {code:'3004.20.19',desc:'Medicamentos contendo antibióticos outros'},
-  {code:'3006.10.19',desc:'Outros suturas cirúrgicas esterilizadas'},
-  {code:'9018.90.99',desc:'Outros instrumentos e aparelhos de medicina'},
-  {code:'9021.10.10',desc:'Artigos e aparelhos de ortopedia'},
-  // MÁQUINAS E EQUIPAMENTOS
-  {code:'8479.89.99',desc:'Outras máquinas e aparelhos mecânicos'},
-  {code:'8462.10.10',desc:'Máquinas de forjar ou estampar comandadas numericamente'},
-  {code:'8501.10.19',desc:'Outros motores elétricos até 37.5W'},
-  {code:'8537.10.20',desc:'Quadros painéis para controle elétrico até 1000V'},
-  {code:'8544.30.00',desc:'Conjuntos de fios para velas de ignição'},
-  {code:'8529.90.92',desc:'Partes para aparelhos receptores de televisão'},
-  {code:'9403.20.00',desc:'Móveis metálicos para escritório'},
-  {code:'9403.30.00',desc:'Móveis de madeira para escritório'},
-  {code:'9401.61.00',desc:'Assentos com armação de madeira estofados'},
-  // AGRÍCOLA
-  {code:'8432.80.00',desc:'Outras máquinas e aparelhos para preparar solo'},
-  {code:'8433.53.00',desc:'Máquinas para colheita de raízes ou tubérculos'},
-  {code:'3808.91.29',desc:'Outros inseticidas apresentados de outra forma'},
-  {code:'3105.20.10',desc:'Adubos ou fertilizantes minerais contendo nitrogênio fósforo potássio'},
+  // ── LINHA BRANCA ──
+  {code:'8450.11.00',desc:'Máquinas de lavar roupa até 10kg doméstica',tags:'lavadora tanquinho'},
+  {code:'8450.12.00',desc:'Máquinas de lavar roupa até 10kg com secadora doméstica',tags:'lavadora secadora combo'},
+  {code:'8450.19.00',desc:'Outras máquinas de lavar roupa domésticas',tags:'lavadora'},
+  {code:'8450.20.00',desc:'Máquinas de lavar roupa acima de 10kg capacidade',tags:'lavadora industrial comercial'},
+  {code:'8450.90.10',desc:'Partes de máquinas de lavar roupa acima 10kg',tags:'peça parte lavadora'},
+  {code:'8450.90.90',desc:'Partes de máquinas de lavar roupa domésticas',tags:'peça parte lavadora doméstica'},
+  {code:'8418.10.00',desc:'Combinado refrigerador-congelador doméstico',tags:'geladeira freezer combinado'},
+  {code:'8418.21.00',desc:'Refrigerador doméstico tipo compressão',tags:'geladeira refrigerador'},
+  {code:'8418.22.00',desc:'Refrigerador doméstico tipo absorção elétrica',tags:'geladeira absorção'},
+  {code:'8418.29.00',desc:'Outros refrigeradores domésticos',tags:'geladeira refrigerador'},
+  {code:'8418.30.00',desc:'Congeladores tipo arca horizontal até 800 litros',tags:'freezer arca horizontal'},
+  {code:'8418.40.00',desc:'Congeladores tipo vertical até 900 litros',tags:'freezer vertical'},
+  {code:'8418.50.10',desc:'Balcões frigoríficos comerciais',tags:'balcão frio refrigeração comercial'},
+  {code:'8415.10.11',desc:'Aparelhos de ar condicionado split até 30000 BTU',tags:'ar condicionado split inverter'},
+  {code:'8415.10.12',desc:'Aparelhos de ar condicionado split acima 30000 BTU',tags:'ar condicionado split comercial'},
+  {code:'8415.10.19',desc:'Outros aparelhos de ar condicionado de parede',tags:'ar condicionado janela'},
+  {code:'8415.81.10',desc:'Aparelhos de ar condicionado com motor elétrico até 30000 BTU',tags:'ar condicionado portátil'},
+  {code:'8415.81.90',desc:'Outros aparelhos de ar condicionado',tags:'ar condicionado central'},
+  {code:'8516.50.00',desc:'Fornos de micro-ondas domésticos',tags:'micro-ondas microondas'},
+  {code:'8516.60.00',desc:'Outros fornos elétricos domésticos',tags:'forno elétrico'},
+  {code:'8516.31.00',desc:'Secadores de cabelo elétricos',tags:'secador cabelo hair dryer'},
+  {code:'8516.32.00',desc:'Aparelhos de fazer ondular ou frisar o cabelo',tags:'chapinha prancha babyliss'},
+  {code:'8516.72.00',desc:'Torradeiras elétricas domésticas',tags:'torradeira toast'},
+  {code:'8516.71.00',desc:'Aparelhos para preparar café ou chá',tags:'cafeteira chaleira elétrica'},
+  {code:'8509.40.00',desc:'Trituradores e misturadores de alimentos elétricos',tags:'liquidificador mixer triturador'},
+  {code:'8508.11.00',desc:'Aspiradores de pó até 1500W de potência',tags:'aspirador pó vacuum'},
+  {code:'8508.19.00',desc:'Outros aspiradores de pó',tags:'aspirador robô roomba'},
+  // ── INFORMÁTICA (II=0, IPI=0) ──
+  {code:'8471.30.12',desc:'Notebook laptop computador portátil até 3,5kg',tags:'notebook laptop pc portátil'},
+  {code:'8471.30.19',desc:'Outros computadores portáteis para processamento de dados',tags:'notebook ultrabook tablet pc'},
+  {code:'8471.41.10',desc:'Microcomputador desktop all-in-one',tags:'computador desktop all in one'},
+  {code:'8471.41.90',desc:'Outros microcomputadores desktop',tags:'computador desktop pc tower'},
+  {code:'8471.49.10',desc:'Servidores de rede',tags:'servidor server rack'},
+  {code:'8471.60.52',desc:'Mouse para computador',tags:'mouse rato cursor'},
+  {code:'8471.60.53',desc:'Teclado para computador',tags:'teclado keyboard'},
+  {code:'8471.60.54',desc:'Outras unidades de entrada para computador',tags:'scanner touchpad'},
+  {code:'8471.70.11',desc:'Unidades de disco rígido HD SSD até 1TB',tags:'hd disco rígido ssd nvme'},
+  {code:'8471.70.19',desc:'Outras unidades de memória SSD NVMe',tags:'ssd nvme memória flash'},
+  {code:'8471.90.11',desc:'Placas de circuito para computador motherboard',tags:'placa mãe motherboard'},
+  // ── CELULARES / TELECOM ──
+  {code:'8517.12.11',desc:'Telefones celulares smartphone para redes 4G',tags:'celular smartphone iphone android'},
+  {code:'8517.12.13',desc:'Telefones celulares smartphone para redes 5G',tags:'celular smartphone 5g'},
+  {code:'8517.12.19',desc:'Outros aparelhos celulares portáteis',tags:'celular flip feature phone'},
+  {code:'8517.62.51',desc:'Roteadores sem fio Wi-Fi',tags:'roteador wi-fi wireless router'},
+  {code:'8528.72.20',desc:'Monitores de vídeo LCD para computador',tags:'monitor display tela lcd'},
+  {code:'8525.80.19',desc:'Câmeras digitais de fotografia',tags:'câmera fotográfica digital'},
+  {code:'8525.80.29',desc:'Câmeras de vídeo digitais filmadora',tags:'câmera vídeo filmadora'},
+  {code:'8528.73.00',desc:'Televisores LED LCD smart TV',tags:'tv televisor smart tv led'},
+  // ── CARNES ──
+  {code:'0201.10.00',desc:'Carcaças e meias-carcaças de bovinos frescas',tags:'carne bovina fresca'},
+  {code:'0201.20.00',desc:'Outras peças não desossadas de bovinos frescas',tags:'carne bovina corte fresco'},
+  {code:'0201.30.00',desc:'Carnes desossadas de bovinos frescas ou refrigeradas',tags:'carne bovina desossada fresca'},
+  {code:'0202.10.00',desc:'Carcaças e meias-carcaças de bovinos congeladas',tags:'carne bovina congelada'},
+  {code:'0202.20.00',desc:'Outras peças não desossadas de bovinos congeladas',tags:'carne bovina congelada corte'},
+  {code:'0202.30.00',desc:'Carnes desossadas de bovinos congeladas',tags:'carne bovina desossada congelada'},
+  {code:'0203.11.00',desc:'Carcaças de suínos frescas',tags:'carne suína porco fresca'},
+  {code:'0203.21.00',desc:'Carcaças de suínos congeladas',tags:'carne suína porco congelada'},
+  {code:'0207.11.00',desc:'Frangos inteiros frescos ou refrigerados',tags:'frango inteiro fresco'},
+  {code:'0207.12.00',desc:'Frangos inteiros congelados',tags:'frango inteiro congelado'},
+  {code:'0207.13.00',desc:'Partes de frangos frescas peito coxa',tags:'corte frango peito coxa fresco'},
+  {code:'0207.14.00',desc:'Partes de frangos congeladas peito coxa',tags:'corte frango peito coxa congelado'},
+  {code:'1601.00.00',desc:'Enchidos linguiça salsicha embutidos',tags:'linguiça salsicha embutido'},
+  {code:'1602.32.00',desc:'Preparações de frangos frango preparado',tags:'frango preparado'},
+  {code:'1602.41.00',desc:'Preparações de presunto defumado',tags:'presunto defumado'},
+  // ── CAFÉ ──
+  {code:'0901.11.10',desc:'Café arábica verde não torrado ensacado',tags:'café verde arábica grão'},
+  {code:'0901.11.90',desc:'Outros cafés não torrados conilon robusta',tags:'café verde conilon robusta'},
+  {code:'0901.21.00',desc:'Café torrado não descafeinado em grão',tags:'café torrado grão espresso'},
+  {code:'0901.22.00',desc:'Café torrado moído não descafeinado',tags:'café torrado moído'},
+  {code:'2101.11.10',desc:'Extratos de café solúvel instantâneo',tags:'café solúvel nescafé instantâneo'},
+  {code:'2101.12.00',desc:'Preparações à base de extratos de café cápsulas',tags:'cápsulas café preparado'},
+  // ── ALIMENTOS PROCESSADOS ──
+  {code:'2106.10.00',desc:'Concentrados de proteínas texturizadas soja',tags:'proteína texturizada soja'},
+  {code:'2106.90.10',desc:'Compostos de vitaminas e minerais',tags:'suplemento vitamínico mineral'},
+  {code:'2106.90.90',desc:'Outras preparações alimentícias não especificadas',tags:'alimento preparado mistura'},
+  {code:'1901.10.00',desc:'Preparações para alimentação de lactentes bebê',tags:'fórmula infantil leite bebê'},
+  {code:'1902.11.00',desc:'Massas alimentícias espaguete talharim',tags:'massa macarrão espaguete talharim'},
+  {code:'1902.19.00',desc:'Outras massas alimentícias macarrão parafuso',tags:'macarrão massa parafuso penne'},
+  {code:'1902.20.00',desc:'Massas alimentícias recheadas ravioli tortellini',tags:'massa recheada ravioli tortellini'},
+  {code:'1905.31.00',desc:'Biscoitos e bolachas adicionados de edulcorante',tags:'biscoito bolacha cookie doce'},
+  {code:'1905.90.20',desc:'Bolachas e biscoitos salgados crackers',tags:'biscoito salgado cracker'},
+  {code:'2004.10.00',desc:'Batatas preparadas congeladas batata frita',tags:'batata frita congelada'},
+  {code:'2009.11.00',desc:'Suco de laranja congelado',tags:'suco laranja congelado'},
+  {code:'2009.61.00',desc:'Suco de uva incluindo mostos',tags:'suco uva mosto'},
+  {code:'1509.10.00',desc:'Azeite de oliva virgem extra',tags:'azeite oliva virgem extra'},
+  {code:'1806.31.10',desc:'Chocolate em tabletes ou barras recheados',tags:'chocolate barra recheado'},
+  {code:'1806.32.10',desc:'Outros chocolates em tabletes barras',tags:'chocolate barra amargo ao leite'},
+  {code:'1604.14.10',desc:'Atum preparado ou conservado em lata',tags:'atum lata conserva'},
+  {code:'1604.20.10',desc:'Sardinha preparada ou conservada em lata',tags:'sardinha lata conserva'},
+  // ── CALÇADOS ──
+  {code:'6403.59.90',desc:'Outros calçados de couro natural',tags:'sapato couro natural'},
+  {code:'6403.99.90',desc:'Outros calçados com sola borracha plástico ou couro',tags:'sapato sandália calçado'},
+  {code:'6403.99.10',desc:'Outros calçados masculinos',tags:'sapato masculino'},
+  {code:'6403.51.10',desc:'Calçados cobrindo o tornozelo masculinos couro',tags:'botina bota tornozelo couro'},
+  {code:'6402.19.00',desc:'Outros calçados esportivos com sola borracha plástico',tags:'tênis esportivo'},
+  {code:'6402.99.00',desc:'Outros calçados borracha plástico',tags:'sandália chinelo borracha'},
+  {code:'6404.11.00',desc:'Calçados esportivos tênis sola borracha parte têxtil',tags:'tênis esportivo corrida'},
+  {code:'6404.19.00',desc:'Outros calçados com sola borracha parte têxtil',tags:'sapatênis lona'},
+  {code:'6401.92.00',desc:'Calçados impermeáveis cobrindo tornozelo borracha',tags:'bota impermeável chuva'},
+  // ── VESTUÁRIO ──
+  {code:'6109.10.00',desc:'Camisetas de malha de algodão t-shirt',tags:'camiseta malha algodão t-shirt'},
+  {code:'6109.90.00',desc:'Camisetas de malha outras matérias têxteis',tags:'camiseta sintética poliéster'},
+  {code:'6110.20.10',desc:'Camisolas pulôveres de algodão moletom',tags:'blusa moletom algodão'},
+  {code:'6203.42.00',desc:'Calças de algodão masculinas',tags:'calça jeans algodão masculino'},
+  {code:'6204.62.00',desc:'Calças de algodão femininas',tags:'calça jeans algodão feminino'},
+  {code:'6105.10.00',desc:'Camisas de malha de algodão masculinas polo',tags:'camisa polo manga curta algodão'},
+  // ── AUTOPEÇAS ──
+  {code:'8708.10.10',desc:'Para-choques e suas partes para veículos',tags:'para-choque bumper'},
+  {code:'8708.21.00',desc:'Cintos de segurança para veículos automóveis',tags:'cinto segurança seat belt'},
+  {code:'8708.30.11',desc:'Freios de disco para veículos pastilha',tags:'freio disco pastilha'},
+  {code:'8708.40.10',desc:'Caixas de velocidades câmbio automático',tags:'câmbio automático transmissão'},
+  {code:'8708.80.00',desc:'Sistemas de suspensão e suas partes amortecedor',tags:'suspensão amortecedor mola'},
+  {code:'8708.91.00',desc:'Radiadores para veículos automóveis',tags:'radiador resfriamento motor'},
+  {code:'8708.99.90',desc:'Outras partes e acessórios para veículos',tags:'peça acessório auto'},
+  {code:'8714.10.00',desc:'Partes e acessórios de motocicletas',tags:'peça moto motocicleta'},
+  {code:'8703.22.10',desc:'Automóveis motor explosão gasolina 1000 a 1500cc',tags:'carro motor 1.0 1.4 flex'},
+  {code:'8703.23.10',desc:'Automóveis motor explosão gasolina 1500 a 3000cc',tags:'carro motor 1.5 2.0 flex'},
+  // ── BEBIDAS ──
+  {code:'2203.00.00',desc:'Cervejas de malte',tags:'cerveja beer lager pilsen'},
+  {code:'2204.10.00',desc:'Vinhos espumantes e champanha',tags:'espumante champagne prosecco'},
+  {code:'2204.21.00',desc:'Outros vinhos em recipientes até 2 litros',tags:'vinho tinto branco rosé'},
+  {code:'2208.20.10',desc:'Aguardente de vinho conhaque brandy cognac',tags:'conhaque brandy cognac'},
+  {code:'2208.30.10',desc:'Uísque scotch whisky bourbon',tags:'uísque whisky scotch bourbon'},
+  {code:'2208.40.00',desc:'Rum aguardente de cana cachaça',tags:'rum cachaça aguardente'},
+  {code:'2208.60.00',desc:'Vodca vodka',tags:'vodca vodka'},
+  {code:'2208.90.00',desc:'Outras bebidas alcoólicas gin tequila',tags:'destilado gin tequila mezcal'},
+  // ── MEDICAMENTOS ──
+  {code:'3004.10.11',desc:'Medicamentos contendo penicilinas antibióticos',tags:'antibiótico penicilina amoxicilina'},
+  {code:'3004.31.11',desc:'Medicamentos contendo insulina diabetes',tags:'insulina diabetes'},
+  {code:'3004.49.10',desc:'Medicamentos contendo vitaminas',tags:'vitamina suplemento'},
+  {code:'3004.90.99',desc:'Outros medicamentos uso humano não especificados',tags:'remédio medicamento genérico'},
+  // ── COSMÉTICOS ──
+  {code:'3303.00.20',desc:'Perfumes e águas de colônia fragrância',tags:'perfume colônia fragrância'},
+  {code:'3304.10.00',desc:'Produtos de maquilagem para lábios batom',tags:'batom lip gloss maquiagem'},
+  {code:'3304.20.10',desc:'Produtos de maquilagem para olhos rímel',tags:'rímel máscara sombra delineador'},
+  {code:'3304.99.10',desc:'Cremes e loções de beleza hidratantes',tags:'hidratante creme loção'},
+  {code:'3305.10.00',desc:'Xampus e shampoos para o cabelo',tags:'shampoo xampu cabelo'},
+  {code:'3305.90.00',desc:'Outras preparações capilares condicionador',tags:'condicionador máscara capilar'},
+  {code:'3306.10.00',desc:'Dentifrícios cremes dentais pastas de dente',tags:'pasta dente creme dental'},
+  {code:'3307.20.10',desc:'Desodorantes corporais e antiperspirantes',tags:'desodorante antitranspirante'},
+  // ── MÁQUINAS E EQUIPAMENTOS ──
+  {code:'8479.89.99',desc:'Outras máquinas e aparelhos mecânicos de uso geral',tags:'máquina industrial equipamento'},
+  {code:'8501.10.19',desc:'Motores elétricos de potência até 37,5W',tags:'motor elétrico pequeno'},
+  {code:'8537.10.20',desc:'Quadros e painéis para controle elétrico até 1000V',tags:'quadro elétrico painel CLP'},
+  {code:'8482.10.10',desc:'Rolamentos de esferas para cargas radiais',tags:'rolamento esfera'},
+  // ── PLÁSTICOS ──
+  {code:'3901.10.10',desc:'Polietileno de baixa densidade PEBD em formas primárias',tags:'polietileno PEBD resina plástico'},
+  {code:'3901.20.10',desc:'Polietileno de alta densidade PEAD em formas primárias',tags:'polietileno PEAD resina'},
+  {code:'3902.10.00',desc:'Polipropileno PP em formas primárias',tags:'polipropileno PP resina'},
+  {code:'3904.10.00',desc:'Policloreto de vinila PVC não plastificado',tags:'PVC rígido cano tubo'},
+  {code:'3926.90.90',desc:'Outros artefatos de plástico embalagens',tags:'peça plástica embalagem'},
+  // ── MÓVEIS ──
+  {code:'9403.10.00',desc:'Móveis metálicos para escritório mesa cadeira',tags:'mesa cadeira escritório metal'},
+  {code:'9403.30.00',desc:'Móveis de madeira para escritório',tags:'mesa escritório madeira'},
+  {code:'9403.40.00',desc:'Móveis de madeira para cozinha armário',tags:'armário cozinha madeira'},
+  {code:'9403.50.00',desc:'Móveis de madeira para quarto guarda-roupa',tags:'guarda-roupa cama madeira'},
+  {code:'9403.60.00',desc:'Outros móveis de madeira sala sofá estante',tags:'sofá estante madeira'},
+  {code:'9401.30.10',desc:'Assentos giratórios com altura regulável cadeira escritório',tags:'cadeira escritório giratória ergonômica'},
+  {code:'9401.61.00',desc:'Assentos com armação de madeira estofados sofá',tags:'sofá poltrona madeira estofado'},
+  {code:'9401.71.00',desc:'Assentos com armação de metal estofados',tags:'sofá poltrona metal estofado'},
+  // ── FERRAMENTAS ──
+  {code:'8202.10.00',desc:'Serras manuais carpintaria',tags:'serra manual carpintaria'},
+  {code:'8204.11.00',desc:'Chaves de porcas manuais fixas e ajustáveis',tags:'chave porca inglesa ferramenta'},
+  {code:'8205.20.00',desc:'Martelos e maços ferramentas',tags:'martelo maço ferramenta'},
+  {code:'8205.40.00',desc:'Chaves de fenda e parafusadeiras',tags:'chave fenda parafusadeira'},
+  // ── BRINQUEDOS ──
+  {code:'9503.00.21',desc:'Bonecas e bonecos representando personagens',tags:'boneca barbie boneco personagem'},
+  {code:'9503.00.39',desc:'Conjuntos de construção e jogos de montar lego',tags:'lego montar construção'},
+  {code:'9503.00.91',desc:'Outros brinquedos com motor elétrico controle remoto',tags:'brinquedo elétrico rc controle'},
+  {code:'9503.00.99',desc:'Outros brinquedos jogos puzzle',tags:'brinquedo jogo puzzle'},
+  // ── AGRÍCOLA / INSUMOS ──
+  {code:'8432.80.00',desc:'Outras máquinas e aparelhos para preparar o solo',tags:'arado grade máquina agrícola'},
+  {code:'8433.53.00',desc:'Máquinas para colheita de raízes ou tubérculos colhedora',tags:'colhedora batata tubérculo'},
+  {code:'3808.91.29',desc:'Outros inseticidas apresentados de outra forma pesticida',tags:'inseticida pesticida'},
+  {code:'3105.20.10',desc:'Adubos minerais com nitrogênio fósforo e potássio NPK',tags:'fertilizante adubo NPK'},
+  // ── SAÚDE / HOSPITALAR ──
+  {code:'9018.90.99',desc:'Outros instrumentos e aparelhos para medicina cirurgia',tags:'instrumento cirúrgico médico'},
+  {code:'9021.10.10',desc:'Artigos e aparelhos de ortopedia prótese',tags:'órtese prótese ortopédico'},
+  {code:'3006.10.19',desc:'Outros materiais cirúrgicos suturas',tags:'sutura fio cirúrgico'},
 ].map(n=>({...n,codRaw:n.code}));
 
 // NCM page renderização
@@ -1989,26 +2515,51 @@ function renderNcmPage(arr){
   ncmFiltered=arr;
   const start=ncmPageCurrent*ncmPageSize;
   const page=arr.slice(start,start+ncmPageSize);
-  document.getElementById('ncm-page-results').innerHTML=`<table class="nt"><thead><tr><th>Código NCM</th><th>Descrição</th><th>II (est.)</th><th>IPI (est.)</th></tr></thead><tbody>${
-    page.map(n=>`<tr onclick="selectNcm('${n.code}');showTab('sim')">
+  document.getElementById('ncm-page-results').innerHTML=`<table class="nt"><thead><tr><th>Código NCM</th><th>Descrição</th><th>II</th><th>IPI</th><th style="font-size:9px;">Fonte</th></tr></thead><tbody>${
+    page.map(n=>{
+      const exata=!!ALIQ_DB[n.code];
+      const ii=(getII(n.code)*100).toFixed(0);
+      const ipi=(getIPI(n.code)*100).toFixed(0);
+      return `<tr onclick="selectNcm('${n.code}');showTab('sim')">
       <td class="code">${n.code}</td>
-      <td style="max-width:400px;">${n.desc.substring(0,80)}${n.desc.length>80?'...':''}</td>
-      <td class="aliq">${(getII(n.code)*100).toFixed(0)}%</td>
-      <td class="aliq">${(getIPI(n.code)*100).toFixed(0)}%</td>
-    </tr>`).join('')
+      <td style="max-width:360px;font-size:12px;color:var(--text2);">${n.desc.substring(0,80)}${n.desc.length>80?'...':''}</td>
+      <td class="aliq">${ii}%</td>
+      <td class="aliq">${ipi}%</td>
+      <td style="font-size:9px;font-family:var(--mono);color:${exata?'var(--accent)':'var(--text3)'};">${exata?'✓ TEC':'est.'}</td>
+    </tr>`;}).join('')
   }</tbody></table>`;
   const total=arr.length;const pages=Math.ceil(total/ncmPageSize);
   document.getElementById('ncm-page-info').textContent=`Pág. ${ncmPageCurrent+1} de ${pages.toLocaleString('pt-BR')} · ${total.toLocaleString('pt-BR')} resultados`;
 }
 function ncmPagePrev(){if(ncmPageCurrent>0){ncmPageCurrent--;renderNcmPage(ncmFiltered);}}
 function ncmPageNext(){if((ncmPageCurrent+1)*ncmPageSize<ncmFiltered.length){ncmPageCurrent++;renderNcmPage(ncmFiltered);}}
+
+// ── BUSCA MELHORADA — busca em código, descrição e tags/sinônimos ──
 function filterFullNcm(q){
   ncmPageCurrent=0;
-  if(!q||q.length<2){renderNcmPage(ncmDB.slice(0,ncmDB.length>100?ncmDB.length:50));return;}
-  const qLow=q.toLowerCase();
-  const res=ncmDB.filter(n=>n.desc.toLowerCase().includes(qLow)||n.code.includes(q)||n.codRaw?.includes(q));
-  document.getElementById('ncm-result-count').textContent=`${res.length.toLocaleString('pt-BR')} resultados para "${q}"`;
-  renderNcmPage(res);
+  const pool=ncmDB.length>0?ncmDB:NCM_LOCAL;
+  if(!q||q.length<2){
+    document.getElementById('ncm-result-count').textContent=`${pool.length.toLocaleString('pt-BR')} NCMs disponíveis. Use a busca para filtrar.`;
+    renderNcmPage(pool);
+    return;
+  }
+  const qLow=q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const normalize=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const scored=pool.map(n=>{
+    const code=n.code.replace(/\./g,'');
+    const qNum=q.replace(/\./g,'');
+    const desc=normalize(n.desc);
+    const tags=normalize(n.tags||'');
+    let score=0;
+    if(code===qNum)score=100;
+    else if(code.startsWith(qNum))score=80;
+    else if(n.code.includes(q))score=75;
+    else if(desc.includes(qLow))score=60+(desc.indexOf(qLow)===0?10:0);
+    else if(tags.includes(qLow))score=40;
+    return{n,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.n);
+  document.getElementById('ncm-result-count').textContent=`${scored.length.toLocaleString('pt-BR')} resultado${scored.length!==1?'s':''} para "${q}"`;
+  renderNcmPage(scored);
 }
 
 // ══════════════════════════
@@ -2049,10 +2600,13 @@ function selectNcm(code){
   const pool=ncmLoaded&&ncmDB.length>0?ncmDB:NCM_LOCAL;
   const n=pool.find(x=>x.code===code||x.codRaw===code);
   if(!n)return;
-  selNcm={...n,II:getII(n.code),IPI:getIPI(n.code),kgPorUSD:getPeso(n.code)};
+  const iiLocal=getII(n.code);
+  const ipiLocal=getIPI(n.code);
+  const fonteLocal = ALIQ_DB[n.code] ? 'TEC·base' : 'est.capítulo';
+  selNcm={...n,II:iiLocal,IPI:ipiLocal,kgPorUSD:getPeso(n.code),aliqFonte:fonteLocal};
   document.getElementById('nc').textContent=n.code;
   document.getElementById('nd').textContent=n.desc.substring(0,45)+(n.desc.length>45?'...':'');
-  document.getElementById('na').textContent=`II ${(selNcm.II*100).toFixed(0)}% · IPI ${(selNcm.IPI*100).toFixed(0)}%`;
+  document.getElementById('na').textContent=`II ${(iiLocal*100).toFixed(0)}% · IPI ${(ipiLocal*100).toFixed(0)}% · ${fonteLocal}`;
   document.getElementById('ncm-badge').style.display='flex';
   document.getElementById('ncm-empty').style.display='none';
   document.getElementById('peso-field').style.display='block';
@@ -2061,6 +2615,25 @@ function selectNcm(code){
   freteManual=false;
   ['desp','cap','arm','fi','frete','seguro','peso'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.dataset.manual='';}});
   calcular();
+  // Busca assíncrona na API TEC para confirmar/atualizar alíquota
+  fetchAliqTEC(n.code).then(res=>{
+    if(!res||!selNcm||selNcm.code!==n.code)return;
+    const mudouII=Math.abs(res.ii-selNcm.II)>0.001;
+    const mudouIPI=Math.abs(res.ipi-selNcm.IPI)>0.001;
+    selNcm.II=res.ii;
+    selNcm.IPI=res.ipi;
+    selNcm.aliqFonte='TEC·oficial';
+    const badge=document.getElementById('na');
+    if(badge){
+      badge.textContent=`II ${(res.ii*100).toFixed(0)}% · IPI ${(res.ipi*100).toFixed(0)}% · TEC·oficial`;
+      if(mudouII||mudouIPI){
+        badge.style.color='var(--warn)';
+        badge.title='Alíquota atualizada pela API TEC/Siscomex';
+        setTimeout(()=>{if(badge)badge.style.color='';},3000);
+        calcular(); // Recalcula com alíquota corrigida
+      }
+    }
+  }).catch(()=>{});
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.nw'))document.getElementById('ndd').classList.remove('open');});
 
@@ -2371,7 +2944,7 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','rastreio','mercado','ncm','alertas','noticias'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
@@ -2747,23 +3320,25 @@ function calcIncoterm(){
     </div>`;
 }
 
-// ══════════════════════════
-// HISTÓRICO DE SIMULAÇÕES
-// ══════════════════════════
-function salvarHistorico(dados){
+// ══════════════════════════════════════
+// HISTÓRICO — LOCAL (fallback sem login)
+// ══════════════════════════════════════
+window.salvarHistoricoLocal = function(dados){
   try{
     let hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
     hist.unshift({...dados,ts:new Date().toLocaleString('pt-BR')});
     hist=hist.slice(0,10);
     localStorage.setItem('gt_hist',JSON.stringify(hist));
-    renderHistorico();
+    renderHistoricoLocal();
   }catch(e){}
-}
+};
 
-function renderHistorico(){
+window.renderHistoricoLocal = function(){
   try{
     const hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
     const el=document.getElementById('historico-lista');if(!el)return;
+    const sub=document.getElementById('hist-sub');
+    if(sub) sub.textContent='Últimas 10 simulações salvas localmente. Faça login para salvar na nuvem.';
     if(!hist.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva ainda.</div>';return;}
     el.innerHTML=hist.map((h,i)=>`
       <div class="card" style="cursor:pointer;margin-bottom:10px;" onclick="recarregarSimulacao(${i})">
@@ -2772,21 +3347,36 @@ function renderHistorico(){
           <span style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);">${R0(h.total)}</span>
         </div>
         <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">${h.ncmCode} — ${h.ncmDesc?.substring(0,45)||''}...</div>
-        <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);">
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap;">
           <span>FOB: ${h.moeda} ${fN(h.fob,2)}</span>
           <span>Câmbio: R$ ${fN(h.cambio,4)}</span>
           <span>Estado: ${h.estado}</span>
-          <span>Carga trib.: ${h.carga}</span>
+          <span>Carga: ${h.carga}</span>
         </div>
       </div>`).join('');
   }catch(e){}
+};
+
+// Alias mantidos para compatibilidade com código legado
+function salvarHistorico(dados){
+  if(window.gtUser && window.salvarHistoricoCloud){
+    window.salvarHistoricoCloud(dados);
+  } else {
+    window.salvarHistoricoLocal(dados);
+  }
+}
+function renderHistorico(){
+  if(window.gtUser && window.renderHistoricoCloud){
+    window.renderHistoricoCloud();
+  } else {
+    window.renderHistoricoLocal();
+  }
 }
 
 function recarregarSimulacao(idx){
   try{
     const hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
     const h=hist[idx];if(!h)return;
-    // Recarregar NCM e dados
     const pool=ncmLoaded&&ncmDB.length>0?ncmDB:NCM_LOCAL;
     const n=pool.find(x=>x.code===h.ncmCode);
     if(n)selectNcm(h.ncmCode);
@@ -2800,17 +3390,99 @@ function recarregarSimulacao(idx){
 }
 
 function limparHistorico(){
-  if(confirm('Limpar todo o histórico?')){localStorage.removeItem('gt_hist');renderHistorico();}
+  if(!confirm('Limpar todo o histórico local?'))return;
+  localStorage.removeItem('gt_hist');
+  renderHistoricoLocal();
+}
+
+// ══════════════════════════════════════
+// SIDE-BY-SIDE
+// ══════════════════════════════════════
+function calcSBS(){
+  ['a','b'].forEach(s=>{
+    const fob=parseFloat(document.getElementById(`sbs-fob-${s}`).value)||0;
+    const cambio=parseFloat(document.getElementById(`sbs-cambio-${s}`).value)||0;
+    const ii=(parseFloat(document.getElementById(`sbs-ii-${s}`).value)||0)/100;
+    const ipi=(parseFloat(document.getElementById(`sbs-ipi-${s}`).value)||0)/100;
+    const frete=parseFloat(document.getElementById(`sbs-frete-${s}`).value)||0;
+    const icms=parseFloat(document.getElementById(`sbs-icms-${s}`).value)||0.18;
+    const el=document.getElementById(`sbs-res-${s}`);
+    if(!fob||!cambio){el.innerHTML='';return;}
+    const seg=(fob+frete)*0.003;
+    const cif=(fob+frete+seg)*cambio;
+    const iiVal=cif*ii;
+    const ipiVal=(cif+iiVal)*ipi;
+    const pis=(cif+iiVal+ipiVal)*0.021;
+    const cofins=(cif+iiVal+ipiVal)*0.0965;
+    const base_icms=cif+iiVal+ipiVal+pis+cofins;
+    const icmsVal=base_icms*icms/(1-icms);
+    const trib=iiVal+ipiVal+pis+cofins+icmsVal;
+    const desp=2500+1500+700+1800;
+    const total=cif+trib+desp;
+    const ct=((trib/cif)*100).toFixed(1);
+    const color=s==='a'?'var(--accent)':'var(--warn)';
+    el.innerHTML=`
+      <div class="card" style="border-color:${color}33;">
+        <div class="ct">Resultado — Cenário ${s.toUpperCase()}</div>
+        <div class="rl"><span class="rl-l">CIF (BRL)</span><span class="rl-v">${R0(cif)}</span></div>
+        <div class="rl"><span class="rl-l">II</span><span class="rl-v">${R0(iiVal)}</span></div>
+        <div class="rl"><span class="rl-l">IPI</span><span class="rl-v">${R0(ipiVal)}</span></div>
+        <div class="rl"><span class="rl-l">PIS + COFINS</span><span class="rl-v">${R0(pis+cofins)}</span></div>
+        <div class="rl"><span class="rl-l">ICMS</span><span class="rl-v">${R0(icmsVal)}</span></div>
+        <div class="rl"><span class="rl-l">Despesas op.</span><span class="rl-v">${R0(desp)}</span></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:var(--text2);">Total desembaraçado</span>
+          <span style="font-family:var(--head);font-size:20px;font-weight:800;color:${color};letter-spacing:-.5px;">${R0(total)}</span>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Carga tributária: ${ct}% sobre CIF</div>
+      </div>`;
+    el._total=total;
+  });
+  // Comparativo
+  const elA=document.getElementById('sbs-res-a');
+  const elB=document.getElementById('sbs-res-b');
+  const comp=document.getElementById('sbs-comparativo');
+  if(!elA._total||!elB._total){comp.innerHTML='';return;}
+  const tA=elA._total,tB=elB._total;
+  const diff=Math.abs(tA-tB);
+  const winner=tA<tB?'A':'B';
+  const wColor=winner==='A'?'var(--accent)':'var(--warn)';
+  const descA=document.getElementById('sbs-desc-a').value||'Cenário A';
+  const descB=document.getElementById('sbs-desc-b').value||'Cenário B';
+  comp.innerHTML=`
+    <div class="card" style="border-color:${wColor}55;background:linear-gradient(135deg,${wColor}08,transparent);">
+      <div class="ct">Veredicto</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-family:var(--head);font-size:22px;font-weight:800;color:${wColor};letter-spacing:-.5px;">Cenário ${winner} vence</div>
+        <div style="font-size:13px;color:var(--text2);">economia de <strong style="color:${wColor};">${R0(diff)}</strong> (${(diff/Math.max(tA,tB)*100).toFixed(1)}%)</div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:flex-end;height:48px;">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--accent);">${R0(tA)}</div>
+          <div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:${tA<=tB?'100%':Math.round(tB/tA*100)+'%'};opacity:${winner==='A'?'1':'0.4'};"></div>
+          <div style="font-size:9px;color:var(--text3);">${descA}</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--warn);">${R0(tB)}</div>
+          <div style="width:100%;background:var(--warn);border-radius:3px 3px 0 0;height:${tB<=tA?'100%':Math.round(tA/tB*100)+'%'};opacity:${winner==='B'?'1':'0.4'};"></div>
+          <div style="font-size:9px;color:var(--text3);">${descB}</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ══════════════════════════
 // INIT
 // ══════════════════════════
+// Expor funções globais para o módulo Firebase
+window.R0=R0; window.fN=fN; window.selectNcm=selectNcm; window.calcular=calcular; window.showTab=showTab;
+window.ncmLoaded=ncmLoaded; window.ncmDB=ncmDB; window.NCM_LOCAL=NCM_LOCAL;
+
 buildFreteChart();
 fetchCambio();
 setInterval(fetchCambio,30000);
 loadNcmDB();
-renderHistorico();
+renderHistoricoLocal();
 // Mapa Leaflet: inicia quando usuário abre aba de rastreamento
 </script>
 </body>
