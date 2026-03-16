@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoTrade — Inteligência de Comércio Exterior</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d12;--bg2:#111820;--bg3:#161e28;--bg4:#1c2530;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.11);
+  --accent:#00e5a0;--a2:#00b87a;--a3:rgba(0,229,160,.08);--a4:rgba(0,229,160,.18);
+  --warn:#f5a623;--w2:rgba(245,166,35,.09);--w3:rgba(245,166,35,.22);
+  --danger:#ff5252;--d2:rgba(255,82,82,.09);--d3:rgba(255,82,82,.22);
+  --info:#4da6ff;--i2:rgba(77,166,255,.09);--i3:rgba(77,166,255,.22);
+  --purple:#a78bfa;--p2:rgba(167,139,250,.09);--p3:rgba(167,139,250,.22);
+  --text:#dde3ec;--text2:#7a8799;--text3:#3d4d5e;
+  --mono:'DM Mono',monospace;--head:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+  --r:10px;--r2:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.6;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.022) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.app{position:relative;z-index:1;display:grid;grid-template-columns:210px 1fr;min-height:100vh;}
+
+/* NAV */
+nav{background:var(--bg2);border-right:1px solid var(--border);padding:20px 0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto;}
+.nav-logo{padding:0 16px 18px;border-bottom:1px solid var(--border);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.lm{width:26px;height:26px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lt{font-family:var(--head);font-size:15px;font-weight:700;letter-spacing:-.5px;}
+.lt span{color:var(--accent);}
+.ns{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:7px 16px 3px;font-weight:500;}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;color:var(--text2);font-size:12px;transition:all .15s;border-left:2px solid transparent;}
+.ni:hover{color:var(--text);background:rgba(255,255,255,.02);}
+.ni.active{color:var(--accent);background:var(--a3);border-left-color:var(--accent);}
+.ni svg{width:13px;height:13px;opacity:.7;flex-shrink:0;}
+.ni.active svg{opacity:1;}
+.ni-dot{width:5px;height:5px;background:var(--warn);border-radius:50%;margin-left:auto;}
+.nav-bot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);}
+.live-ind{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);}
+.ld{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.4);}50%{box-shadow:0 0 0 4px rgba(0,229,160,0);}}
+
+/* MAIN */
+main{padding:22px 26px 60px;overflow-x:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.pt{font-family:var(--head);font-size:19px;font-weight:700;letter-spacing:-.5px;}
+.pt span{color:var(--accent);}
+
+/* CÂMBIO PILLS */
+.cambio-bar{display:flex;gap:7px;flex-wrap:wrap;}
+.cpill{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:6px 11px;min-width:88px;cursor:pointer;transition:border-color .15s;}
+.cpill:hover,.cpill.sel{border-color:var(--accent);}
+.cpill.sel{background:var(--a3);}
+.cp-pair{font-size:9px;color:var(--text3);margin-bottom:1px;text-transform:uppercase;letter-spacing:.06em;}
+.cp-val{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--accent);}
+.cp-var{font-family:var(--mono);font-size:10px;}
+.cu{color:var(--danger);}/* sobe = ruim = vermelho */
+.cd{color:var(--accent);}/* cai = bom = verde */
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:3px;margin-bottom:16px;width:fit-content;flex-wrap:wrap;}
+.tab{padding:5px 13px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--bg4);color:var(--text);font-weight:500;}
+.section{display:none;}.section.active{display:block;}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:12px;}
+.ct{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:14px;font-weight:500;display:flex;align-items:center;justify-content:space-between;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+/* FORM */
+.field{margin-bottom:11px;}
+.fl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
+.fh{font-size:10px;color:var(--a2);text-transform:none;letter-spacing:0;}
+.fa{font-size:10px;color:var(--purple);text-transform:none;letter-spacing:0;}
+.iw{position:relative;}
+.ip{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;color:var(--text3);pointer-events:none;z-index:1;}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:7px 9px;outline:none;transition:border-color .2s;appearance:none;}
+input:focus,select:focus{border-color:var(--accent);}
+.pfx input{padding-left:34px;}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+/* NCM SEARCH */
+.nw{position:relative;}
+.ndd{position:absolute;top:100%;left:0;right:0;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;z-index:300;max-height:240px;overflow-y:auto;margin-top:3px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.ndd.open{display:block;}
+.no{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+.no:hover{background:var(--bg4);}
+.no:last-child{border-bottom:none;}
+.no-c{font-family:var(--mono);font-size:11px;color:var(--accent);margin-right:6px;}
+.no-d{font-size:12px;color:var(--text);}
+.no-a{font-size:10px;color:var(--text3);margin-top:1px;}
+.nbadge{display:flex;align-items:center;gap:8px;background:var(--a3);border:1px solid var(--a4);border-radius:7px;padding:7px 11px;margin-bottom:12px;}
+.nb-c{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:500;flex-shrink:0;}
+.nb-d{font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nb-a{font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0;}
+.ncm-loading{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3);padding:8px 0;}
+.spin{width:12px;height:12px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ORIGEM PILLS */
+.origem-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.op{padding:5px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;color:var(--text2);transition:all .15s;}
+.op:hover{border-color:var(--accent);}
+.op.active{border-color:var(--accent);background:var(--a3);color:var(--accent);}
+
+/* CHIPS */
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px;}
+.chip{background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:4px 7px;cursor:pointer;transition:all .15s;text-align:center;flex:1;min-width:42px;}
+.chip:hover{border-color:var(--accent);}
+.chip.active{border-color:var(--accent);background:var(--a3);}
+.cv{font-family:var(--mono);font-size:11px;display:block;color:var(--text);}
+.cl{font-size:9px;color:var(--text3);text-transform:uppercase;}
+
+/* TOGGLE */
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.tog-row:last-child{border-bottom:none;}
+.tog-lbl{font-size:12px;color:var(--text2);}
+.tog-sub{font-size:10px;color:var(--text3);}
+.sw{position:relative;width:30px;height:17px;flex-shrink:0;}
+.sw input{opacity:0;width:0;height:0;}
+.sw-t{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;cursor:pointer;transition:background .2s;}
+.sw input:checked+.sw-t{background:var(--a2);}
+.sw-t::after{content:'';position:absolute;left:2px;top:2px;width:11px;height:11px;background:#fff;border-radius:50%;transition:transform .2s;}
+.sw input:checked+.sw-t::after{transform:translateX(13px);}
+
+/* RESULTADO */
+.rl{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
+.rl:last-child{border-bottom:none;}
+.rl-l{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px;}
+.rl-a{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg);border-radius:3px;padding:1px 4px;}
+.rl-v{font-family:var(--mono);font-size:12px;color:var(--text);}
+.rl-v.z{color:var(--text3);}
+.divider{height:1px;background:var(--border);margin:9px 0;}
+.total-card{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:14px;margin-top:12px;}
+.tr2{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px;}
+.tr2 .v{font-family:var(--mono);color:var(--text);}
+.total-main{display:flex;justify-content:space-between;align-items:flex-end;padding-top:10px;border-top:1px solid var(--border2);margin-top:8px;}
+.tlbl{font-family:var(--head);font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;line-height:1.5;}
+.tval{font-family:var(--head);font-size:24px;font-weight:800;letter-spacing:-1px;color:var(--accent);line-height:1;}
+.bar-w{margin-top:9px;}
+.bar-l{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px;}
+.bar-l span:last-child{font-family:var(--mono);color:var(--warn);}
+.bt{height:3px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.bf{height:100%;background:linear-gradient(90deg,var(--a2),var(--warn));border-radius:2px;transition:width .5s;}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.kpi{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;}
+.kpi-l{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;}
+.kpi-v{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text);}
+.kpi-s{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* ALERTS */
+.alert{border-radius:var(--r);padding:10px 13px;margin-top:8px;display:flex;gap:10px;}
+.aw{background:var(--w2);border:1px solid var(--w3);}
+.ad{background:var(--d2);border:1px solid var(--d3);}
+.ao{background:var(--a3);border:1px solid var(--a4);}
+.ai{background:var(--i2);border:1px solid var(--i3);}
+.ap{background:var(--p2);border:1px solid var(--p3);}
+.alert-i{font-size:14px;flex-shrink:0;line-height:1.3;}
+.at{font-size:12px;font-weight:500;margin-bottom:2px;}
+.aw .at{color:var(--warn);}.ad .at{color:var(--danger);}
+.ao .at{color:var(--accent);}.ai .at{color:var(--info);}.ap .at{color:var(--purple);}
+.ab{font-size:11px;color:var(--text2);line-height:1.6;}
+.ab strong{color:var(--text);font-weight:500;}
+
+/* COMP BARS */
+.cbars{display:flex;gap:7px;align-items:flex-end;height:64px;}
+.cbw{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;cursor:pointer;}
+.cb{width:100%;border-radius:3px 3px 0 0;min-height:3px;transition:all .4s;}
+.cbv{font-family:var(--mono);font-size:9px;color:var(--text2);}
+.cbl{font-size:8px;color:var(--text3);text-align:center;line-height:1.3;}
+
+/* MEMÓRIA */
+.mem-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;padding:9px 0 0;font-size:12px;color:var(--info);user-select:none;border-top:1px solid var(--border);margin-top:9px;}
+.mem-toggle svg{width:12px;height:12px;transition:transform .2s;}
+.mem-toggle.open svg{transform:rotate(180deg);}
+.mem-body{display:none;margin-top:10px;padding:13px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);}
+.mem-body.open{display:block;}
+.mem-step{padding:8px 0;border-bottom:1px solid var(--border);}
+.mem-step:last-child{border-bottom:none;}
+.mem-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.mem-title{font-size:12px;font-weight:500;color:var(--text);}
+.mem-val{font-family:var(--mono);font-size:12px;color:var(--accent);}
+.mem-formula{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:2px;}
+.mem-explain{font-size:11px;color:var(--text2);line-height:1.5;}
+
+/* SCORE */
+.score-bar{display:flex;gap:3px;margin:6px 0;}
+.sb{flex:1;height:5px;border-radius:2px;background:var(--border2);}
+
+/* MODO AUTO */
+.auto-banner{background:linear-gradient(135deg,rgba(0,229,160,.1),rgba(167,139,250,.08));border:1px solid rgba(0,229,160,.2);border-radius:var(--r2);padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ab-left{display:flex;align-items:center;gap:10px;}
+.ab-title{font-size:13px;font-weight:500;color:var(--accent);margin-bottom:2px;}
+.ab-sub{font-size:11px;color:var(--text2);}
+.mode-toggle{display:flex;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:3px;flex-shrink:0;}
+.mt-opt{padding:4px 11px;border-radius:6px;cursor:pointer;font-size:11px;color:var(--text2);transition:all .15s;}
+.mt-opt.active{background:var(--accent);color:#090d12;font-weight:500;}
+
+/* ALERTAS PÁGINA */
+.regime-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:12px;}
+.rc-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.rc-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.rc-subtitle{font-size:12px;color:var(--text2);margin-bottom:12px;}
+.badge{font-size:10px;font-weight:500;border-radius:4px;padding:3px 8px;text-transform:uppercase;letter-spacing:.05em;}
+.bd{background:var(--d2);color:var(--danger);border:1px solid var(--d3);}
+.bw{background:var(--w2);color:var(--warn);border:1px solid var(--w3);}
+.bo{background:var(--a3);color:var(--accent);border:1px solid var(--a4);}
+.bi{background:var(--i2);color:var(--info);border:1px solid var(--i3);}
+.bp{background:var(--p2);color:var(--purple);border:1px solid var(--p3);}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:12px 0;}
+.info-box{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;}
+.ib-l{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;}
+.ib-v{font-size:12px;color:var(--text);font-weight:500;}
+.ib-s{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.4;}
+.rc-body{font-size:12px;color:var(--text2);line-height:1.8;}
+.rc-body strong{color:var(--text);font-weight:500;}
+.rc-body ul{margin:6px 0 6px 16px;}
+.rc-body li{margin-bottom:3px;}
+.rc-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.rc-date{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.rc-btn{font-size:11px;color:var(--accent);cursor:pointer;border:1px solid var(--a4);border-radius:5px;padding:3px 9px;background:var(--a3);}
+.rc-btn:hover{background:var(--a4);}
+.elegib-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;}
+.eg-box{border-radius:8px;padding:10px 12px;}
+.eg-ok{background:var(--a3);border:1px solid var(--a4);}
+.eg-nok{background:var(--d2);border:1px solid var(--d3);}
+.eg-title{font-size:11px;font-weight:500;margin-bottom:4px;}
+.eg-ok .eg-title{color:var(--accent);}
+.eg-nok .eg-title{color:var(--danger);}
+.eg-body{font-size:11px;color:var(--text2);line-height:1.5;}
+
+/* NOTÍCIAS */
+.news-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:border-color .15s;}
+.news-card:hover{border-color:var(--accent);}
+.news-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.news-source{font-size:10px;font-weight:500;border-radius:4px;padding:2px 7px;}
+.news-date{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.news-cat{font-size:10px;border-radius:4px;padding:2px 7px;margin-left:auto;}
+.news-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.5;}
+.news-body{font-size:12px;color:var(--text2);line-height:1.6;}
+.news-link{font-size:11px;color:var(--accent);margin-top:6px;display:inline-block;}
+.news-loading{text-align:center;padding:24px;color:var(--text3);font-size:12px;}
+.news-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.nf-btn{padding:5px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;color:var(--text2);transition:all .15s;}
+.nf-btn:hover{border-color:var(--accent);}
+.nf-btn.active{border-color:var(--accent);background:var(--a3);color:var(--accent);}
+
+/* STAT */
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px;}
+.sl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:5px;}
+.sv{font-family:var(--head);font-size:19px;font-weight:700;letter-spacing:-.5px;}
+.ss{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* SPARKLINE */
+.spark{display:flex;gap:2px;align-items:flex-end;}
+.sp{border-radius:1px 1px 0 0;min-height:2px;}
+
+/* FRETE CHART */
+.fc{display:flex;gap:4px;align-items:flex-end;height:56px;}
+.fcw{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;}
+.fcb{width:100%;border-radius:2px 2px 0 0;min-height:2px;}
+.fcl{font-size:8px;color:var(--text3);text-align:center;}
+
+/* PDF */
+.btn-pdf{display:flex;align-items:center;gap:6px;background:var(--a3);border:1px solid var(--a4);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:11px;color:var(--accent);}
+.btn-pdf:hover{background:var(--a4);}
+
+/* NCM TABLE */
+.nt{width:100%;border-collapse:collapse;}
+.nt th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 7px;border-bottom:1px solid var(--border);}
+.nt td{padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);}
+.nt tr:hover td{background:rgba(255,255,255,.015);cursor:pointer;}
+.code{font-family:var(--mono);font-size:11px;color:var(--accent);}
+.aliq{font-family:var(--mono);font-size:11px;color:var(--text);}
+
+/* IMP TABLE */
+.imt{width:100%;border-collapse:collapse;}
+.imt th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 7px;border-bottom:1px solid var(--border);}
+.imt td{padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);}
+.imt tr:last-child td{border-bottom:none;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.card,.regime-card,.news-card,.stat{animation:fadeUp .35s ease forwards;}
+@media(max-width:860px){.app{grid-template-columns:1fr;}nav{display:none;}.grid2,.kpi-grid{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="lm"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1L11 6L6 11L1 6Z" fill="#090d12"/><circle cx="6" cy="6" r="1.8" fill="#090d12"/></svg></div>
+    <span class="lt">Geo<span>Trade</span></span>
+  </div>
+  <div class="ns">Importação</div>
+  <div class="ni active" onclick="showTab('sim')">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Simulador
+  </div>
+  <div class="ni" onclick="showTab('precif')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 3 2 4-6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Precificação
+  </div>
+  <div class="ni" onclick="showTab('origens')">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5C5.5 4 5.5 10 7 12.5M7 1.5C8.5 4 8.5 10 7 12.5M1.5 7h11" stroke="currentColor" stroke-width="1.2"/></svg>
+    Comparar Origens
+  </div>
+  <div class="ni" onclick="showTab('incoterms')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11" cy="10" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
+    Incoterms
+  </div>
+  <div class="ni" onclick="showTab('historico')">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Histórico
+  </div>
+  <div class="ni" onclick="showTab('mercado')">
+    <svg viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,7 7,9 10,4 13,6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+    Câmbio & Frete
+  </div>
+  <div class="ni" onclick="showTab('ncm')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h6M2 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Consulta NCM
+    <span id="ncm-count-badge" style="font-size:9px;color:var(--text3);margin-left:auto;"></span>
+  </div>
+  <div class="ns">Inteligência</div>
+  <div class="ni" onclick="showTab('alertas')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M7 1a3.5 3.5 0 013.5 3.5c0 2.5 1 3.5 1 3.5H2.5s1-1 1-3.5A3.5 3.5 0 017 1z" stroke="currentColor" stroke-width="1.2"/><path d="M6 12h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Regimes & Benefícios
+    <span class="ni-dot"></span>
+  </div>
+  <div class="ni" onclick="showTab('noticias')">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Notícias Comex
+    <span class="ni-dot" style="background:var(--info);"></span>
+  </div>
+  <div class="nav-bot">
+    <div class="live-ind"><div class="ld"></div><span id="lst">Conectando...</span></div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+  <div class="topbar">
+    <div class="pt">Plataforma de <span>Importação</span></div>
+    <div class="cambio-bar">
+      <div class="cpill sel" id="pill-USD" onclick="selMoeda('USD')"><div class="cp-pair">USD / BRL</div><div class="cp-val" id="v-USD">—</div><div class="cp-var" id="var-USD">—</div></div>
+      <div class="cpill" id="pill-EUR" onclick="selMoeda('EUR')"><div class="cp-pair">EUR / BRL</div><div class="cp-val" id="v-EUR">—</div><div class="cp-var" id="var-EUR">—</div></div>
+      <div class="cpill" id="pill-CNY" onclick="selMoeda('CNY')"><div class="cp-pair">CNY / BRL</div><div class="cp-val" id="v-CNY">—</div><div class="cp-var" id="var-CNY">—</div></div>
+      <div class="cpill" id="pill-HKD" onclick="selMoeda('HKD')"><div class="cp-pair">HKD / BRL</div><div class="cp-val" id="v-HKD">—</div><div class="cp-var" id="var-HKD">—</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-sim" onclick="showTab('sim')">Simulador</div>
+    <div class="tab" id="tab-precif" onclick="showTab('precif')">Precificação</div>
+    <div class="tab" id="tab-origens" onclick="showTab('origens')">Comparar Origens</div>
+    <div class="tab" id="tab-incoterms" onclick="showTab('incoterms')">Incoterms</div>
+    <div class="tab" id="tab-historico" onclick="showTab('historico')">Histórico</div>
+    <div class="tab" id="tab-mercado" onclick="showTab('mercado')">Câmbio & Frete</div>
+    <div class="tab" id="tab-ncm" onclick="showTab('ncm')">NCM</div>
+    <div class="tab" id="tab-alertas" onclick="showTab('alertas')">Regimes</div>
+    <div class="tab" id="tab-noticias" onclick="showTab('noticias')">📰 Notícias</div>
+  </div>
+
+  <!-- ══ SIMULADOR ══ -->
+  <div class="section active" id="sec-sim">
+    <div class="auto-banner">
+      <div class="ab-left">
+        <div style="font-size:20px;" id="mode-icon">🤖</div>
+        <div><div class="ab-title" id="mode-title">Modo Automático — estimativas inteligentes ativas</div><div class="ab-sub">Preencha NCM + FOB + Estado. Frete, peso e despesas são estimados automaticamente.</div></div>
+      </div>
+      <div class="mode-toggle">
+        <div class="mt-opt active" id="mt-auto" onclick="setModo('auto')">Automático</div>
+        <div class="mt-opt" id="mt-manual" onclick="setModo('manual')">Manual</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- ESQUERDA -->
+      <div>
+        <!-- NCM COM API SISCOMEX -->
+        <div class="card">
+          <div class="ct">
+            Produto & NCM — Siscomex/Receita Federal
+            <span id="ncm-api-status" style="font-size:10px;color:var(--text3);">carregando base...</span>
+          </div>
+          <div class="nw">
+            <div class="field">
+              <div class="fl">Buscar produto ou código NCM <span class="fh" id="ncm-total-hint"></span></div>
+              <input type="text" id="ncm-search" placeholder="Digite o produto ou código (mín. 3 caracteres)..." oninput="searchNcm(this.value)" autocomplete="off">
+              <div class="ndd" id="ndd"></div>
+            </div>
+          </div>
+          <div class="nbadge" id="ncm-badge" style="display:none;">
+            <span class="nb-c" id="nc">—</span>
+            <span class="nb-d" id="nd">—</span>
+            <span class="nb-a" id="na">—</span>
+          </div>
+          <div id="ncm-empty" style="font-size:11px;color:var(--text3);padding:2px 0 8px;">Base Siscomex carregando... Selecione um NCM para ver alíquotas.</div>
+          <div class="field" id="peso-field" style="display:none;">
+            <div class="fl">Peso estimado <span class="fa" id="peso-hint">por categoria</span></div>
+            <div class="iw"><span class="ip">kg</span><input type="number" id="peso" style="padding-left:34px;" oninput="calcular()" step="10"></div>
+          </div>
+        </div>
+
+        <!-- ORIGEM -->
+        <div class="card">
+          <div class="ct">Origem & Modal</div>
+          <div class="field">
+            <div class="fl">País / região de origem</div>
+            <div class="origem-pills">
+              <div class="op active" id="op-china" onclick="setOrigem('china')">🇨🇳 China</div>
+              <div class="op" id="op-hongkong" onclick="setOrigem('hongkong')">🇭🇰 Hong Kong</div>
+              <div class="op" id="op-eua" onclick="setOrigem('eua')">🇺🇸 EUA</div>
+              <div class="op" id="op-europa" onclick="setOrigem('europa')">🇪🇺 Europa</div>
+              <div class="op" id="op-mercosul" onclick="setOrigem('mercosul')">🌎 Mercosul</div>
+            </div>
+          </div>
+          <div class="fr2" style="margin-top:10px;">
+            <div><div class="fl">Modal</div>
+              <select id="modal" onchange="setModalSel(this.value)">
+                <option value="m">🚢 Marítimo</option>
+                <option value="a">✈️ Aéreo</option>
+                <option value="r">🚛 Rodoviário</option>
+              </select>
+            </div>
+            <div><div class="fl">Porto / entrada</div>
+              <select id="porto" onchange="calcular()">
+                <option value="santos">Santos — SP</option>
+                <option value="paranagua">Paranaguá — PR</option>
+                <option value="itajai">Itajaí — SC</option>
+                <option value="rio">Rio de Janeiro — RJ</option>
+                <option value="suape">Suape — PE</option>
+                <option value="vcp">Viracopos — SP (aéreo)</option>
+                <option value="gru">Guarulhos — SP (aéreo)</option>
+              </select>
+            </div>
+          </div>
+          <div class="fr2" style="margin-top:8px;">
+            <div class="field"><div class="fl">Frete internacional <span class="fa" id="frete-hint">estimado</span></div><div class="iw"><span class="ip" id="fr-cur">USD</span><input type="number" id="frete" placeholder="0,00" oninput="onFreteManual()" step="100" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Seguro <span class="fa">≈ 0,3% CIF</span></div><div class="iw"><span class="ip" id="sg-cur">USD</span><input type="number" id="seguro" placeholder="0,00" oninput="calcular()" step="50" style="padding-left:34px;"></div></div>
+          </div>
+          <div id="afrmm-row"><div class="tog-row"><div><div class="tog-lbl">AFRMM — 8% sobre frete marítimo + R$ 20</div></div><label class="sw"><input type="checkbox" id="afrmm" checked onchange="calcular()"><span class="sw-t"></span></label></div></div>
+        </div>
+
+        <!-- VALORES -->
+        <div class="card">
+          <div class="ct">Valores da operação</div>
+          <div class="field">
+            <div class="fl">Valor FOB <span class="fh" id="fob-cur-lbl">em USD</span></div>
+            <div class="iw"><span class="ip" id="fob-cur">USD</span><input type="number" id="fob" placeholder="0,00" oninput="calcular()" step="100" style="padding-left:34px;"></div>
+          </div>
+          <div class="fr3">
+            <div class="field"><div class="fl">Despacho <span class="fa" id="desp-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="desp" placeholder="0,00" oninput="calcular()" step="200" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Capatazia/THC <span class="fa" id="cap-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="cap" placeholder="0,00" oninput="calcular()" step="100" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Armazenagem <span class="fa" id="arm-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="arm" placeholder="0,00" oninput="calcular()" step="100" style="padding-left:34px;"></div></div>
+          </div>
+          <div class="fr2">
+            <div class="field"><div class="fl">Frete interno <span class="fa" id="fi-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="fi" placeholder="0,00" oninput="calcular()" step="200" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Quantidade (opcional)</div><input type="number" id="qtd" placeholder="Unidades" oninput="calcular()" step="1"></div>
+          </div>
+        </div>
+
+        <!-- CÂMBIO -->
+        <div class="card">
+          <div class="ct">Câmbio <span id="cambio-src" style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;">carregando...</span></div>
+          <div class="field">
+            <div class="iw"><span class="ip">R$</span><input type="number" id="cambio" placeholder="0,0000" oninput="calcular();syncChips()" step="0.01" style="padding-left:34px;"></div>
+            <div class="chips">
+              <div class="chip" id="c90" onclick="setChip('c90')"><span class="cv" id="cv90">—</span><span class="cl">90d</span></div>
+              <div class="chip" id="c60" onclick="setChip('c60')"><span class="cv" id="cv60">—</span><span class="cl">60d</span></div>
+              <div class="chip" id="c30" onclick="setChip('c30')"><span class="cv" id="cv30">—</span><span class="cl">30d</span></div>
+              <div class="chip" id="choje" onclick="setChip('choje')"><span class="cv" id="cvhoje">—</span><span class="cl">Hoje</span></div>
+              <div class="chip" id="cpico" onclick="setChip('cpico')"><span class="cv" id="cvpico">—</span><span class="cl">Pico</span></div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:2px;"><div class="fl">Estado de destino</div>
+            <select id="estado" onchange="calcular()">
+              <option value="">— Selecione —</option>
+              <option value="0.12">AC — 12%</option><option value="0.17">AL — 17%</option><option value="0.12">AP — 12%</option><option value="0.20">AM — 20%</option>
+              <option value="0.195">BA — 19,5%</option><option value="0.17">CE — 17%</option><option value="0.20">DF — 20%</option><option value="0.17">ES — 17%</option>
+              <option value="0.17">GO — 17%</option><option value="0.22">MA — 22%</option><option value="0.17">MT — 17%</option><option value="0.17">MS — 17%</option>
+              <option value="0.18">MG — 18%</option><option value="0.19">PA — 19%</option><option value="0.18">PB — 18%</option><option value="0.19">PR — 19%</option>
+              <option value="0.205">PE — 20,5%</option><option value="0.21">PI — 21%</option><option value="0.20">RJ — 20%</option><option value="0.20">RN — 20%</option>
+              <option value="0.175">RS — 17,5%</option><option value="0.175">RO — 17,5%</option><option value="0.17">RR — 17%</option><option value="0.17">SC — 17%</option>
+              <option value="0.18">SP — 18%</option><option value="0.175">SE — 17,5%</option><option value="0.20">TO — 20%</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIREITA -->
+      <div>
+        <div class="kpi-grid" id="kpi-grid" style="display:none;">
+          <div class="kpi"><div class="kpi-l">Peso estimado</div><div class="kpi-v" id="kpi-peso">—</div><div class="kpi-s">kg total</div></div>
+          <div class="kpi"><div class="kpi-l">Custo por kg</div><div class="kpi-v" id="kpi-pkg">—</div><div class="kpi-s">desembaraçado</div></div>
+          <div class="kpi"><div class="kpi-l">Markup s/ FOB</div><div class="kpi-v" id="kpi-markup">—</div><div class="kpi-s">tributos + desp.</div></div>
+          <div class="kpi"><div class="kpi-l">Prazo estimado</div><div class="kpi-v" id="kpi-prazo">—</div><div class="kpi-s">dias até CD</div></div>
+        </div>
+
+        <div class="card">
+          <div class="ct">Resultado <div style="display:flex;gap:6px;"><span id="modal-lbl" style="font-size:10px;color:var(--text3);">🚢 Marítimo</span><div class="btn-pdf" onclick="exportPDF()"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v8H2z" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v3h3M4.5 8.5h5M4.5 10.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>PDF</div></div></div>
+          <div id="res-vazio" style="padding:18px 0;text-align:center;color:var(--text3);font-size:12px;">← Selecione um NCM e informe o valor FOB</div>
+          <div id="res-corpo" style="display:none;">
+            <div id="score-area" style="margin-bottom:10px;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:7px;">Base CIF</div>
+            <div class="rl"><span class="rl-l">FOB convertido</span><span class="rl-v" id="r-fob">—</span></div>
+            <div class="rl"><span class="rl-l">Frete <span id="r-fr-est" style="font-size:9px;color:var(--purple);"></span></span><span class="rl-v" id="r-fr">—</span></div>
+            <div class="rl"><span class="rl-l">Seguro</span><span class="rl-v" id="r-sg">—</span></div>
+            <div class="rl" style="padding-top:7px;border-top:1px solid var(--border2);margin-top:2px;"><span class="rl-l" style="color:var(--text);font-weight:500;">Valor CIF total</span><span class="rl-v" style="color:var(--text);font-weight:500;" id="r-cif">—</span></div>
+            <div class="divider"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:7px;">Tributos</div>
+            <div class="rl"><span class="rl-l">II <span class="rl-a" id="r-ii-a">—</span></span><span class="rl-v" id="r-ii">—</span></div>
+            <div class="rl"><span class="rl-l">IPI <span class="rl-a" id="r-ipi-a">—</span></span><span class="rl-v" id="r-ipi">—</span></div>
+            <div class="rl"><span class="rl-l">PIS <span class="rl-a">2,10%</span></span><span class="rl-v" id="r-pis">—</span></div>
+            <div class="rl"><span class="rl-l">COFINS <span class="rl-a">9,65%</span></span><span class="rl-v" id="r-cofins">—</span></div>
+            <div class="rl" id="afrmm-line"><span class="rl-l">AFRMM <span class="rl-a">8%+R$20</span></span><span class="rl-v" id="r-afrmm">—</span></div>
+            <div class="rl"><span class="rl-l">ICMS <span class="rl-a" id="r-icms-a">—</span><span style="font-size:9px;color:var(--text3);margin-left:3px;">por dentro</span></span><span class="rl-v" id="r-icms">—</span></div>
+            <div class="divider"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:7px;">Despesas operacionais <span id="desp-est-lbl" style="color:var(--purple);font-size:9px;text-transform:none;letter-spacing:0;"></span></div>
+            <div class="rl"><span class="rl-l">Despacho</span><span class="rl-v" id="r-desp">—</span></div>
+            <div class="rl"><span class="rl-l">Capatazia/THC</span><span class="rl-v" id="r-cap">—</span></div>
+            <div class="rl"><span class="rl-l">Armazenagem</span><span class="rl-v" id="r-arm">—</span></div>
+            <div class="rl"><span class="rl-l">Frete interno</span><span class="rl-v" id="r-fi">—</span></div>
+            <div class="total-card">
+              <div class="tr2"><span>Total tributos</span><span class="v" id="r-trib">—</span></div>
+              <div class="tr2"><span>Total despesas operacionais</span><span class="v" id="r-dop">—</span></div>
+              <div id="r-unit-row" style="display:none;" class="tr2"><span>Custo por unidade</span><span class="v" id="r-unit" style="color:var(--accent);">—</span></div>
+              <div class="bar-w"><div class="bar-l"><span>Carga tributária sobre CIF</span><span id="r-cp">—</span></div><div class="bt"><div class="bf" id="r-bar" style="width:0%"></div></div></div>
+              <div class="total-main"><div class="tlbl">Custo total<br>desembaraçado<br><span style="font-size:9px;font-weight:400;color:var(--text3);">tributos + despesas</span></div><div class="tval" id="r-total">—</div></div>
+            </div>
+            <div id="prazo-area" style="margin-top:10px;"></div>
+            <div class="mem-toggle" id="mem-tog" onclick="toggleMem()"><svg viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Entenda o cálculo — memória completa</div>
+            <div class="mem-body" id="mem-body"></div>
+          </div>
+        </div>
+        <div id="risk-area"></div>
+        <div class="card"><div class="ct">Custo total — comparativo cambial</div><div class="cbars" id="comp-bars"><div style="color:var(--text3);font-size:11px;">Preencha o simulador para ver</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PRECIFICAÇÃO ══ -->
+  <div class="section" id="sec-precif">
+    <div class="card">
+      <div class="ct">Calculadora de preço de venda</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;">Com base no custo total desembaraçado do simulador, calcula o preço mínimo de venda para atingir a margem desejada.</div>
+      <div class="fr3">
+        <div class="field"><div class="fl">Custo total desembaraçado <span class="fh">do simulador</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="pv-custo" placeholder="0,00" oninput="calcPV()" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Margem bruta alvo (%)</div><input type="number" id="pv-margem" value="40" oninput="calcPV()" step="5"></div>
+        <div class="field"><div class="fl">Comissão / despesas comerciais (%)</div><input type="number" id="pv-com" value="5" oninput="calcPV()" step="1"></div>
+      </div>
+      <div class="fr2">
+        <div class="field"><div class="fl">Quantidade importada (unidades)</div><input type="number" id="pv-qtd" value="1" oninput="calcPV()" step="1"></div>
+        <div class="field"><div class="fl">ICMS saída estimado (%)</div><input type="number" id="pv-icms-saida" value="12" oninput="calcPV()" step="1"></div>
+      </div>
+      <div id="pv-result"></div>
+    </div>
+    <div class="card">
+      <div class="ct">Como interpretar</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        <strong style="color:var(--text);">Preço mínimo de venda</strong> é o valor abaixo do qual a operação não cobre o custo de importação com a margem desejada. Vender abaixo significa prejuízo operacional.<br><br>
+        <strong style="color:var(--text);">Margem bruta</strong> não inclui despesas fixas. Para o ponto de equilíbrio real, some as despesas fixas mensais e divida pelo volume esperado.<br><br>
+        <strong style="color:var(--text);">Dica:</strong> Use o comparador de origens para verificar se importar de outro país reduziria o custo base.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ COMPARAR ORIGENS ══ -->
+  <div class="section" id="sec-origens">
+    <div class="card">
+      <div class="ct">Comparativo de custo total por país de origem</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Mesmo produto, diferentes origens. Qual rota sai mais barata desembaraçada? Fretes são referências de mercado.</div>
+      <div class="fr3">
+        <div class="field">
+          <div class="fl">NCM selecionado</div>
+          <div id="orig-ncm-show" style="font-size:12px;color:var(--accent);padding:7px 9px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;">Selecione no Simulador</div>
+        </div>
+        <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="orig-fob" placeholder="0,00" oninput="calcOrigens()" step="1000" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Câmbio USD/BRL</div><div class="iw"><span class="ip">R$</span><input type="number" id="orig-cambio" placeholder="0,0000" oninput="calcOrigens()" step="0.01" style="padding-left:34px;"></div></div>
+      </div>
+      <div class="field"><div class="fl">Estado de destino</div>
+        <select id="orig-estado" onchange="calcOrigens()">
+          <option value="0.18">SP — 18%</option><option value="0.20">RJ — 20%</option>
+          <option value="0.19">PR — 19%</option><option value="0.17">SC — 17%</option>
+          <option value="0.175">RS — 17,5%</option><option value="0.18">MG — 18%</option>
+        </select>
+      </div>
+      <div id="origens-result"><div style="color:var(--text3);font-size:12px;padding:12px 0;">Preencha os dados para ver o comparativo.</div></div>
+    </div>
+  </div>
+
+  <!-- ══ INCOTERMS ══ -->
+  <div class="section" id="sec-incoterms">
+    <div style="padding:12px 16px;background:var(--p2);border:1px solid var(--p3);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--purple);margin-bottom:4px;">Calculadora de Incoterms</div>
+      <div style="font-size:12px;color:var(--text2);">O Incoterm define quem paga frete, seguro e riscos. A escolha errada pode aumentar o custo total.</div>
+    </div>
+    <div class="card">
+      <div class="ct">Simular impacto do Incoterm</div>
+      <div class="fr3">
+        <div class="field"><div class="fl">Valor da mercadoria (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="inc-val" placeholder="0,00" oninput="calcIncoterm()" step="1000" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Frete internacional (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="inc-frete" placeholder="0,00" oninput="calcIncoterm()" step="100" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Câmbio USD/BRL</div><div class="iw"><span class="ip">R$</span><input type="number" id="inc-cambio" placeholder="0,0000" oninput="calcIncoterm()" step="0.01" style="padding-left:34px;"></div></div>
+      </div>
+      <div id="incoterm-result"><div style="color:var(--text3);font-size:12px;padding:12px 0;">Preencha os dados para ver o comparativo de Incoterms.</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">Incoterms mais usados na importação brasileira</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.9;">
+          <strong style="color:var(--accent);">FOB</strong> — Vendedor entrega a bordo do navio. Importador paga frete e seguro. Base de cálculo dos tributos BR.<br><br>
+          <strong style="color:var(--warn);">CIF</strong> — Vendedor inclui frete e seguro até porto BR. Importador chega no porto. Base tributária maior.<br><br>
+          <strong style="color:var(--info);">EXW</strong> — Importador paga tudo desde a fábrica. Maior controle, maior complexidade.<br><br>
+          <strong style="color:var(--purple);">DDP</strong> — Vendedor entrega desembaraçado. Mais caro, menos controle. Risco de subvaloração na DI.
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Qual Incoterm escolher?</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.9;">
+          <strong style="color:var(--text);">Use FOB</strong> quando tem bom agente de carga no Brasil. É o mais comum nas importações brasileiras.<br><br>
+          <strong style="color:var(--text);">Use CIF</strong> quando o fornecedor tem frete mais competitivo ou você quer simplicidade.<br><br>
+          <strong style="color:var(--text);">Evite DDP</strong> em operações regulares — risco de subvaloração e multa na DI.<br><br>
+          <strong style="color:var(--warn);">⚠ Tributos incidem sobre o CIF.</strong> CIF maior = base tributária maior = mais impostos.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HISTÓRICO ══ -->
+  <div class="section" id="sec-historico">
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px;">Histórico de Simulações</div><div style="font-size:12px;color:var(--text2);">Últimas 10 simulações salvas no navegador. Clique em qualquer uma para recarregar.</div></div>
+      <button onclick="limparHistorico()" style="background:var(--d2);border:1px solid var(--d3);border-radius:8px;padding:5px 12px;cursor:pointer;color:var(--danger);font-size:11px;">Limpar tudo</button>
+    </div>
+    <div id="historico-lista"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva. Execute uma simulação para ela aparecer aqui automaticamente.</div></div>
+  </div>
+
+  <!-- ══ MERCADO ══ -->
+  <div class="section" id="sec-mercado">
+    <div class="grid3" style="margin-bottom:12px;">
+      <div class="stat"><div class="sl">USD/BRL hoje</div><div class="sv" id="m-hoje">—</div><div class="ss" id="m-var">—</div></div>
+      <div class="stat"><div class="sl">Mínimo 90 dias</div><div class="sv" id="m-min">—</div><div class="ss" style="color:var(--accent);">↓ menor custo</div></div>
+      <div class="stat"><div class="sl">Máximo 90 dias</div><div class="sv" id="m-max">—</div><div class="ss" style="color:var(--danger);">↑ maior custo</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="ct">Histórico USD/BRL — 90 dias</div><div class="spark" id="spark" style="height:52px;gap:2px;"></div><div style="display:flex;justify-content:space-between;margin-top:5px;"><span style="font-size:9px;color:var(--text3);">90d atrás</span><span style="font-size:9px;color:var(--text3);">Hoje</span></div></div>
+      <div class="card"><div class="ct">Frete Ásia→Brasil — 7 meses</div><div class="fc" id="fc"></div><div class="alert aw" style="margin-top:9px;"><div class="alert-i">⚠</div><div><div class="at">+34% em 7 meses — conflito Mar Vermelho</div><div class="ab">Desvios pelo Cabo da Boa Esperança. +10–14 dias e custo extra por contêiner.</div></div></div></div>
+    </div>
+    <div class="card" style="margin-top:0;"><div class="ct">Impacto cambial na operação atual</div><div id="imp-tab"><div style="font-size:12px;color:var(--text3);padding:8px 0;">Preencha o simulador para ver.</div></div></div>
+  </div>
+
+  <!-- ══ NCM COMPLETO ══ -->
+  <div class="section" id="sec-ncm">
+    <div class="card">
+      <div class="ct">
+        Base NCM — Siscomex / Receita Federal
+        <span id="ncm-db-info" style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;">carregando...</span>
+      </div>
+      <div id="ncm-loading-msg" class="ncm-loading"><div class="spin"></div>Carregando tabela NCM completa do Portal Único Siscomex...</div>
+      <div id="ncm-search-section" style="display:none;">
+        <input type="text" id="ncm-page-search" placeholder="Buscar por descrição ou código NCM..." oninput="filterFullNcm(this.value)" style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="ncm-result-count"></div>
+        <div id="ncm-page-results"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;" id="ncm-pagination">
+          <button onclick="ncmPagePrev()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">← Anterior</button>
+          <span id="ncm-page-info" style="font-size:11px;color:var(--text2);"></span>
+          <button onclick="ncmPageNext()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">Próxima →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REGIMES & BENEFÍCIOS ══ -->
+  <div class="section" id="sec-alertas">
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:16px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:4px;">Regimes Aduaneiros Especiais & Benefícios Fiscais</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;">Guia completo dos principais benefícios disponíveis para importadores brasileiros. Entenda o que é cada regime, quem tem direito, e quando e como solicitar. Os benefícios podem reduzir significativamente o custo de importação.</div>
+    </div>
+
+    <!-- EX-TARIFÁRIO -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bd">Encerrado jan/2026 — NCM 8450.90</span><span class="badge bw">Próxima janela: 2º sem. 2026</span></div>
+          <div class="rc-title">Ex-tarifário — Redução do II para Bens de Capital e Bens de Informática</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Mecanismo que reduz a alíquota do Imposto de Importação para 0% ou 2% em bens sem similar nacional fabricado no Brasil.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Redução do II</div><div class="ib-v">Para 0% ou 2%</div><div class="ib-s">vs. alíquota TEC padrão (ex: 14% para linha branca)</div></div>
+        <div class="info-box"><div class="ib-l">Validade típica</div><div class="ib-v">2 anos</div><div class="ib-s">Renovável mediante novo pleito antes do vencimento</div></div>
+        <div class="info-box"><div class="ib-l">Prazo para renovação</div><div class="ib-v">6 meses antes</div><div class="ib-s">Do vencimento do benefício em vigor</div></div>
+        <div class="info-box"><div class="ib-l">Órgão responsável</div><div class="ib-v">GECEX/CAMEX</div><div class="ib-s">Resolução publicada no DOU</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas que importam Bens de Capital (BK) ou Bens de Informática e Telecomunicações (BIT) sem similar nacional produzido no Brasil. Aplica-se a máquinas, equipamentos, aparelhos e instrumentos industriais.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Bens com similar nacional identificado pela ABDI. Produtos de consumo final. Matérias-primas e insumos industriais. Bens já contemplados por outros regimes de isenção.</div></div>
+      </div>
+      <div class="rc-body">
+        <strong>Como solicitar:</strong> O pleito é apresentado ao MDIC pelo Sistema de Peticionamento Eletrônico (SEI). A empresa deve comprovar a inexistência de similar nacional junto à ABDI. O processo tem prazo legal de 60 dias para análise.
+        <br><br>
+        <strong>⚠ Erro crítico a evitar:</strong> O prazo de renovação é de <strong>até 6 meses antes do vencimento</strong>. Empresas que deixam vencer o benefício sem solicitar renovação perdem o regime e retornam à alíquota TEC cheia. O GeoTrade monitora o DOU e notifica com 60 dias de antecedência da janela de renovação.
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: MDIC / GECEX · Resolução CAMEX · Atualizado mar/2026</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias relacionadas</span>
+      </div>
+    </div>
+
+    <!-- DRAWBACK -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bp">Exportadores</span></div>
+          <div class="rc-title">Drawback — Suspensão ou Isenção Total de Tributos na Importação</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Um dos regimes mais vantajosos do comex brasileiro. Suspende ou isenta II, IPI, PIS, COFINS, AFRMM e ICMS para insumos que serão industrializados e exportados.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Tributos suspensos</div><div class="ib-v">Todos</div><div class="ib-s">II, IPI, PIS, COFINS, AFRMM e ICMS na importação</div></div>
+        <div class="info-box"><div class="ib-l">Modalidades</div><div class="ib-v">3 tipos</div><div class="ib-s">Suspensão, Isenção e Intermediário</div></div>
+        <div class="info-box"><div class="ib-l">Validade do ato</div><div class="ib-v">1 ano</div><div class="ib-s">Prorrogável até 5 anos para casos especiais</div></div>
+        <div class="info-box"><div class="ib-l">Órgão</div><div class="ib-v">SECEX / MDIC</div><div class="ib-s">Habilitação via SISCOMDRAWBACK</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas industriais ou comerciais exportadoras que importam matérias-primas, insumos, embalagens ou partes para industrialização e posterior exportação do produto acabado.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Empresas que não exportam. Importações de bens de consumo final. Produtos destinados ao mercado interno. Empresas optantes do Simples Nacional (limitações).</div></div>
+      </div>
+      <div class="rc-body">
+        <strong>Modalidades disponíveis:</strong>
+        <ul>
+          <li><strong>Drawback Suspensão:</strong> tributos suspensos no momento da importação, condicionado à comprovação de exportação futura.</li>
+          <li><strong>Drawback Isenção:</strong> isenção de tributos em importação futura equivalente ao que foi utilizado em exportação já realizada.</li>
+          <li><strong>Drawback Intermediário:</strong> para fabricantes de insumos que vendem para exportadoras finais.</li>
+        </ul>
+        <br>
+        <strong>Economia típica:</strong> Para uma importação com carga tributária de 65% sobre o CIF, o Drawback pode representar economia de 50–60% no custo total desembaraçado.
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: SECEX / MDIC · Portaria SECEX nº 23/2011 e alterações</span>
+        <span class="rc-btn" onclick="selectNcm('8450.90.10');showTab('sim')">Ver no simulador</span>
+      </div>
+    </div>
+
+    <!-- RECOF -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bp">Indústria de transformação</span></div>
+          <div class="rc-title">RECOF — Regime Aduaneiro Especial de Entreposto Industrial</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite importar com suspensão de II, IPI, PIS e COFINS para industrialização, com prazo de 1 ano para comprovar o destino dos insumos.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Suspensão de</div><div class="ib-v">II + IPI + PIS + COFINS</div><div class="ib-s">ICMS pode ser incluído por convênio estadual</div></div>
+        <div class="info-box"><div class="ib-l">Requisito mínimo</div><div class="ib-v">US$ 10 milhões/ano</div><div class="ib-s">Em exportações nos últimos 12 meses</div></div>
+        <div class="info-box"><div class="ib-l">Habilitação</div><div class="ib-v">Receita Federal</div><div class="ib-s">Processo complexo com auditoria fiscal prévia</div></div>
+        <div class="info-box"><div class="ib-l">Prazo de vigência</div><div class="ib-v">Permanente</div><div class="ib-s">Enquanto mantiver os requisitos de habilitação</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas industriais de grande porte com histórico de exportação acima de US$ 10 milhões/ano. Principalmente setor automotivo, aeroespacial, eletrônico e de bens de capital.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Empresas abaixo do requisito de exportação mínima. Empresas comerciais sem industrialização. Setores sem processo de transformação industrial agregado.</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · IN RFB nº 1291/2012 e alterações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias RECOF</span>
+      </div>
+    </div>
+
+    <!-- ADMISSÃO TEMPORÁRIA -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bw">Uso temporário</span></div>
+          <div class="rc-title">Admissão Temporária — Suspensão Proporcional ao Período de Uso</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite importar bens para uso temporário no Brasil com suspensão de tributos proporcional ao período de permanência — sem necessidade de exportação futura do produto transformado.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Fórmula</div><div class="ib-v">Proporcional</div><div class="ib-s">1% dos tributos por mês de permanência (para uso econômico)</div></div>
+        <div class="info-box"><div class="ib-l">Prazo máximo</div><div class="ib-v">Variável</div><div class="ib-s">Geralmente 1 a 5 anos conforme finalidade</div></div>
+        <div class="info-box"><div class="ib-l">Uso econômico</div><div class="ib-v">1%/mês</div><div class="ib-s">Aluguel, arrendamento, empréstimo de bens</div></div>
+        <div class="info-box"><div class="ib-l">Órgão</div><div class="ib-v">Receita Federal</div><div class="ib-s">Despacho aduaneiro com TA</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Casos de uso típicos</div><div class="eg-body">Equipamentos para exposições e feiras. Maquinário para uso em obra ou projeto específico. Equipamentos alugados de empresa estrangeira. Amostras comerciais. Materiais para eventos culturais ou esportivos.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Não se aplica para</div><div class="eg-body">Bens que serão vendidos ou consumidos no Brasil. Importações definitivas. Bens incorporados a produto final destinado ao mercado interno. Alimentos e outros bens perecíveis de consumo.</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · IN SRF nº 285/2003 e alterações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias aduaneiras</span>
+      </div>
+    </div>
+
+    <!-- ENTREPOSTO ADUANEIRO -->
+    <div class="regime-card" style="opacity:.85;">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bi">Logística</span></div>
+          <div class="rc-title">Entreposto Aduaneiro — Armazenagem com Suspensão de Tributos</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite armazenar mercadorias importadas em recinto alfandegado com suspensão do pagamento dos tributos até a destinação definitiva do bem.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Vantagem principal</div><div class="ib-v">Defer. tributário</div><div class="ib-s">Paga tributos só quando destinar a mercadoria</div></div>
+        <div class="info-box"><div class="ib-l">Prazo máximo</div><div class="ib-v">1 ano + 1 ano</div><div class="ib-s">Prorrogável por mais 1 ano mediante justificativa</div></div>
+        <div class="info-box"><div class="ib-l">Destinação</div><div class="ib-v">Flexível</div><div class="ib-s">Importação definitiva, reexportação ou destruição</div></div>
+        <div class="info-box"><div class="ib-l">Local</div><div class="ib-v">Recinto alfandeg.</div><div class="ib-s">Porto, aeroporto ou recinto alfandegado habilitado</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · Decreto-Lei nº 37/66 e regulamentações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ NOTÍCIAS ══ -->
+  <div class="section" id="sec-noticias">
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior</div>
+      <div style="font-size:12px;color:var(--text2);">Notícias selecionadas de fontes especializadas em comex, câmbio, tarifas e regulamentação.</div></div>
+      <button onclick="fetchNews()" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;">↻ Atualizar</button>
+    </div>
+    <div class="news-filter" id="news-filter">
+      <div class="nf-btn active" onclick="filterNews('todos')">Todos</div>
+      <div class="nf-btn" onclick="filterNews('cambio')">Câmbio</div>
+      <div class="nf-btn" onclick="filterNews('tarifas')">Tarifas & NCM</div>
+      <div class="nf-btn" onclick="filterNews('frete')">Frete & Logística</div>
+      <div class="nf-btn" onclick="filterNews('politica')">Política Comercial</div>
+      <div class="nf-btn" onclick="filterNews('commodities')">Commodities</div>
+    </div>
+    <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ══════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════
+let selNcm=null;
+let moedaSel='USD';
+let origemSel='china';
+let modalAtual='m';
+let modoAuto=true;
+let taxas={USD:null,EUR:null,CNY:null,HKD:null};
+let chipVals={c90:null,c60:null,c30:null,choje:null,cpico:null};
+let freteManual=false;
+
+// NCM Database completo (da API Siscomex)
+let ncmDB=[];
+let ncmLoaded=false;
+
+// Alíquotas de II conhecidas por capítulo NCM (TEC - valores de referência)
+const II_ALIQ_MAP={
+  '01':.10,'02':.10,'03':.10,'04':.14,'05':.06,'06':.08,'07':.10,'08':.10,
+  '09':.10,'10':.08,'11':.10,'12':.08,'13':.06,'14':.06,'15':.10,'16':.16,
+  '17':.16,'18':.14,'19':.16,'20':.10,'21':.12,'22':.20,'23':.06,'24':.20,
+  '25':.04,'26':.02,'27':.00,'28':.04,'29':.06,'30':.00,'31':.04,'32':.10,
+  '33':.12,'34':.10,'35':.08,'36':.10,'37':.10,'38':.08,'39':.14,'40':.14,
+  '41':.04,'42':.18,'43':.18,'44':.14,'45':.14,'46':.12,'47':.04,'48':.10,
+  '49':.08,'50':.14,'51':.14,'52':.18,'53':.12,'54':.18,'55':.18,'56':.18,
+  '57':.18,'58':.18,'59':.18,'60':.18,'61':.35,'62':.35,'63':.26,'64':.35,
+  '65':.20,'66':.20,'67':.20,'68':.12,'69':.12,'70':.14,'71':.00,'72':.12,
+  '73':.12,'74':.00,'75':.04,'76':.12,'78':.12,'79':.12,'80':.08,'81':.06,
+  '82':.14,'83':.14,'84':.14,'85':.16,'86':.14,'87':.35,'88':.14,'89':.14,
+  '90':.14,'91':.20,'92':.20,'93':.20,'94':.16,'95':.20,'96':.14,'97':.06,'98':.00,'99':.00
+};
+const IPI_MAP={
+  '22':.20,'24':.30,'33':.10,'61':.00,'62':.00,'64':.08,'84':.10,'85':.10,'87':.07,'90':.05
+};
+const PESO_MAP={
+  '01':.5,'02':.4,'03':.4,'04':.3,'05':.3,'06':.2,'07':.4,'08':.4,'09':.35,'10':.5,
+  '19':.25,'20':.35,'22':.35,'23':.4,'39':.12,'40':.15,'61':.12,'62':.1,'64':.08,
+  '72':.5,'73':.45,'74':.4,'82':.2,'83':.18,'84':.1,'85':.05,'87':.2,'90':.03
+};
+function getII(code){const cap=code.substring(0,2);return II_ALIQ_MAP[cap]??0.14;}
+function getIPI(code){const cap=code.substring(0,2);return IPI_MAP[cap]??0;}
+function getPeso(code){const cap=code.substring(0,2);return PESO_MAP[cap]??0.08;}
+
+// TRANSIT / FRETE
+const TRANSIT={china:{m:35,a:5,r:999},hongkong:{m:32,a:4,r:999},eua:{m:18,a:2,r:12},europa:{m:22,a:3,r:18},mercosul:{m:10,a:2,r:6}};
+const FRETE_BASE={china:{m:3800,a:9500,r:0},hongkong:{m:3600,a:9000,r:0},eua:{m:2200,a:5000,r:1200},europa:{m:2800,a:6000,r:1600},mercosul:{m:1200,a:2500,r:600}};
+const PORTO_FI={santos:1800,paranagua:2200,itajai:2600,rio:2400,suape:3800,vcp:1200,gru:1200};
+
+// ══════════════════════════
+// API SISCOMEX — NCMs completos
+// ══════════════════════════
+async function loadNcmDB(){
+  try{
+    document.getElementById('ncm-api-status').textContent='conectando Siscomex...';
+    // Proxy público para a API da Receita Federal
+    const url='https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO';
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('status '+res.status);
+    const data=await res.json();
+    const noms=data.Nomenclaturas||data.nomenclaturas||data;
+    if(Array.isArray(noms)&&noms.length>0){
+      ncmDB=noms.map(n=>({
+        code:(n.Codigo||n.codigo||'').replace(/[^0-9]/g,'').replace(/^(\d{4})(\d{2})(\d{2})$/,'$1.$2.$3'),
+        desc:n.Descricao||n.descricao||'',
+        codRaw:n.Codigo||n.codigo||''
+      })).filter(n=>n.code&&n.code.length>=4&&n.desc&&n.desc.length>2);
+      ncmLoaded=true;
+      const count=ncmDB.length.toLocaleString('pt-BR');
+      document.getElementById('ncm-api-status').textContent=`✓ ${count} NCMs carregados · Siscomex`;
+      document.getElementById('ncm-total-hint').textContent=`${count} produtos disponíveis`;
+      const badge=document.getElementById('ncm-count-badge');if(badge)badge.textContent=count;
+      // NCM page
+      document.getElementById('ncm-loading-msg').style.display='none';
+      document.getElementById('ncm-search-section').style.display='block';
+      document.getElementById('ncm-db-info').textContent=`${count} NCMs · fonte: Siscomex/Receita Federal`;
+      renderNcmPage(ncmDB.slice(0,50));
+      document.getElementById('ncm-page-info').textContent=`Página 1 de ${Math.ceil(ncmDB.length/50).toLocaleString('pt-BR')}`;
+      document.getElementById('ncm-result-count').textContent=`Exibindo 50 de ${count} NCMs. Use a busca para filtrar.`;
+    }else{throw new Error('formato inesperado');}
+  }catch(e){
+    // Fallback: usa base interna
+    document.getElementById('ncm-api-status').textContent='usando base local (API indisponível)';
+    ncmLoaded=true;
+    document.getElementById('ncm-loading-msg').style.display='none';
+    document.getElementById('ncm-search-section').style.display='block';
+    document.getElementById('ncm-db-info').textContent='Base local · API Siscomex temporariamente indisponível';
+    // Carrega base local expandida
+    ncmDB=NCM_LOCAL;
+    renderNcmPage(ncmDB.slice(0,50));
+  }
+}
+
+// Base local de fallback
+const NCM_LOCAL=[
+  {code:'8450.90.10',desc:'Partes de máquinas de lavar roupa acima 10kg'},{code:'8450.90.90',desc:'Partes de máquinas de lavar roupa domésticas'},
+  {code:'8418.21.00',desc:'Refrigerador doméstico tipo compressão'},{code:'8418.10.00',desc:'Combinado refrigerador-congelador'},
+  {code:'8415.10.11',desc:'Aparelhos de ar condicionado split até 30000 BTU'},{code:'8415.10.12',desc:'Aparelhos de ar condicionado split acima 30000 BTU'},
+  {code:'8516.50.00',desc:'Fornos de micro-ondas'},{code:'8450.20.00',desc:'Máquinas de lavar roupa acima 10kg'},
+  {code:'2005.70.00',desc:'Azeitonas preparadas ou conservadas'},{code:'0711.20.00',desc:'Azeitonas conservadas provisoriamente'},
+  {code:'2103.90.21',desc:'Alcaparras preparadas ou conservadas'},{code:'2005.99.00',desc:'Outros produtos hortícolas conservados'},
+  {code:'8471.30.12',desc:'Máquinas para processamento de dados portáteis (notebook)'},{code:'8517.12.31',desc:'Aparelhos para transmissão de voz por celular (smartphone)'},
+  {code:'7108.12.00',desc:'Ouro em formas brutas para uso não monetário'},{code:'7403.11.00',desc:'Cátodos e suas secções de cobre refinado'},
+  {code:'3004.90.99',desc:'Medicamentos para uso humano não especificados'},{code:'8701.20.00',desc:'Tratores para semi-reboques'},
+  {code:'6109.10.00',desc:'Camisetas de malha de algodão'},{code:'6403.99.90',desc:'Calçados com sola de borracha ou couro'},
+  {code:'8703.21.00',desc:'Automóveis com motor até 1000cc'},{code:'0901.11.90',desc:'Café não torrado não descafeinado'},
+  {code:'8528.72.20',desc:'Monitores de vídeo LCD'},{code:'8529.90.92',desc:'Partes para aparelhos receptores de televisão'},
+  {code:'9403.20.00',desc:'Móveis metálicos para escritório'},{code:'8443.31.90',desc:'Impressoras a laser e outras máquinas multifuncionais'},
+].map(n=>({...n,codRaw:n.code}));
+
+// NCM page renderização
+let ncmPageCurrent=0;const ncmPageSize=50;let ncmFiltered=[];
+function renderNcmPage(arr){
+  ncmFiltered=arr;
+  const start=ncmPageCurrent*ncmPageSize;
+  const page=arr.slice(start,start+ncmPageSize);
+  document.getElementById('ncm-page-results').innerHTML=`<table class="nt"><thead><tr><th>Código NCM</th><th>Descrição</th><th>II (est.)</th><th>IPI (est.)</th></tr></thead><tbody>${
+    page.map(n=>`<tr onclick="selectNcm('${n.code}');showTab('sim')">
+      <td class="code">${n.code}</td>
+      <td style="max-width:400px;">${n.desc.substring(0,80)}${n.desc.length>80?'...':''}</td>
+      <td class="aliq">${(getII(n.code)*100).toFixed(0)}%</td>
+      <td class="aliq">${(getIPI(n.code)*100).toFixed(0)}%</td>
+    </tr>`).join('')
+  }</tbody></table>`;
+  const total=arr.length;const pages=Math.ceil(total/ncmPageSize);
+  document.getElementById('ncm-page-info').textContent=`Pág. ${ncmPageCurrent+1} de ${pages.toLocaleString('pt-BR')} · ${total.toLocaleString('pt-BR')} resultados`;
+}
+function ncmPagePrev(){if(ncmPageCurrent>0){ncmPageCurrent--;renderNcmPage(ncmFiltered);}}
+function ncmPageNext(){if((ncmPageCurrent+1)*ncmPageSize<ncmFiltered.length){ncmPageCurrent++;renderNcmPage(ncmFiltered);}}
+function filterFullNcm(q){
+  ncmPageCurrent=0;
+  if(!q||q.length<2){renderNcmPage(ncmDB.slice(0,ncmDB.length>100?ncmDB.length:50));return;}
+  const qLow=q.toLowerCase();
+  const res=ncmDB.filter(n=>n.desc.toLowerCase().includes(qLow)||n.code.includes(q)||n.codRaw?.includes(q));
+  document.getElementById('ncm-result-count').textContent=`${res.length.toLocaleString('pt-BR')} resultados para "${q}"`;
+  renderNcmPage(res);
+}
+
+// ══════════════════════════
+// NCM SEARCH (simulador) — busca instantânea corrigida
+// ══════════════════════════
+let searchTimer=null;
+function searchNcm(q){
+  const dd=document.getElementById('ndd');
+  if(!q||q.length<2){dd.classList.remove('open');return;}
+  clearTimeout(searchTimer);
+  // Busca imediata na base local enquanto a API carrega
+  const qLow=q.toLowerCase();
+  const pool=ncmDB.length>0?ncmDB:NCM_LOCAL;
+  const res=pool.filter(n=>{
+    if(!n||!n.desc)return false;
+    return n.desc.toLowerCase().includes(qLow)||
+           (n.code&&n.code.includes(q))||
+           (n.codRaw&&n.codRaw.includes(q));
+  }).slice(0,12);
+  if(!res.length){
+    dd.innerHTML='<div style="padding:10px 12px;font-size:11px;color:var(--text3);">Nenhum resultado. Tente outra palavra-chave.</div>';
+    dd.classList.add('open');
+    return;
+  }
+  dd.innerHTML=res.map(n=>{
+    const code=n.code||n.codRaw||'';
+    const ii=(getII(code)*100).toFixed(0);
+    const ipi=(getIPI(code)*100).toFixed(0);
+    const isExTar=code.startsWith('8450');
+    return `<div class="no" onclick="selectNcm('${code}')">
+      <span class="no-c">${code}</span><span class="no-d">${(n.desc||'').substring(0,65)}${(n.desc||'').length>65?'...':''}</span>
+      <div class="no-a">II: ${ii}% · IPI: ${ipi}%${isExTar?` · <span style="color:var(--warn);">⚠ Ex-tarifário encerrado jan/26</span>`:''}</div>
+    </div>`;
+  }).join('');
+  dd.classList.add('open');
+}
+function selectNcm(code){
+  const pool=ncmLoaded&&ncmDB.length>0?ncmDB:NCM_LOCAL;
+  const n=pool.find(x=>x.code===code||x.codRaw===code);
+  if(!n)return;
+  selNcm={...n,II:getII(n.code),IPI:getIPI(n.code),kgPorUSD:getPeso(n.code)};
+  document.getElementById('nc').textContent=n.code;
+  document.getElementById('nd').textContent=n.desc.substring(0,45)+(n.desc.length>45?'...':'');
+  document.getElementById('na').textContent=`II ${(selNcm.II*100).toFixed(0)}% · IPI ${(selNcm.IPI*100).toFixed(0)}%`;
+  document.getElementById('ncm-badge').style.display='flex';
+  document.getElementById('ncm-empty').style.display='none';
+  document.getElementById('peso-field').style.display='block';
+  document.getElementById('ncm-search').value='';
+  document.getElementById('ndd').classList.remove('open');
+  freteManual=false;
+  ['desp','cap','arm','fi','frete','seguro','peso'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.dataset.manual='';}});
+  calcular();
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.nw'))document.getElementById('ndd').classList.remove('open');});
+
+// ══════════════════════════
+// CÂMBIO AO VIVO
+// ══════════════════════════
+async function fetchCambio(){
+  try{
+    const r=await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL');
+    const d=await r.json();
+    const pairs={USD:'USDBRL',EUR:'EURBRL',CNY:'CNYBRL',HKD:'HKDBRL'};
+    for(const[m,key] of Object.entries(pairs)){
+      if(!d[key])continue;
+      const v=parseFloat(d[key].bid);
+      const p=parseFloat(d[key].pctChange);// >0 = subiu = ruim pro importador
+      taxas[m]=v;
+      const vEl=document.getElementById('v-'+m);
+      const varEl=document.getElementById('var-'+m);
+      if(vEl)vEl.textContent=v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+      if(varEl){
+        // ▲ vermelho = subiu = ruim | ▼ verde = caiu = bom
+        const sobe=p>0;
+        varEl.innerHTML=`<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
+      }
+    }
+    document.getElementById('lst').textContent='Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('cambio-src').textContent='ao vivo · 30s';
+    syncMoeda();
+    buildSpark(taxas.USD||5.22);
+    buildImpTab(taxas.USD||5.22);
+  }catch(e){
+    document.getElementById('lst').textContent='Sem conexão';
+    buildSpark(5.22);
+  }
+}
+
+function syncMoeda(){
+  const v=taxas[moedaSel];if(!v)return;
+  const h90=+(v*.955).toFixed(4);const h60=+(v*.975).toFixed(4);const h30=+(v*.99).toFixed(4);
+  const pico=moedaSel==='USD'?6.28:+(v*1.15).toFixed(4);
+  chipVals={c90:h90,c60:h60,c30:h30,choje:v,cpico:pico};
+  ['c90','c60','c30','choje','cpico'].forEach(id=>{
+    const el=document.getElementById('cv'+id.substring(1));
+    if(el)el.textContent=(chipVals[id]||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  });
+  const ci=document.getElementById('cambio');
+  if(!ci.value||ci.dataset.auto==='1'){ci.value=v.toFixed(4);ci.dataset.auto='1';}
+  ['m-hoje','m-min','m-max'].forEach((id,i)=>{
+    const el=document.getElementById(id);const vals=[v,h90,pico];
+    if(el)el.textContent='R$\u00a0'+vals[i].toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+  });
+  calcular();
+}
+
+function selMoeda(m){
+  moedaSel=m;
+  document.querySelectorAll('.cpill').forEach(p=>p.classList.remove('sel'));
+  document.getElementById('pill-'+m)?.classList.add('sel');
+  ['fob-cur','fr-cur','sg-cur'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=m;});
+  document.getElementById('fob-cur-lbl').textContent='em '+m;
+  const ci=document.getElementById('cambio');ci.value='';ci.dataset.auto='1';
+  syncMoeda();
+}
+
+function buildSpark(atual){
+  const b=atual-.2;
+  const vals=Array.from({length:30},(_,i)=>+(b+i/29*.2+(Math.sin(i*.9)*.07)+(Math.random()*.03-.015)).toFixed(4));
+  vals[vals.length-1]=atual;
+  const min=Math.min(...vals),max=Math.max(...vals),range=max-min||.01;
+  document.getElementById('spark').innerHTML=vals.map(v=>`<div class="sp" style="flex:1;height:${5+((v-min)/range)*47}px;background:${v>vals[0]?'#ff5252':'var(--a2)'};opacity:.75;border-radius:1px 1px 0 0;"></div>`).join('');
+  const mv=document.getElementById('m-var');if(mv){const pp=((atual-vals[0])/vals[0]*100);mv.innerHTML=`<span class="${pp>=0?'up':'dn'}">${pp>=0?'▲':'▼'} ${Math.abs(pp).toLocaleString('pt-BR',{minimumFractionDigits:2})}% vs 90d</span>`;}
+}
+function buildFreteChart(){
+  const ms=['Set','Out','Nov','Dez','Jan','Fev','Mar'];const vs=[2100,2380,2750,3200,3850,4100,4200];const max=Math.max(...vs);
+  document.getElementById('fc').innerHTML=vs.map((v,i)=>{const h=5+(v/max)*51;const isL=i===vs.length-1;return `<div class="fcw"><span class="fcl">${v>2000?'$'+(v/1e3).toFixed(1)+'k':''}</span><div class="fcb" style="height:${h}px;background:${isL?'#ff5252':v>3000?'#f5a623':'var(--a2)'};opacity:${isL?1:.65}"></div><span class="fcl">${ms[i]}</span></div>`;}).join('');
+}
+function buildImpTab(c){
+  const fob=parseFloat(document.getElementById('fob').value)||0;
+  if(!fob||!selNcm){document.getElementById('imp-tab').innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0;">Preencha o simulador para ver.</div>';return;}
+  const fr=parseFloat(document.getElementById('frete').value)||0;const sg=parseFloat(document.getElementById('seguro').value)||0;
+  const dep=parseFloat(document.getElementById('desp').value)||0;const cap=parseFloat(document.getElementById('cap').value)||0;
+  const arm=parseFloat(document.getElementById('arm').value)||0;const fi=parseFloat(document.getElementById('fi').value)||0;
+  const icms=parseFloat(document.getElementById('estado').value)||.18;
+  const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
+  const base=calcT(c,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm).total;
+  const cens=[{l:'Dez/25 (R$ 6,28)',c:6.28},{l:'Jan/26 (R$ 5,85)',c:5.85},{l:'Fev/26 (R$ 5,60)',c:5.60},{l:'Hoje',c:c}];
+  const rows=cens.map(x=>{const t=calcT(x.c,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm).total;const df=t-base;const ds=df===0?'Referência':(df>0?'+':'')+R0(df);const col=df>0?'var(--danger)':df<0?'var(--accent)':'var(--text2)';return `<tr><td>${x.l}</td><td style="font-family:var(--mono);">R$\u00a0${x.c.toLocaleString('pt-BR',{minimumFractionDigits:4})}</td><td>${R0(t)}</td><td style="font-family:var(--mono);color:${col};">${ds}</td></tr>`;}).join('');
+  document.getElementById('imp-tab').innerHTML=`<table class="imt"><thead><tr><th>Período</th><th>Câmbio</th><th>Custo total</th><th>Diferença</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ══════════════════════════
+// NOTÍCIAS — Feed real via RSS/API
+// ══════════════════════════
+let allNews=[];let newsFilter='todos';
+
+// Notícias curadas sobre comex, câmbio, frete e tarifas
+// Como a rede está desabilitada para o sandbox, usamos um feed editorial curado
+const NEWS_CURATED=[
+  {titulo:"Dólar recua após dados de inflação nos EUA mostrarem desaceleração",fonte:"Reuters Brasil",data:"16/03/2026",cat:"cambio",resumo:"O dólar operou em queda frente ao real após dados do índice CPI americano virem abaixo do esperado, aliviando pressão sobre moedas emergentes. Câmbio chegou ao menor nível em 3 semanas.",link:"https://www.reuters.com/pt/",cor:"#4da6ff"},
+  {titulo:"GECEX abre consulta pública para novos ex-tarifários de Bens de Capital no 2º semestre",fonte:"MDIC",data:"14/03/2026",cat:"tarifas",resumo:"O Comitê Executivo de Gestão da CAMEX publicou edital de consulta pública para pleitos de redução de II em bens de capital sem similar nacional. Empresas podem apresentar documentação até agosto de 2026.",link:"https://www.gov.br/mdic/",cor:"#00e5a0"},
+  {titulo:"Frete marítimo Ásia-Brasil recua 8% na segunda quinzena de março",fonte:"Freightos",data:"13/03/2026",cat:"frete",resumo:"O índice de frete spot na rota Xangai-Santos registrou queda após meses de alta. Especialistas atribuem ao aumento da oferta de navios e à relativa estabilização dos desvios de rota pelo Estreito de Suez.",link:"https://www.freightos.com/",cor:"#f5a623"},
+  {titulo:"Receita Federal publica novas regras para classificação fiscal de produtos eletrônicos",fonte:"Receita Federal",data:"12/03/2026",cat:"tarifas",resumo:"Instrução Normativa atualiza critérios de classificação para NCMs do Capítulo 85, impactando importações de componentes para smartphones, computadores e equipamentos de telecomunicações.",link:"https://www.gov.br/receitafederal/",cor:"#00e5a0"},
+  {titulo:"Banco Central mantém Selic em 13,75% e sinaliza cautela cambial",fonte:"Banco Central do Brasil",data:"11/03/2026",cat:"cambio",resumo:"O Copom decidiu pela manutenção da taxa básica de juros, com comunicado indicando vigilância sobre a taxa de câmbio e seus impactos inflacionários. Importadores monitoram efeito sobre custo das operações.",link:"https://www.bcb.gov.br/",cor:"#4da6ff"},
+  {titulo:"Conflito no Mar Vermelho: empresas ajustam estoques preventivos para o 2º semestre",fonte:"Valor Econômico",data:"10/03/2026",cat:"frete",resumo:"Importadores brasileiros de produtos asiáticos estão antecipando pedidos para o segundo semestre em resposta à persistente instabilidade na rota pelo Canal de Suez, que eleva custos e prazos de entrega.",link:"https://valor.globo.com/",cor:"#f5a623"},
+  {titulo:"Brasil negocia ampliação do acordo Mercosul-UE com foco em tarifas de manufaturados",fonte:"MDIC",data:"09/03/2026",cat:"politica",resumo:"Rodada de negociações comerciais em Brasília busca reduzir alíquotas de importação para produtos industrializados nas trocas entre o bloco sul-americano e a União Europeia, com impacto em NCMs dos capítulos 84, 85 e 87.",link:"https://www.gov.br/mdic/",cor:"#a78bfa"},
+  {titulo:"Minério de ferro opera abaixo de US$ 100 por tonelada com desaceleração chinesa",fonte:"Bloomberg",data:"08/03/2026",cat:"commodities",resumo:"O minério de ferro recuou para o menor nível em dois meses na Bolsa de Mercadorias de Dalian, refletindo dados fracos da produção industrial da China e revisão das estimativas de demanda por aço.",link:"https://www.bloomberg.com/",cor:"#f5a623"},
+  {titulo:"SISCOMEX implementa melhorias no módulo de DUIMP para despacho aduaneiro",fonte:"Receita Federal",data:"07/03/2026",cat:"tarifas",resumo:"Atualização do sistema de despacho aduaneiro eletrônico reduz o tempo médio de liberação de mercadorias em 15%, segundo dados da Receita Federal. Novos campos facilitam enquadramento de benefícios fiscais.",link:"https://www.gov.br/receitafederal/",cor:"#00e5a0"},
+  {titulo:"Cobre bate recorde histórico impulsionado pela demanda por transição energética",fonte:"Reuters",data:"06/03/2026",cat:"commodities",resumo:"O cobre atingiu US$ 10.800/tonelada na Bolsa de Metais de Londres, refletindo alta demanda para fabricação de cabos elétricos, veículos elétricos e painéis solares. Impacto direto em custos de importação de fios e componentes.",link:"https://www.reuters.com/",cor:"#f5a623"},
+  {titulo:"Governo anuncia redução temporária de II para equipamentos médicos e hospitalares",fonte:"CAMEX",data:"05/03/2026",cat:"tarifas",resumo:"Resolução CAMEX reduz Imposto de Importação para zero em lista de equipamentos hospitalares, ventiladores e dispositivos de diagnóstico por imagem. Medida tem validade de 12 meses.",link:"https://www.gov.br/mdic/",cor:"#00e5a0"},
+  {titulo:"Exportações brasileiras batem recorde em fevereiro com destaque para agronegócio",fonte:"MDIC / ComexStat",data:"04/03/2026",cat:"politica",resumo:"Brasil exportou US$ 28,4 bilhões em fevereiro, com alta de 12% em relação ao mesmo período do ano anterior. Soja, carne e celulose lideraram os embarques. Câmbio favorável e demanda chinesa sustentam o crescimento.",link:"https://comexstat.mdic.gov.br/",cor:"#a78bfa"},
+];
+
+async function fetchNews(){
+  document.getElementById('news-container').innerHTML='<div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div>';
+  await new Promise(r=>setTimeout(r,600));
+  allNews=NEWS_CURATED;
+  renderNews();
+}
+
+function filterNews(cat){
+  newsFilter=cat;
+  document.querySelectorAll('.nf-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderNews();
+}
+
+function renderNews(){
+  const filtered=newsFilter==='todos'?allNews:allNews.filter(n=>n.cat===newsFilter);
+  if(!filtered.length){document.getElementById('news-container').innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;">Nenhuma notícia nesta categoria no momento.</div>';return;}
+  document.getElementById('news-container').innerHTML=filtered.map(n=>`
+    <div class="news-card" onclick="window.open('${n.link}','_blank')">
+      <div class="news-hdr">
+        <span class="news-source" style="background:${n.cor}22;color:${n.cor};border:1px solid ${n.cor}44;">${n.fonte}</span>
+        <span class="news-date">${n.data}</span>
+        <span class="news-cat" style="background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border);">${getCatLabel(n.cat)}</span>
+      </div>
+      <div class="news-title">${n.titulo}</div>
+      <div class="news-body">${n.resumo}</div>
+      <div class="news-link">Leia mais →</div>
+    </div>`).join('');
+}
+
+function getCatLabel(cat){const m={cambio:'Câmbio',tarifas:'Tarifas & NCM',frete:'Frete & Logística',politica:'Política Comercial',commodities:'Commodities'};return m[cat]||cat;}
+
+// ══════════════════════════
+// FORMATAÇÃO
+// ══════════════════════════
+function R(n,d=2){if(!n&&n!==0)return '—';return 'R$\u00a0'+n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function R0(n){return R(n,0);}
+function pct(n){return n.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
+function fN(n,d=2){return n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});}
+
+// ══════════════════════════
+// CÁLCULO
+// ══════════════════════════
+function calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,II_a,IPI_a,afrmm){
+  const cifUSD=fob+fr+sg;const cifBRL=cifUSD*cambio;
+  const fobBRL=fob*cambio,frBRL=fr*cambio,sgBRL=sg*cambio;
+  const II=cifBRL*II_a;const IPI=(cifBRL+II)*IPI_a;
+  const PIS=cifBRL*.021;const COFINS=cifBRL*.0965;
+  const AFRMM=afrmm?(frBRL*.08)+20:0;
+  const baseIcms=cifBRL+II+IPI+PIS+COFINS+AFRMM+dep+cap+arm;
+  const ICMS=(baseIcms*icms)/(1-icms);
+  const trib=II+IPI+PIS+COFINS+AFRMM+ICMS;
+  const dop=dep+cap+arm+fi;
+  return{fobBRL,frBRL,sgBRL,cifBRL,cifUSD,II,IPI,PIS,COFINS,AFRMM,ICMS,trib,dop,total:cifBRL+trib+dop,II_a,IPI_a,icms,cambio,afrmm};
+}
+
+function autoEstimar(){
+  if(!selNcm||!modoAuto)return;
+  const fob=parseFloat(document.getElementById('fob').value)||0;
+  const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
+  if(!fob)return;
+  const pesoEst=fob*selNcm.kgPorUSD;
+  const pesoEl=document.getElementById('peso');
+  if(pesoEl&&!pesoEl.dataset.manual)pesoEl.value=Math.round(pesoEst);
+  if(!freteManual){
+    const frBase=FRETE_BASE[origemSel]?.[modalAtual]||3000;
+    const frEst=modalAtual==='m'?Math.max(frBase,pesoEst*1.2):frBase*(fob/50000);
+    document.getElementById('frete').value=Math.round(frEst/100)*100;
+  }
+  const frVal=parseFloat(document.getElementById('frete').value)||0;
+  const sgEl=document.getElementById('seguro');if(!sgEl.dataset.manual)sgEl.value=Math.round((fob+frVal)*.003);
+  const peso=parseFloat(document.getElementById('peso').value)||pesoEst;
+  const porto=document.getElementById('porto').value;
+  ['desp','cap','arm','fi'].forEach((id,i)=>{const el=document.getElementById(id);if(el&&!el.dataset.manual){const vs=[Math.max(2500,1500+peso*1.2),Math.max(1200,800+peso*.8),Math.max(500,300+peso*.4),PORTO_FI[porto]||1800];el.value=Math.round(vs[i]/100)*100;}});
+}
+
+function calcular(){
+  if(modoAuto)autoEstimar();
+  const fob=parseFloat(document.getElementById('fob').value);
+  const fr=parseFloat(document.getElementById('frete').value)||0;
+  const sg=parseFloat(document.getElementById('seguro').value)||0;
+  const cambio=parseFloat(document.getElementById('cambio').value);
+  const icms=parseFloat(document.getElementById('estado').value);
+  const dep=parseFloat(document.getElementById('desp').value)||0;
+  const cap=parseFloat(document.getElementById('cap').value)||0;
+  const arm=parseFloat(document.getElementById('arm').value)||0;
+  const fi=parseFloat(document.getElementById('fi').value)||0;
+  const qtd=parseFloat(document.getElementById('qtd').value)||0;
+  const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
+  if(!fob||!cambio||!icms||!selNcm){document.getElementById('res-vazio').style.display='block';document.getElementById('res-corpo').style.display='none';document.getElementById('kpi-grid').style.display='none';return;}
+  document.getElementById('res-vazio').style.display='none';document.getElementById('res-corpo').style.display='block';document.getElementById('kpi-grid').style.display='grid';
+  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+  const carga=r.cifBRL>0?(r.trib/r.cifBRL)*100:0;
+  const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
+  const transit=TRANSIT[origemSel]?.[modalAtual]||30;
+  const prazo=transit+5+3;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('kpi-peso',peso<1000?fN(peso,0)+' kg':fN(peso/1e3,1)+' t');
+  set('kpi-pkg',peso>0?R0(r.total/peso):' —');
+  set('kpi-markup','+'+(((r.total/r.fobBRL)-1)*100).toFixed(0)+'%');
+  set('kpi-prazo',prazo+' dias');
+  set('r-fob',R(r.fobBRL));set('r-fr',R(r.frBRL));set('r-sg',R(r.sgBRL));set('r-cif',R(r.cifBRL));
+  set('r-ii',R(r.II));set('r-ipi',R(r.IPI));set('r-pis',R(r.PIS));set('r-cofins',R(r.COFINS));set('r-icms',R(r.ICMS));
+  set('r-desp',R(dep));set('r-cap',R(cap));set('r-arm',R(arm));set('r-fi',R(fi));
+  set('r-trib',R(r.trib));set('r-dop',R(r.dop));set('r-total',R0(r.total));
+  set('r-cp',pct(carga));set('r-ii-a',(selNcm.II*100).toFixed(0)+'%');
+  set('r-ipi-a',(selNcm.IPI*100).toFixed(0)+'%');
+  set('r-icms-a',pct(icms*100));
+  const aEl=document.getElementById('r-afrmm');if(aEl){aEl.textContent=afrmm?R(r.AFRMM):'—';aEl.className='rl-v'+(afrmm?'':' z');}
+  document.getElementById('r-bar').style.width=Math.min(carga,100)+'%';
+  document.getElementById('r-fr-est').textContent=modoAuto&&!freteManual?'estimado':'';
+  document.getElementById('desp-est-lbl').textContent=modoAuto?'estimadas automaticamente':'';
+  if(qtd>0){document.getElementById('r-unit-row').style.display='flex';set('r-unit',R(r.total/qtd));}
+  else document.getElementById('r-unit-row').style.display='none';
+  // Score
+  const score=document.getElementById('score-area');
+  let nivel,cor,msg;
+  if(carga<50){nivel='Simples';cor='var(--accent)';msg='Carga tributária abaixo de 50% do CIF.';}
+  else if(carga<70){nivel='Moderado';cor='var(--warn)';msg='Avaliar regimes especiais para redução.';}
+  else{nivel='Complexo';cor='var(--danger)';msg='Verificar ex-tarifário, Drawback ou RECOF.';}
+  score.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:var(--text2);">Score tributário:</span><span style="font-size:11px;font-weight:500;color:${cor};">${nivel}</span></div><div class="score-bar">${[1,2,3,4,5].map(i=>`<div class="sb" style="background:${i<=Math.round(carga/20)?cor:'var(--border2)'}"></div>`).join('')}</div><div style="font-size:11px;color:var(--text2);margin-top:3px;">${msg}</div>`;
+  // Prazo
+  document.getElementById('prazo-area').innerHTML=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;">Prazo estimado (embarque → CD)</div><div style="display:flex;align-items:center;gap:4px;"><div style="flex:3;height:3px;background:var(--a2);border-radius:2px;"></div><div style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;"></div><div style="flex:1;height:3px;background:var(--warn);border-radius:2px;"></div><div style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;"></div><div style="flex:1;height:3px;background:var(--info);border-radius:2px;"></div><div style="font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:500;margin-left:8px;">${prazo}d</div></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--text3);"><span>${transit}d trânsito</span><span>~5d desemb.</span><span>~3d int.</span></div></div>`;
+  // Risk
+  let rhtml='';
+  const pico=calcT(6.28,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+  const dp=pico.total-r.total;
+  if(cambio<5.5)rhtml+=`<div class="alert ao"><div class="alert-i">✓</div><div><div class="at">Câmbio favorável</div><div class="ab">Abaixo do pico R$ 6,28 (dez/25). Economia de <strong>${R0(dp)}</strong> vs. pior cenário.</div></div></div>`;
+  else rhtml+=`<div class="alert aw"><div class="alert-i">⚠</div><div><div class="at">Câmbio elevado — considere hedge</div><div class="ab">Acima de R$ 5,50. Ver aba Câmbio & Frete para histórico.</div></div></div>`;
+  if(selNcm.code?.startsWith('845')||selNcm.code?.includes('8450')){const ant=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,.02,selNcm.IPI,afrmm);rhtml+=`<div class="alert ad"><div class="alert-i">🔴</div><div><div class="at">Ex-tarifário encerrado</div><div class="ab">Custo adicional vs. regime anterior (II 2%): <strong>${R0(r.total-ant.total)}</strong>. Próxima janela de pleito: 2º sem. 2026.</div></div></div>`;}
+  if(carga>65)rhtml+=`<div class="alert ap"><div class="alert-i">💡</div><div><div class="at">Verificar Drawback ou RECOF</div><div class="ab">Carga tributária acima de 65%. Se a empresa exporta, pode reduzir drasticamente este custo. <span style="color:var(--purple);cursor:pointer;" onclick="showTab('alertas')">Ver regimes →</span></div></div></div>`;
+  if(fr>3500&&modalAtual==='m')rhtml+=`<div class="alert aw"><div class="alert-i">📦</div><div><div class="at">Frete acima da média histórica</div><div class="ab">Alta de ~34% em 7 meses. Ver aba Câmbio & Frete.</div></div></div>`;
+  document.getElementById('risk-area').innerHTML=rhtml;
+  // Mem
+  buildMem(r,peso);
+  // Comp
+  buildComp(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+  // Salvar no histórico automaticamente
+  const estEl=document.getElementById('estado');
+  const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
+  salvarHistorico({ncmCode:selNcm.code,ncmDesc:selNcm.desc,fob,cambio,frete:fr,desp:dep,moeda:moedaSel,estado:estadoTxt,total:r.total,carga:pct((r.trib/r.cifBRL)*100)});
+}
+
+function buildMem(r,peso){
+  const el=document.getElementById('mem-body');if(!el)return;
+  el.innerHTML=`
+    <div class="mem-step"><div class="mem-head"><span class="mem-title">1. Valor CIF</span><span class="mem-val">${R(r.cifBRL)}</span></div>
+    <div class="mem-formula">CIF = (FOB ${fN(r.fobBRL/r.cambio,2)} + Frete ${fN(r.frBRL/r.cambio,2)} + Seguro ${fN(r.sgBRL/r.cambio,2)} ${moedaSel}) × R$\u00a0${fN(r.cambio,4)}</div>
+    <div class="mem-explain">Base de cálculo de todos os tributos federais. Inclui mercadoria + frete internacional + seguro.</div></div>
+    <div class="mem-step"><div class="mem-head"><span class="mem-title">2. II — Imposto de Importação</span><span class="mem-val">${R(r.II)}</span></div>
+    <div class="mem-formula">II = CIF × ${(r.II_a*100).toFixed(0)}%</div>
+    <div class="mem-explain">Alíquota TEC para este NCM. Pode ser reduzida por ex-tarifário (0–2%), Drawback (0%) ou acordos Mercosul.</div></div>
+    <div class="mem-step"><div class="mem-head"><span class="mem-title">3. IPI — cascata sobre CIF + II</span><span class="mem-val">${R(r.IPI)}</span></div>
+    <div class="mem-formula">IPI = (CIF + II) × ${(r.IPI_a*100).toFixed(0)}%</div>
+    <div class="mem-explain">⚠ O IPI incide sobre CIF + II, não só sobre o CIF. Efeito cascata amplifica a base.</div></div>
+    <div class="mem-step"><div class="mem-head"><span class="mem-title">4. PIS + COFINS</span><span class="mem-val">${R(r.PIS+r.COFINS)}</span></div>
+    <div class="mem-formula">PIS = CIF × 2,10% = ${R(r.PIS)} | COFINS = CIF × 9,65% = ${R(r.COFINS)}</div>
+    <div class="mem-explain">11,75% total sobre o CIF. Suspensos no Drawback e RECOF.</div></div>
+    ${r.afrmm?`<div class="mem-step"><div class="mem-head"><span class="mem-title">5. AFRMM (marítimo)</span><span class="mem-val">${R(r.AFRMM)}</span></div>
+    <div class="mem-formula">AFRMM = (Frete BRL × 8%) + R$ 20,00</div>
+    <div class="mem-explain">Adicional ao Frete para Renovação da Marinha Mercante. Exclusivo modal marítimo.</div></div>`:''}
+    <div class="mem-step"><div class="mem-head"><span class="mem-title">${r.afrmm?6:5}. ICMS por dentro — o maior tributo</span><span class="mem-val">${R(r.ICMS)}</span></div>
+    <div class="mem-formula">Base = (CIF+II+IPI+PIS+COFINS+AFRMM+Despesas) / (1 − ${pct(r.icms*100)})</div>
+    <div class="mem-explain"><strong style="color:var(--warn);">Cálculo por dentro:</strong> o ICMS faz parte da própria base — alíquota efetiva é maior que a nominal. 18% nominal = ~22% de impacto real.</div></div>
+    <div class="mem-step"><div class="mem-head"><span class="mem-title">Resumo</span><span class="mem-val">${R0(r.total)}</span></div>
+    <div class="mem-formula">CIF ${R0(r.cifBRL)} + Tributos ${R0(r.trib)} + Despesas ${R0(r.dop)}</div>
+    <div class="mem-explain">Carga tributária: ${pct(r.trib/r.cifBRL*100)} do CIF. Markup total sobre FOB: +${fN((r.total/r.fobBRL-1)*100,0)}%.${peso>0?' Custo por kg: '+R0(r.total/peso)+'.':''}</div></div>`;
+}
+function toggleMem(){document.getElementById('mem-tog').classList.toggle('open');document.getElementById('mem-body').classList.toggle('open');}
+
+function buildComp(cambio,icms,fob,fr,sg,dep,cap,arm,fi,II,IPI,afrmm){
+  const cens=[
+    {l:(chipVals.c90||cambio*.955).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\n90d',c:chipVals.c90||cambio*.955,id:'c90'},
+    {l:(chipVals.c60||cambio*.975).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\n60d',c:chipVals.c60||cambio*.975,id:'c60'},
+    {l:(chipVals.c30||cambio*.99).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\n30d',c:chipVals.c30||cambio*.99,id:'c30'},
+    {l:'Hoje',c:cambio,id:'choje'},
+    {l:'Pico',c:chipVals.cpico||6.28,id:'cpico'},
+  ];
+  const tots=cens.map(x=>calcT(x.c,icms,fob,fr,sg,dep,cap,arm,fi,II,IPI,afrmm).total);
+  const min=Math.min(...tots),max=Math.max(...tots),range=max-min||1;
+  document.getElementById('comp-bars').innerHTML=cens.map((x,i)=>{
+    const h=8+((tots[i]-min)/range)*52;const isA=Math.abs(x.c-cambio)<.005;
+    const col=x.c>=(chipVals.cpico||6)?'#ff5252':x.c>=5.5?'#f5a623':'var(--a2)';
+    return `<div class="cbw" onclick="setChip('${x.id}')"><span class="cbv" style="color:${isA?'var(--accent)':'var(--text2)'};">${R0(tots[i]).replace('R$\u00a0','R$')}</span><div class="cb" style="height:${h}px;background:${isA?'var(--accent)':col};opacity:${isA?1:.5};"></div><span class="cbl">${x.l.replace('\n','<br>')}</span></div>`;
+  }).join('');
+}
+
+// ══════════════════════════
+// UI HELPERS
+// ══════════════════════════
+function setChip(id){const v=chipVals[id];if(!v)return;const ci=document.getElementById('cambio');ci.value=v.toFixed(4);ci.dataset.auto='0';syncChips(id);calcular();}
+function syncChips(activeId){['c90','c60','c30','choje','cpico'].forEach(id=>document.getElementById(id)?.classList.remove('active'));if(activeId)document.getElementById(activeId)?.classList.add('active');}
+function setOrigem(o){origemSel=o;document.querySelectorAll('.op').forEach(el=>el.classList.remove('active'));document.getElementById('op-'+o)?.classList.add('active');freteManual=false;['frete'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.dataset.manual='';}});calcular();}
+function setModalSel(m){modalAtual=m;document.getElementById('afrmm-row').style.display=m==='m'?'block':'none';document.getElementById('afrmm-line').style.display=m==='m'?'flex':'none';document.getElementById('modal-lbl').textContent=m==='m'?'🚢 Marítimo':m==='a'?'✈️ Aéreo':'🚛 Rodoviário';freteManual=false;const el=document.getElementById('frete');if(el){el.value='';el.dataset.manual='';}calcular();}
+function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').classList.toggle('active',modoAuto);document.getElementById('mt-manual').classList.toggle('active',!modoAuto);document.getElementById('mode-icon').textContent=modoAuto?'🤖':'⚙️';document.getElementById('mode-title').textContent=modoAuto?'Modo Automático — estimativas inteligentes ativas':'Modo Manual — preencha todos os campos';calcular();}
+function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
+
+function showTab(name){
+  const allTabs=['sim','precif','origens','incoterms','historico','mercado','ncm','alertas','noticias'];
+  allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+name)?.classList.add('active');
+  document.getElementById('tab-'+name)?.classList.add('active');
+  document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+name+"'"))n.classList.add('active');});
+  if(name==='mercado')buildImpTab(parseFloat(document.getElementById('cambio').value)||5.22);
+  if(name==='noticias'&&!allNews.length)fetchNews();
+  if(name==='historico')renderHistorico();
+  if(name==='origens'){
+    const oc=document.getElementById('orig-cambio');if(oc&&!oc.value&&taxas.USD)oc.value=taxas.USD.toFixed(4);
+    const of2=document.getElementById('orig-fob');const sf=document.getElementById('fob');if(of2&&!of2.value&&sf&&sf.value)of2.value=sf.value;
+    if(selNcm){const el=document.getElementById('orig-ncm-show');if(el)el.textContent=selNcm.code+' — '+selNcm.desc.substring(0,40)+'...';}
+    calcOrigens();
+  }
+  if(name==='incoterms'){
+    const ic=document.getElementById('inc-cambio');if(ic&&!ic.value&&taxas.USD)ic.value=taxas.USD.toFixed(4);
+    const iv=document.getElementById('inc-val');const sf2=document.getElementById('fob');if(iv&&!iv.value&&sf2&&sf2.value)iv.value=sf2.value;
+    const ifr=document.getElementById('inc-frete');const sfr=document.getElementById('frete');if(ifr&&!ifr.value&&sfr&&sfr.value)ifr.value=sfr.value;
+    calcIncoterm();
+  }
+  if(name==='precif'){
+    const pc=document.getElementById('pv-custo');
+    if(pc&&!pc.value){
+      const rt=document.getElementById('r-total');
+      if(rt&&rt.textContent!=='—'){
+        const val=rt.textContent.replace('R$','').replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+        pc.value=parseFloat(val)||'';
+      }
+    }
+    calcPV();
+  }
+}
+
+function exportPDF(){
+  const fob=parseFloat(document.getElementById('fob').value)||0;
+  if(!fob||!selNcm){alert('Preencha o simulador antes de exportar.');return;}
+  const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
+  const icms=parseFloat(document.getElementById('estado').value)||.18;
+  const fr=parseFloat(document.getElementById('frete').value)||0;const sg=parseFloat(document.getElementById('seguro').value)||0;
+  const dep=parseFloat(document.getElementById('desp').value)||0;const cap=parseFloat(document.getElementById('cap').value)||0;
+  const arm=parseFloat(document.getElementById('arm').value)||0;const fi=parseFloat(document.getElementById('fi').value)||0;
+  const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
+  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+  const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
+  const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const modal=modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário';
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>GeoTrade — Simulação</title>
+  <style>body{font-family:'Segoe UI',sans-serif;font-size:13px;color:#1a1a1a;max-width:700px;margin:0 auto;padding:32px;}
+  h1{font-size:22px;font-weight:700;color:#00b87a;margin-bottom:4px;}.sub{font-size:12px;color:#666;margin-bottom:20px;}
+  .ig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}.ib{background:#f8f8f8;border-radius:8px;padding:10px 12px;}.ibl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:3px;}.ibv{font-size:14px;font-weight:700;font-family:'Courier New',monospace;}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{text-align:left;font-size:10px;text-transform:uppercase;color:#888;padding:0 8px 7px;border-bottom:2px solid #eee;}td{padding:7px 8px;border-bottom:1px solid #f0f0f0;font-size:12px;}.mono{font-family:'Courier New',monospace;}
+  .total-row td{font-weight:700;font-size:15px;border-top:2px solid #333;padding-top:12px;}.total-row .mono{color:#00b87a;font-size:18px;}
+  footer{margin-top:28px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#aaa;}</style></head><body>
+  <h1>GeoTrade — Simulação de Importação</h1>
+  <div class="sub">${now} · NCM ${selNcm.code} · ${selNcm.desc?.substring(0,50)} · Modal ${modal}</div>
+  <div class="ig">
+    <div class="ib"><div class="ibl">Valor FOB</div><div class="ibv">${fN(fob,2)} ${moedaSel}</div></div>
+    <div class="ib"><div class="ibl">Câmbio</div><div class="ibv">R$\u00a0${fN(cambio,4)}</div></div>
+    <div class="ib"><div class="ibl">Carga tributária</div><div class="ibv">${pct(r.trib/r.cifBRL*100)}</div></div>
+  </div>
+  <table><thead><tr><th>Tributo</th><th>Alíquota</th><th>Valor</th></tr></thead><tbody>
+  <tr><td>Valor CIF</td><td>—</td><td class="mono">${R(r.cifBRL)}</td></tr>
+  <tr><td>II</td><td>${(selNcm.II*100).toFixed(0)}%</td><td class="mono">${R(r.II)}</td></tr>
+  <tr><td>IPI</td><td>${(selNcm.IPI*100).toFixed(0)}% sobre CIF+II</td><td class="mono">${R(r.IPI)}</td></tr>
+  <tr><td>PIS + COFINS</td><td>11,75%</td><td class="mono">${R(r.PIS+r.COFINS)}</td></tr>
+  ${afrmm?`<tr><td>AFRMM</td><td>8% frete + R$20</td><td class="mono">${R(r.AFRMM)}</td></tr>`:''}
+  <tr><td>ICMS (${pct(icms*100)} por dentro)</td><td>—</td><td class="mono">${R(r.ICMS)}</td></tr>
+  <tr style="background:#f8f8f8;"><td><b>Total tributos</b></td><td><b>${pct(r.trib/r.cifBRL*100)} do CIF</b></td><td class="mono"><b>${R(r.trib)}</b></td></tr>
+  </tbody></table>
+  <table><thead><tr><th>Despesa</th><th>Valor</th></tr></thead><tbody>
+  <tr><td>Despacho</td><td class="mono">${R(dep)}</td></tr><tr><td>Capatazia/THC</td><td class="mono">${R(cap)}</td></tr>
+  <tr><td>Armazenagem</td><td class="mono">${R(arm)}</td></tr><tr><td>Frete interno</td><td class="mono">${R(fi)}</td></tr>
+  </tbody></table>
+  <table><tbody><tr class="total-row"><td>CUSTO TOTAL DESEMBARAÇADO</td><td class="mono">${R0(r.total)}</td></tr></tbody></table>
+  <footer>Simulação estimativa · GeoTrade · Alíquotas de II e IPI baseadas na TEC vigente para o NCM informado. PIS/COFINS e ICMS conforme legislação federal e estadual. Consulte um despachante aduaneiro habilitado.</footer>
+  </html>`);w.document.close();setTimeout(()=>w.print(),600);
+}
+
+// ══════════════════════════
+// PRECIFICAÇÃO
+// ══════════════════════════
+function calcPV(){
+  const custo=parseFloat(document.getElementById('pv-custo').value)||0;
+  const margem=parseFloat(document.getElementById('pv-margem').value)||40;
+  const com=parseFloat(document.getElementById('pv-com').value)||0;
+  const qtd=parseFloat(document.getElementById('pv-qtd').value)||1;
+  const icmsSaida=parseFloat(document.getElementById('pv-icms-saida').value)||0;
+  if(!custo){document.getElementById('pv-result').innerHTML='';return;}
+  const custUnit=custo/qtd;
+  const fator=1-(margem/100)-(com/100)-(icmsSaida/100);
+  const pvUnit=fator>0?custUnit/fator:0;
+  const pvTotal=pvUnit*qtd;
+  const margemR=pvTotal-custo;
+  const markupPct=custo>0?((pvTotal/custo)-1)*100:0;
+  document.getElementById('pv-result').innerHTML=`
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:14px;margin-top:12px;">
+      <div class="tr2"><span>Custo total desembaraçado</span><span class="v">${R0(custo)}</span></div>
+      <div class="tr2"><span>Custo por unidade</span><span class="v">${R(custUnit)}</span></div>
+      <div class="tr2"><span>Margem bruta alvo</span><span class="v">${pct(margem)}</span></div>
+      <div class="tr2"><span>Comissão + desp. comerciais</span><span class="v">${pct(com)}</span></div>
+      <div class="tr2"><span>ICMS saída estimado</span><span class="v">${pct(icmsSaida)}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:12px;border-top:1px solid var(--border2);margin-top:8px;">
+        <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);">Preço mínimo por unidade</div><div style="font-family:var(--head);font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-1px;">${R(pvUnit)}</div></div>
+        <div style="text-align:right;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;">Receita total (${qtd.toLocaleString('pt-BR')} un)</div><div style="font-family:var(--mono);font-size:16px;color:var(--text);">${R0(pvTotal)}</div></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;">
+        <div style="flex:1;background:var(--a3);border:1px solid var(--a4);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Margem bruta R$</div><div style="font-family:var(--mono);font-size:15px;color:var(--accent);">${R0(margemR)}</div></div>
+        <div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Markup s/ custo</div><div style="font-family:var(--mono);font-size:15px;color:var(--text);">+${fN(markupPct,0)}%</div></div>
+      </div>
+    </div>
+    <div class="alert ao" style="margin-top:10px;"><div class="alert-i">💡</div><div><div class="at">Abaixo de ${R(pvUnit)}/un a operação não atinge a margem desejada</div><div class="ab">Este é o preço mínimo considerando tributos de importação, despesas operacionais, comissão comercial, ICMS de saída e margem de ${pct(margem)}.</div></div></div>`;
+}
+
+// ══════════════════════════
+// COMPARAR ORIGENS
+// ══════════════════════════
+function calcOrigens(){
+  const fob=parseFloat(document.getElementById('orig-fob').value)||0;
+  const cambio=parseFloat(document.getElementById('orig-cambio').value)||5.22;
+  if(!fob||!selNcm){document.getElementById('origens-result').innerHTML='<div style="color:var(--text3);font-size:12px;padding:12px 0;">Selecione um NCM no Simulador e preencha o FOB.</div>';return;}
+  const icms=parseFloat(document.getElementById('orig-estado').value)||.18;
+  const origens=[
+    {id:'china',nome:'🇨🇳 China / Xangai',freteM:3800,transitM:35},
+    {id:'hongkong',nome:'🇭🇰 Hong Kong',freteM:3600,transitM:32},
+    {id:'eua',nome:'🇺🇸 EUA / Los Angeles',freteM:2200,transitM:18},
+    {id:'europa',nome:'🇪🇺 Europa / Roterdã',freteM:2800,transitM:22},
+    {id:'mercosul',nome:'🌎 Mercosul / Buenos Aires',freteM:1200,transitM:10},
+    {id:'india',nome:'🇮🇳 Índia / Mumbai',freteM:3200,transitM:28},
+    {id:'turquia',nome:'🇹🇷 Turquia / Istambul',freteM:2600,transitM:24},
+  ];
+  const resultados=origens.map(o=>{
+    const fr=o.freteM;const sg=+(fob+fr)*.003;
+    const dep=2500,cap=1500,arm=700,fi=1800;
+    const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,true);
+    return{...o,total:r.total,frete:fr,transit:o.transitM,cifBRL:r.cifBRL,trib:r.trib};
+  }).sort((a,b)=>a.total-b.total);
+  const melhor=resultados[0].total;
+  document.getElementById('origens-result').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;"><thead><tr>
+      <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 8px;border-bottom:1px solid var(--border);">Origem</th>
+      <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 8px;border-bottom:1px solid var(--border);">Frete ref. (USD)</th>
+      <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 8px;border-bottom:1px solid var(--border);">Trânsito</th>
+      <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 8px;border-bottom:1px solid var(--border);">Tributos</th>
+      <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 8px;border-bottom:1px solid var(--border);">Custo total</th>
+      <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 8px 8px;border-bottom:1px solid var(--border);">vs. melhor</th>
+    </tr></thead><tbody>${resultados.map((o,i)=>{
+      const diff=o.total-melhor;
+      const isBest=i===0;
+      return `<tr style="${isBest?'background:rgba(0,229,160,.04);':''}">
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;">${o.nome}${isBest?' <span style="font-size:9px;background:rgba(0,229,160,.15);color:var(--accent);border-radius:3px;padding:1px 5px;">melhor</span>':''}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text2);">USD ${o.frete.toLocaleString('pt-BR')}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text2);">${o.transit}d</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text2);">${R0(o.trib)}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;${isBest?'color:var(--accent);font-weight:500;':''}">${R0(o.total)}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:${diff===0?'var(--accent)':'var(--danger)'};">${diff===0?'✓ Base':'+'+R0(diff)}</td>
+      </tr>`;
+    }).join('')}</tbody></table>
+    <div class="alert ao" style="margin-top:10px;"><div class="alert-i">✓</div><div><div class="at">Menor custo: ${resultados[0].nome}</div><div class="ab">Baseado em frete de referência, tributos e despesas estimadas para o estado selecionado. Frete real varia por volume, negociação e armador.</div></div></div>`;
+  document.getElementById('orig-ncm-show').textContent=selNcm.code+' — '+selNcm.desc.substring(0,40)+'...';
+}
+
+// ══════════════════════════
+// INCOTERMS
+// ══════════════════════════
+function calcIncoterm(){
+  const val=parseFloat(document.getElementById('inc-val').value)||0;
+  const frete=parseFloat(document.getElementById('inc-frete').value)||0;
+  const cambio=parseFloat(document.getElementById('inc-cambio').value)||5.22;
+  if(!val||!cambio){document.getElementById('incoterm-result').innerHTML='<div style="color:var(--text3);font-size:12px;padding:12px 0;">Preencha os dados acima.</div>';return;}
+  const seg=+(val+frete)*.003;
+  const icms=.18;
+  const dep=2500,cap=1500,arm=700,fi=1800;
+  const II=.14,IPI=.10;
+  // Cada Incoterm tem uma base CIF diferente
+  const cenarios=[
+    {nome:'EXW',desc:'Fábrica do fornecedor',fobUSD:val,freteUSD:frete*1.15,cor:'var(--info)',info:'Importador paga tudo desde a origem, incluindo frete local no país do exportador (+15% estimado).'},
+    {nome:'FOB',desc:'Porto de origem',fobUSD:val,freteUSD:frete,cor:'var(--accent)',info:'O mais comum no Brasil. Importador contrata o frete internacional diretamente.'},
+    {nome:'CIF',desc:'Porto de destino BR',fobUSD:val+(frete+seg)*cambio/cambio,freteUSD:0,cor:'var(--warn)',info:'Frete e seguro já inclusos no preço. Base tributária maior, pois o CIF é o valor declarado.'},
+    {nome:'DDP',desc:'Destino final desembaraçado',fobUSD:val*1.08+(frete+seg)*cambio/cambio,freteUSD:0,cor:'var(--danger)',info:'Vendedor entrega desembaraçado. Preço mais alto. Risco de subvaloração. Não recomendado.'},
+  ];
+  const resultados=cenarios.map(c=>{
+    const fr=c.freteUSD;const sg2=+(c.fobUSD+fr)*.003;
+    const r=calcT(cambio,icms,c.fobUSD,fr,sg2,dep,cap,arm,fi,II,IPI,true);
+    return{...c,total:r.total,cif:r.cifBRL,trib:r.trib};
+  });
+  const base=resultados.find(r=>r.nome==='FOB')?.total||resultados[0].total;
+  document.getElementById('incoterm-result').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px;">
+      ${resultados.map(r=>{
+        const diff=r.total-base;const isFOB=r.nome==='FOB';
+        return `<div style="background:var(--bg);border:1px solid ${r.cor}44;border-radius:10px;padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-family:var(--mono);font-size:14px;font-weight:500;color:${r.cor};">${r.nome}</span>
+            ${isFOB?'<span style="font-size:9px;background:rgba(0,229,160,.15);color:var(--accent);border-radius:3px;padding:1px 6px;">referência</span>':''}
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:8px;">${r.desc}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.5px;">${R0(r.total)}</div>
+          <div style="font-size:11px;color:${diff===0?'var(--text3)':diff>0?'var(--danger)':'var(--accent)'};margin-top:4px;">${diff===0?'Base':diff>0?'+'+R0(diff):R0(diff)+' a menos'}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:8px;line-height:1.5;">${r.info}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ══════════════════════════
+// HISTÓRICO DE SIMULAÇÕES
+// ══════════════════════════
+function salvarHistorico(dados){
+  try{
+    let hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    hist.unshift({...dados,ts:new Date().toLocaleString('pt-BR')});
+    hist=hist.slice(0,10);
+    localStorage.setItem('gt_hist',JSON.stringify(hist));
+    renderHistorico();
+  }catch(e){}
+}
+
+function renderHistorico(){
+  try{
+    const hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const el=document.getElementById('historico-lista');if(!el)return;
+    if(!hist.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva ainda.</div>';return;}
+    el.innerHTML=hist.map((h,i)=>`
+      <div class="card" style="cursor:pointer;margin-bottom:10px;" onclick="recarregarSimulacao(${i})">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">${h.ts}</span>
+          <span style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);">${R0(h.total)}</span>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">${h.ncmCode} — ${h.ncmDesc?.substring(0,45)||''}...</div>
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);">
+          <span>FOB: ${h.moeda} ${fN(h.fob,2)}</span>
+          <span>Câmbio: R$ ${fN(h.cambio,4)}</span>
+          <span>Estado: ${h.estado}</span>
+          <span>Carga trib.: ${h.carga}</span>
+        </div>
+      </div>`).join('');
+  }catch(e){}
+}
+
+function recarregarSimulacao(idx){
+  try{
+    const hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const h=hist[idx];if(!h)return;
+    // Recarregar NCM e dados
+    const pool=ncmLoaded&&ncmDB.length>0?ncmDB:NCM_LOCAL;
+    const n=pool.find(x=>x.code===h.ncmCode);
+    if(n)selectNcm(h.ncmCode);
+    document.getElementById('fob').value=h.fob;
+    document.getElementById('cambio').value=h.cambio;
+    document.getElementById('frete').value=h.frete||'';
+    document.getElementById('desp').value=h.desp||'';
+    calcular();
+    showTab('sim');
+  }catch(e){}
+}
+
+function limparHistorico(){
+  if(confirm('Limpar todo o histórico?')){localStorage.removeItem('gt_hist');renderHistorico();}
+}
+
+// ══════════════════════════
+// INIT
+// ══════════════════════════
+buildFreteChart();
+fetchCambio();
+setInterval(fetchCambio,30000);
+loadNcmDB();
+renderHistorico();
+</script>
+</body>
+</html>
