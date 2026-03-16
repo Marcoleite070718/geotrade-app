@@ -198,6 +198,194 @@ window.closePlanModal = () => {
   if (modal) modal.style.display = 'none';
 };
 
+// ── ADMIN UID — substitua pelo seu UID do Firebase ──
+const ADMIN_UIDS = ['COLOQUE_SEU_UID_AQUI'];
+// Para saber seu UID: após fazer login, abra o console do navegador e digite: firebase.auth().currentUser.uid
+// Ou veja em Firebase Console > Authentication > Users
+
+// ── TELA DE LOGIN ──
+function showLoginScreen() {
+  const ls = document.getElementById('login-screen');
+  if (ls) ls.classList.add('visible');
+}
+function hideLoginScreen() {
+  const ls = document.getElementById('login-screen');
+  if (ls) ls.classList.remove('visible');
+}
+window.skipLogin = function() {
+  hideLoginScreen();
+  localStorage.setItem('gt_skipped_login', '1');
+};
+
+// Mostrar tela de login na inicialização (aguarda Firebase verificar sessão)
+document.addEventListener('DOMContentLoaded', () => {
+  const skipped = localStorage.getItem('gt_skipped_login');
+  // Mostrar tela de login enquanto verifica auth
+  if (!skipped) showLoginScreen();
+});
+
+// ── AUTH STATE atualizado ──
+onAuthStateChanged(auth, async (user) => {
+  window.gtUser = user;
+  const loginLoading = document.getElementById('ls-loading');
+  const loginArea = document.getElementById('ls-login-area');
+  if (loginLoading) loginLoading.style.display = 'none';
+  if (loginArea) loginArea.style.display = 'block';
+
+  if (user) {
+    hideLoginScreen();
+    localStorage.removeItem('gt_skipped_login');
+    // Verificar/criar usuário no Firestore
+    try {
+      const snap = await getDocs(query(collection(db,'users'), where('uid','==',user.uid)));
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        window.gtPlan = data.plan || 'free';
+        window.gtUserDocId = snap.docs[0].id;
+      } else {
+        const docRef = await addDoc(collection(db,'users'), {
+          uid: user.uid, email: user.email, name: user.displayName,
+          photo: user.photoURL, plan: 'free', createdAt: serverTimestamp(), simCount: 0
+        });
+        window.gtPlan = 'free';
+        window.gtUserDocId = docRef.id;
+      }
+    } catch(e) { window.gtPlan = 'free'; }
+
+    // Verificar admin
+    const isAdmin = ADMIN_UIDS.includes(user.uid) || user.email?.endsWith('@geotrade.com.br');
+    window.gtIsAdmin = isAdmin;
+    const adminNav = document.getElementById('nav-admin');
+    if (adminNav) adminNav.style.display = isAdmin ? 'flex' : 'none';
+
+    renderAuthBar(user);
+    renderHistoricoCloud();
+  } else {
+    window.gtPlan = 'free';
+    window.gtIsAdmin = false;
+    renderAuthBar(null);
+    const skipped = localStorage.getItem('gt_skipped_login');
+    if (!skipped) showLoginScreen();
+  }
+});
+
+// ── LOGIN com feedback visual ──
+window.gtLogin = async () => {
+  const loginArea = document.getElementById('ls-login-area');
+  const loginLoading = document.getElementById('ls-loading');
+  if (loginArea) loginArea.style.display = 'none';
+  if (loginLoading) loginLoading.style.display = 'flex';
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    if (loginArea) loginArea.style.display = 'block';
+    if (loginLoading) loginLoading.style.display = 'none';
+    if (e.code !== 'auth/popup-closed-by-user') alert('Erro ao fazer login: ' + e.message);
+  }
+};
+
+window.gtLogout = async () => {
+  await signOut(auth);
+  localStorage.removeItem('gt_skipped_login');
+  renderHistoricoLocal();
+  showLoginScreen();
+};
+
+// ── PAINEL ADMIN ──
+window.loadAdminData = async function() {
+  if (!window.gtIsAdmin) return;
+  const icon = document.getElementById('admin-refresh-icon');
+  if (icon) icon.textContent = '⟳';
+
+  try {
+    // Buscar todos os usuários
+    const usersSnap = await getDocs(collection(db,'users'));
+    const users = usersSnap.docs.map(d => ({id:d.id,...d.data()}));
+
+    // KPIs
+    const paid = users.filter(u => ['starter','pro','enterprise'].includes(u.plan)).length;
+    const mrrMap = {starter:197, pro:497, enterprise:1497};
+    const mrr = users.reduce((s,u) => s + (mrrMap[u.plan]||0), 0);
+    document.getElementById('adm-total-users').textContent = users.length;
+    document.getElementById('adm-paid-users').textContent = paid;
+    document.getElementById('adm-mrr').textContent = 'R$ '+mrr.toLocaleString('pt-BR');
+    document.getElementById('adm-user-count').textContent = `· ${users.length} usuários`;
+
+    // Simulações de hoje
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const simsSnap = await getDocs(query(collection(db,'simulacoes'), orderBy('ts','desc'), limit(100)));
+    const allSims = simsSnap.docs.map(d => ({id:d.id,...d.data()}));
+    const simsHoje = allSims.filter(s => {
+      const t = s.ts?.toDate?.();
+      return t && t >= hoje;
+    });
+    document.getElementById('adm-sims-today').textContent = simsHoje.length;
+
+    // Lista de usuários
+    const planOrder = {enterprise:0, pro:1, starter:2, free:3};
+    users.sort((a,b) => (planOrder[a.plan]??4) - (planOrder[b.plan]??4));
+    document.getElementById('adm-users-list').innerHTML = users.map(u => {
+      const initials = (u.name||u.email||'?').split(' ').map(x=>x[0]).join('').toUpperCase().substring(0,2);
+      const planClass = `adm-plan-${u.plan||'free'}`;
+      const planLabel = {free:'Free',starter:'Starter',pro:'Pro',enterprise:'Enterprise'}[u.plan||'free'] || u.plan;
+      const simCount = allSims.filter(s => s.uid === u.uid).length;
+      return `<div class="adm-user-row">
+        <div class="adm-avatar">${u.photo?`<img src="${u.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`:initials}</div>
+        <div class="adm-user-info">
+          <div class="adm-user-name">${u.name||'—'}</div>
+          <div class="adm-user-email">${u.email||'—'}</div>
+        </div>
+        <span class="adm-plan-tag ${planClass}">${planLabel}</span>
+        <select class="adm-plan-select" onchange="updateUserPlan('${u.id}','${u.uid}',this.value)">
+          <option value="free" ${u.plan==='free'?'selected':''}>Free</option>
+          <option value="starter" ${u.plan==='starter'?'selected':''}>Starter</option>
+          <option value="pro" ${u.plan==='pro'?'selected':''}>Pro</option>
+          <option value="enterprise" ${u.plan==='enterprise'?'selected':''}>Enterprise</option>
+        </select>
+        <div class="adm-sim-count">${simCount} sims</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--text3);font-size:12px;padding:12px;">Nenhum usuário encontrado.</div>';
+
+    // Simulações recentes
+    const recent = allSims.slice(0,20);
+    const userMap = {};
+    users.forEach(u => userMap[u.uid] = u);
+    document.getElementById('adm-sims-list').innerHTML = recent.map(s => {
+      const u = userMap[s.uid] || {};
+      const ts = s.ts?.toDate?.()?.toLocaleString('pt-BR') || '—';
+      return `<div class="adm-user-row">
+        <div class="adm-user-info">
+          <div class="adm-user-name" style="font-family:var(--mono);font-size:11px;color:var(--accent);">${s.ncmCode||'—'} · ${(s.ncmDesc||'').substring(0,40)}</div>
+          <div class="adm-user-email">${u.email||s.uid?.substring(0,12)||'—'} · ${ts}</div>
+        </div>
+        <span style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;">${s.total?'R$ '+Math.round(s.total).toLocaleString('pt-BR'):'—'}</span>
+      </div>`;
+    }).join('') || '<div style="color:var(--text3);font-size:12px;padding:12px;">Nenhuma simulação.</div>';
+
+  } catch(e) {
+    console.error('Admin error:', e);
+    document.getElementById('adm-users-list').innerHTML = `<div style="color:var(--danger);font-size:12px;padding:12px;">Erro ao carregar: ${e.message}</div>`;
+  }
+  if (icon) icon.textContent = '↻';
+};
+
+window.updateUserPlan = async function(docId, uid, newPlan) {
+  if (!window.gtIsAdmin) return;
+  try {
+    const {updateDoc, doc: firestoreDoc} = await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js');
+    await updateDoc(firestoreDoc(db,'users',docId), {plan: newPlan});
+    // Feedback visual
+    const row = event.target.closest('.adm-user-row');
+    if (row) {
+      const badge = row.querySelector('.adm-plan-tag');
+      if (badge) {
+        badge.className = `adm-plan-tag adm-plan-${newPlan}`;
+        badge.textContent = {free:'Free',starter:'Starter',pro:'Pro',enterprise:'Enterprise'}[newPlan]||newPlan;
+      }
+    }
+  } catch(e) { alert('Erro ao atualizar plano: '+e.message); }
+};
+
 // Expor funções locais de fallback quando não logado
 window.salvarHistoricoLocal = window.salvarHistoricoLocal || function(dados) {
   try {
@@ -613,9 +801,103 @@ iframe{border-radius:var(--r);}
 .leaflet-control-zoom a:hover{background:var(--bg3) !important;}
 .leaflet-control-attribution{background:rgba(13,25,41,.8) !important;color:var(--text3) !important;font-size:9px !important;}
 .leaflet-control-attribution a{color:var(--accent-bright) !important;}
+/* ── TELA DE LOGIN ── */
+#login-screen{display:none;position:fixed;inset:0;z-index:10000;background:var(--bg);overflow-y:auto;align-items:center;justify-content:center;}
+#login-screen.visible{display:flex;}
+.ls-wrap{width:100%;max-width:420px;margin:auto;padding:40px 24px;}
+.ls-logo{display:flex;align-items:center;gap:12px;margin-bottom:36px;justify-content:center;}
+.ls-logo-icon{width:48px;height:48px;flex-shrink:0;}
+.ls-logo-text{font-family:var(--head);font-size:28px;font-weight:800;letter-spacing:-1px;}
+.ls-logo-text span{background:linear-gradient(135deg,var(--accent-bright),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ls-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px;}
+.ls-title{font-family:var(--head);font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
+.ls-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
+.ls-btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:13px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text);transition:all .15s;margin-bottom:12px;}
+.ls-btn-google:hover{border-color:var(--accent);background:var(--a3);}
+.ls-divider{display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--text3);font-size:11px;}
+.ls-divider::before,.ls-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.ls-features{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:24px;}
+.ls-feat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.ls-feat-icon{font-size:16px;margin-bottom:4px;}
+.ls-feat-title{font-size:11px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.ls-feat-sub{font-size:10px;color:var(--text3);line-height:1.4;}
+.ls-footer{text-align:center;margin-top:20px;font-size:11px;color:var(--text3);}
+.ls-skip{font-size:11px;color:var(--text3);text-align:center;margin-top:14px;cursor:pointer;}
+.ls-skip:hover{color:var(--text2);}
+.ls-loading{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text2);padding:16px 0;}
+
+/* ── PAINEL ADMIN ── */
+.admin-badge{background:linear-gradient(135deg,var(--warn),#f97316);color:#090d12;font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-left:6px;}
+.admin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:768px){.admin-grid{grid-template-columns:1fr 1fr;}}
+.adm-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.adm-kpi-l{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:5px;}
+.adm-kpi-v{font-family:var(--head);font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--accent);}
+.adm-kpi-s{font-size:10px;color:var(--text3);margin-top:2px;}
+.adm-user-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.adm-user-row:last-child{border-bottom:none;}
+.adm-avatar{width:32px;height:32px;border-radius:50%;background:var(--a3);border:1px solid var(--a4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--accent);flex-shrink:0;}
+.adm-user-info{flex:1;min-width:0;}
+.adm-user-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-user-email{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-plan-tag{font-size:9px;font-family:var(--mono);font-weight:500;border-radius:4px;padding:2px 7px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.adm-plan-free{background:var(--bg4);color:var(--text3);border:1px solid var(--border2);}
+.adm-plan-starter{background:var(--a3);color:var(--accent);border:1px solid var(--a4);}
+.adm-plan-pro{background:var(--w2);color:var(--warn);border:1px solid var(--w3);}
+.adm-plan-enterprise{background:var(--p2);color:var(--purple);border:1px solid var(--p3);}
+.adm-sim-count{font-family:var(--mono);font-size:11px;color:var(--text2);flex-shrink:0;min-width:40px;text-align:right;}
+.adm-plan-select{background:var(--bg);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:10px;padding:3px 6px;cursor:pointer;flex-shrink:0;}
 </style>
 </head>
 <body>
+<!-- TELA DE LOGIN -->
+<div id="login-screen">
+  <div class="ls-wrap">
+    <div class="ls-logo">
+      <svg class="ls-logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+        </defs>
+        <polygon points="24,4 44,24 24,44 4,24" fill="url(#lg1)" opacity="0.15" stroke="url(#lg1)" stroke-width="1.5"/>
+        <line x1="24" y1="4" x2="24" y2="44" stroke="url(#lg1)" stroke-width="1" opacity="0.5"/>
+        <line x1="4" y1="24" x2="44" y2="24" stroke="url(#lg1)" stroke-width="1" opacity="0.5"/>
+        <circle cx="24" cy="24" r="5" fill="url(#lg1)"/>
+        <circle cx="24" cy="24" r="2.5" fill="#fff" opacity="0.9"/>
+        <circle cx="24" cy="4" r="2" fill="#06b6d4" opacity="0.8"/>
+        <circle cx="44" cy="24" r="2" fill="#3b82f6" opacity="0.8"/>
+        <circle cx="24" cy="44" r="2" fill="#3b82f6" opacity="0.6"/>
+        <circle cx="4" cy="24" r="2" fill="#06b6d4" opacity="0.6"/>
+      </svg>
+      <span class="ls-logo-text">Geo<span>Trade</span></span>
+    </div>
+    <div class="ls-card">
+      <div class="ls-title">Bem-vindo ao GeoTrade</div>
+      <div class="ls-sub">Plataforma de inteligência para importadores brasileiros. Simule custos reais, monitore câmbio e acesse benefícios fiscais.</div>
+      <div id="ls-login-area">
+        <button class="ls-btn-google" onclick="gtLogin()">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H9v3h4.26C12.54 13.07 11 14 9 14a5 5 0 110-10c1.28 0 2.43.49 3.31 1.28L14.9 2.72A8.5 8.5 0 009 .5 8.5 8.5 0 10.5 9H16.51z"/><path fill="#34A853" d="M2.13 5.45L5.05 7.6A4.99 4.99 0 019 4a4.99 4.99 0 013.31 1.28L14.9 2.72A8.5 8.5 0 009 .5a8.5 8.5 0 00-6.87 4.95z"/><path fill="#FBBC05" d="M9 17.5a8.48 8.48 0 005.89-2.37l-2.72-2.23A5 5 0 019 14a5 5 0 01-4.74-3.4L1.31 12.7A8.5 8.5 0 009 17.5z"/><path fill="#EA4335" d="M16.51 8H9v3h4.26c-.37 1.02-1.04 1.88-1.93 2.47l2.72 2.23A8.5 8.5 0 0017.5 9c0-.51-.05-1.01-.13-1.5z"/></svg>
+          Entrar com Google
+        </button>
+        <div class="ls-divider">ou continue sem conta</div>
+        <button class="ls-btn-google" onclick="skipLogin()" style="background:transparent;border-color:var(--border);color:var(--text2);font-weight:400;">
+          Acessar como visitante <span style="font-size:10px;color:var(--text3);margin-left:4px;">(5 simulações/mês)</span>
+        </button>
+      </div>
+      <div id="ls-loading" class="ls-loading" style="display:none;">
+        <div class="spin" style="width:16px;height:16px;border-width:2px;"></div>
+        <span>Autenticando...</span>
+      </div>
+      <div class="ls-features">
+        <div class="ls-feat"><div class="ls-feat-icon">🧮</div><div class="ls-feat-title">Simulador completo</div><div class="ls-feat-sub">II, IPI, PIS, COFINS, ICMS todos os 27 estados</div></div>
+        <div class="ls-feat"><div class="ls-feat-icon">💱</div><div class="ls-feat-title">Câmbio ao vivo</div><div class="ls-feat-sub">USD, EUR, CNY, HKD atualizando a cada 30s</div></div>
+        <div class="ls-feat"><div class="ls-feat-icon">📦</div><div class="ls-feat-title">13.000+ NCMs</div><div class="ls-feat-sub">Base completa da Receita Federal</div></div>
+        <div class="ls-feat"><div class="ls-feat-icon">⚖️</div><div class="ls-feat-title">Regimes especiais</div><div class="ls-feat-sub">Drawback, Ex-tarifário, RECOF</div></div>
+      </div>
+    </div>
+    <div class="ls-footer">GeoTrade v11 · Inteligência de Importação · Dados via Siscomex & Banco Central</div>
+  </div>
+</div>
+
 <!-- MODAL PLANOS -->
 <div id="plan-modal">
   <div class="pm-box">
@@ -695,6 +977,10 @@ iframe{border-radius:var(--r);}
     Rastreamento
   </div>
   <div class="ns">Inteligência</div>
+  <div class="ni" id="nav-admin" onclick="showTab('admin')" style="display:none;">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="11" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Admin<span class="admin-badge">ADM</span>
+  </div>
   <div class="ni" onclick="showTab('alertas')">
     <svg viewBox="0 0 14 14" fill="none"><path d="M7 1a3.5 3.5 0 013.5 3.5c0 2.5 1 3.5 1 3.5H2.5s1-1 1-3.5A3.5 3.5 0 017 1z" stroke="currentColor" stroke-width="1.2"/><path d="M6 12h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
     Regimes & Benefícios
@@ -2075,6 +2361,33 @@ iframe{border-radius:var(--r);}
       </div>
     </div>
   </div>
+  <!-- ══ ADMIN ══ -->
+  <div class="section" id="sec-admin">
+    <div style="padding:12px 16px;background:var(--w2);border:1px solid var(--w3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--warn);margin-bottom:3px;">Painel Administrativo <span class="admin-badge">ADM</span></div>
+        <div style="font-size:12px;color:var(--text2);">Visão completa de usuários, planos e simulações. Visível apenas para administradores.</div>
+      </div>
+      <button onclick="loadAdminData()" style="background:var(--w2);border:1px solid var(--w3);border-radius:8px;padding:6px 14px;cursor:pointer;color:var(--warn);font-size:11px;display:flex;align-items:center;gap:6px;"><span id="admin-refresh-icon">↻</span> Atualizar</button>
+    </div>
+    <!-- KPIs -->
+    <div class="admin-grid" id="admin-kpis">
+      <div class="adm-kpi"><div class="adm-kpi-l">Total usuários</div><div class="adm-kpi-v" id="adm-total-users">—</div><div class="adm-kpi-s">cadastrados</div></div>
+      <div class="adm-kpi"><div class="adm-kpi-l">Planos pagos</div><div class="adm-kpi-v" id="adm-paid-users" style="color:var(--success);">—</div><div class="adm-kpi-s">Starter + Pro + Enterprise</div></div>
+      <div class="adm-kpi"><div class="adm-kpi-l">Simulações hoje</div><div class="adm-kpi-v" id="adm-sims-today" style="color:var(--teal);">—</div><div class="adm-kpi-s">nas últimas 24h</div></div>
+      <div class="adm-kpi"><div class="adm-kpi-l">MRR estimado</div><div class="adm-kpi-v" id="adm-mrr" style="color:var(--warn);">—</div><div class="adm-kpi-s">receita recorrente</div></div>
+    </div>
+    <!-- Lista de usuários -->
+    <div class="card">
+      <div class="ct">Usuários <span id="adm-user-count" style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;"></span></div>
+      <div id="adm-users-list"><div style="color:var(--text3);font-size:12px;padding:16px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"><div class="spin"></div> Carregando usuários...</div></div>
+    </div>
+    <!-- Simulações recentes -->
+    <div class="card" style="margin-top:12px;">
+      <div class="ct">Simulações recentes <span style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;">(últimas 20)</span></div>
+      <div id="adm-sims-list"><div style="color:var(--text3);font-size:12px;padding:16px;text-align:center;">Carregando...</div></div>
+    </div>
+  </div>
 
 </main>
 </div>
@@ -2298,27 +2611,30 @@ async function loadNcmDB(){
       })).filter(n=>n.code&&n.code.length>=4&&n.desc&&n.desc.length>2);
       ncmLoaded=true;
       const count=ncmDB.length.toLocaleString('pt-BR');
-      document.getElementById('ncm-api-status').textContent=`✓ ${count} NCMs carregados · Siscomex`;
+      document.getElementById('ncm-api-status').textContent=`✓ ${count} NCMs · Siscomex`;
       document.getElementById('ncm-total-hint').textContent=`${count} produtos disponíveis`;
       const badge=document.getElementById('ncm-count-badge');if(badge)badge.textContent=count;
-      // NCM page
       document.getElementById('ncm-loading-msg').style.display='none';
       document.getElementById('ncm-search-section').style.display='block';
       document.getElementById('ncm-db-info').textContent=`${count} NCMs · fonte: Siscomex/Receita Federal`;
-      renderNcmPage(ncmDB.slice(0,50));
-      document.getElementById('ncm-page-info').textContent=`Página 1 de ${Math.ceil(ncmDB.length/50).toLocaleString('pt-BR')}`;
-      document.getElementById('ncm-result-count').textContent=`Exibindo 50 de ${count} NCMs. Use a busca para filtrar.`;
+      renderNcmPage(ncmDB);
+      document.getElementById('ncm-result-count').textContent=`${count} NCMs disponíveis. Use a busca para filtrar.`;
+      document.getElementById('ncm-page-info').textContent=`Pág. 1 de ${Math.ceil(ncmDB.length/50).toLocaleString('pt-BR')} · ${count} resultados`;
     }else{throw new Error('formato inesperado');}
   }catch(e){
     // Fallback: usa base interna
-    document.getElementById('ncm-api-status').textContent='usando base local (API indisponível)';
     ncmLoaded=true;
+    ncmDB=NCM_LOCAL;
+    const count=NCM_LOCAL.length.toLocaleString('pt-BR');
+    document.getElementById('ncm-api-status').textContent=`base local · ${count} NCMs`;
     document.getElementById('ncm-loading-msg').style.display='none';
     document.getElementById('ncm-search-section').style.display='block';
-    document.getElementById('ncm-db-info').textContent='Base local · API Siscomex temporariamente indisponível';
-    // Carrega base local expandida
-    ncmDB=NCM_LOCAL;
-    renderNcmPage(ncmDB.slice(0,50));
+    document.getElementById('ncm-db-info').textContent=`${count} NCMs · base local TEC (API Siscomex indisponível localmente)`;
+    const badge=document.getElementById('ncm-count-badge');if(badge)badge.textContent=count;
+    document.getElementById('ncm-total-hint').textContent=`${count} NCMs disponíveis`;
+    renderNcmPage(ncmDB);
+    document.getElementById('ncm-result-count').textContent=`${count} NCMs disponíveis. Use a busca para filtrar.`;
+    document.getElementById('ncm-page-info').textContent=`Pág. 1 de ${Math.ceil(NCM_LOCAL.length/50)} · ${count} resultados`;
   }
 }
 
@@ -2944,7 +3260,7 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
@@ -2958,6 +3274,7 @@ function showTab(name){
   if(name==='noticias'&&!allNews.length)fetchNews();
   if(name==='historico')renderHistorico();
   if(name==='rastreio'){setTimeout(()=>initLeafletMap(),100);}
+  if(name==='admin'&&window.gtIsAdmin){loadAdminData();}
   if(name==='origens'){
     const oc=document.getElementById('orig-cambio');if(oc&&!oc.value&&taxas.USD)oc.value=taxas.USD.toFixed(4);
     const of2=document.getElementById('orig-fob');const sf=document.getElementById('fob');if(of2&&!of2.value&&sf&&sf.value)of2.value=sf.value;
