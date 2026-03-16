@@ -3,18 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoTrade — Inteligência de Comércio Exterior</title>
+<title>GeoTrade — Simulador de Importação e Inteligência Comex</title>
+<meta name="description" content="Plataforma de inteligência para comércio exterior. Simule custos de importação, calcule impostos, compare origens e rastreie cargas em tempo real.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="https://marcoleite070718.github.io/geotrade-app/icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#090d12;--bg2:#111820;--bg3:#161e28;--bg4:#1c2530;
-  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.11);
-  --accent:#00e5a0;--a2:#00b87a;--a3:rgba(0,229,160,.08);--a4:rgba(0,229,160,.18);
-  --warn:#f5a623;--w2:rgba(245,166,35,.09);--w3:rgba(245,166,35,.22);
-  --danger:#ff5252;--d2:rgba(255,82,82,.09);--d3:rgba(255,82,82,.22);
-  --info:#4da6ff;--i2:rgba(77,166,255,.09);--i3:rgba(77,166,255,.22);
-  --purple:#a78bfa;--p2:rgba(167,139,250,.09);--p3:rgba(167,139,250,.22);
-  --text:#dde3ec;--text2:#7a8799;--text3:#3d4d5e;
+  --bg:#060d1a;--bg2:#0d1929;--bg3:#112035;--bg4:#162840;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);
+  --accent:#3b82f6;--a2:#2563eb;--a3:rgba(59,130,246,.10);--a4:rgba(59,130,246,.22);
+  --accent-bright:#60a5fa;--accent-glow:rgba(59,130,246,.15);
+  --teal:#06b6d4;--teal2:rgba(6,182,212,.09);
+  --warn:#f59e0b;--w2:rgba(245,158,11,.09);--w3:rgba(245,158,11,.22);
+  --danger:#ef4444;--d2:rgba(239,68,68,.09);--d3:rgba(239,68,68,.22);
+  --success:#10b981;--s2:rgba(16,185,129,.09);--s3:rgba(16,185,129,.22);
+  --info:#8b5cf6;--i2:rgba(139,92,246,.09);--i3:rgba(139,92,246,.22);
+  --purple:#8b5cf6;--p2:rgba(139,92,246,.09);--p3:rgba(139,92,246,.22);
+  --text:#e2e8f4;--text2:#7a90b0;--text3:#3a5070;
   --mono:'DM Mono',monospace;--head:'Syne',sans-serif;--body:'DM Sans',sans-serif;
   --r:10px;--r2:14px;
 }
@@ -26,7 +35,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 /* NAV */
 nav{background:var(--bg2);border-right:1px solid var(--border);padding:20px 0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto;}
 .nav-logo{padding:0 16px 18px;border-bottom:1px solid var(--border);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.lm{width:26px;height:26px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lm{width:26px;height:26px;background:linear-gradient(135deg,var(--accent),var(--teal));border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(59,130,246,.4);}
 .lt{font-family:var(--head);font-size:15px;font-weight:700;letter-spacing:-.5px;}
 .lt span{color:var(--accent);}
 .ns{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:7px 16px 3px;font-weight:500;}
@@ -288,7 +297,105 @@ input:focus,select:focus{border-color:var(--accent);}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .card,.regime-card,.news-card,.stat{animation:fadeUp .35s ease forwards;}
-@media(max-width:860px){.app{grid-template-columns:1fr;}nav{display:none;}.grid2,.kpi-grid{grid-template-columns:1fr 1fr;}}
+
+/* MOBILE NAV */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border2);z-index:1000;padding:8px 0 max(8px,env(safe-area-inset-bottom));flex-direction:row;justify-content:space-around;}
+.mn-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 8px;border-radius:8px;color:var(--text2);font-size:9px;text-transform:uppercase;letter-spacing:.05em;min-width:48px;}
+.mn-item.active{color:var(--accent);}
+.mn-item svg{width:18px;height:18px;}
+
+@media(max-width:768px){
+  .app{grid-template-columns:1fr;}
+  nav{display:none;}
+  .mobile-nav{display:flex;}
+  main{padding:14px 14px 80px;}
+  .topbar{flex-direction:column;align-items:flex-start;gap:8px;}
+  .cambio-bar{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;}
+  .cpill{min-width:76px;flex-shrink:0;}
+  .tabs{overflow-x:auto;flex-wrap:nowrap;width:100%;-webkit-overflow-scrolling:touch;}
+  .tab{white-space:nowrap;flex-shrink:0;}
+  .grid2{grid-template-columns:1fr;}
+  .grid3{grid-template-columns:1fr 1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .fr2,.fr3{grid-template-columns:1fr;}
+  .auto-banner{flex-direction:column;gap:10px;}
+  .mode-toggle{align-self:flex-start;}
+  .tval{font-size:20px;}
+  .info-grid{grid-template-columns:1fr 1fr;}
+  .elegib-grid{grid-template-columns:1fr;}
+  .option-grid{grid-template-columns:1fr;}
+}
+@media(max-width:480px){
+  .grid3{grid-template-columns:1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .topbar-r .cambio-bar .cpill:nth-child(n+3){display:none;}
+  .pt{font-size:16px;}
+}
+
+/* ── MELHORIAS VISUAIS v8 ── */
+/* Header gradiente */
+.topbar::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.3;}
+.topbar{position:relative;}
+
+/* Cards com hover suave */
+.card:hover{border-color:rgba(59,130,246,.15);transition:border-color .2s;}
+
+/* Logo texto gradiente */
+.lt span{background:linear-gradient(135deg,var(--accent-bright),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* Active nav item com glow */
+.ni.active{box-shadow:inset 0 0 20px rgba(59,130,246,.08);}
+
+/* Total card destaque */
+.tval{text-shadow:0 0 20px rgba(59,130,246,.3);}
+
+/* Tabs scroll suave no mobile */
+.tabs{-webkit-overflow-scrolling:touch;}
+
+/* KPI valores */
+.kpi-v{color:var(--accent-bright);}
+
+/* Badges coloridos */
+.badge,.b-d,.b-w,.b-o,.b-i,.bo,.bd,.bw,.bi,.bp{font-family:var(--mono);}
+
+/* Score bar cores */
+.sb:nth-child(1){background:var(--success) !important;}
+.sb:nth-child(2){background:var(--success) !important;}
+
+/* Links externos */
+a[target="_blank"]{text-decoration:none;}
+
+/* Scrollbar customizada */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+/* Iframe container */
+iframe{border-radius:var(--r);}
+
+/* Animated live dot azul */
+.ld{background:var(--accent);}
+
+/* Mobile touch targets */
+@media(max-width:768px){
+  .no{padding:12px 14px;min-height:44px;}
+  .chip{min-height:36px;}
+  input,select{min-height:40px;font-size:16px !important;}/* Previne zoom no iOS */
+  .btn-pdf{padding:8px 14px;}
+  .mt-opt{padding:7px 14px;}
+}
+
+/* Leaflet dark mode */
+.leaflet-container{background:#0d1929 !important;font-family:var(--body);}
+.leaflet-tile{filter:brightness(.85) saturate(.9) hue-rotate(200deg);}
+.leaflet-popup-content-wrapper{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 4px 20px rgba(0,0,0,.5);}
+.leaflet-popup-tip{background:var(--bg2);}
+.leaflet-popup-content{font-family:var(--body);font-size:13px;}
+.leaflet-control-zoom a{background:var(--bg2) !important;color:var(--text) !important;border-color:var(--border2) !important;}
+.leaflet-control-zoom a:hover{background:var(--bg3) !important;}
+.leaflet-control-attribution{background:rgba(13,25,41,.8) !important;color:var(--text3) !important;font-size:9px !important;}
+.leaflet-control-attribution a{color:var(--accent-bright) !important;}
 </style>
 </head>
 <body>
@@ -330,6 +437,10 @@ input:focus,select:focus{border-color:var(--accent);}
     Consulta NCM
     <span id="ncm-count-badge" style="font-size:9px;color:var(--text3);margin-left:auto;"></span>
   </div>
+  <div class="ni" onclick="showTab('rastreio')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 11 L5 7 L8 9 L11 5 L13 7" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="4" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+    Rastreamento
+  </div>
   <div class="ns">Inteligência</div>
   <div class="ni" onclick="showTab('alertas')">
     <svg viewBox="0 0 14 14" fill="none"><path d="M7 1a3.5 3.5 0 013.5 3.5c0 2.5 1 3.5 1 3.5H2.5s1-1 1-3.5A3.5 3.5 0 017 1z" stroke="currentColor" stroke-width="1.2"/><path d="M6 12h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -364,6 +475,7 @@ input:focus,select:focus{border-color:var(--accent);}
     <div class="tab" id="tab-origens" onclick="showTab('origens')">Comparar Origens</div>
     <div class="tab" id="tab-incoterms" onclick="showTab('incoterms')">Incoterms</div>
     <div class="tab" id="tab-historico" onclick="showTab('historico')">Histórico</div>
+    <div class="tab" id="tab-rastreio" onclick="showTab('rastreio')">🚢 Rastreamento</div>
     <div class="tab" id="tab-mercado" onclick="showTab('mercado')">Câmbio & Frete</div>
     <div class="tab" id="tab-ncm" onclick="showTab('ncm')">NCM</div>
     <div class="tab" id="tab-alertas" onclick="showTab('alertas')">Regimes</div>
@@ -841,6 +953,833 @@ input:focus,select:focus{border-color:var(--accent);}
     <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
   </div>
 
+
+  <!-- ══ RASTREAMENTO DE CARGA ══ -->
+  <div class="section" id="sec-rastreio">
+
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent-bright);margin-bottom:3px;">Rastreamento de Carga Marítima ao Vivo</div>
+      <div style="font-size:12px;color:var(--text2);">Mapa AIS integrado via OpenSeaMap + Leaflet. Navegue pelo mapa, clique em qualquer navio para ver detalhes, ou busque por IMO, MMSI e nome.</div>
+    </div>
+
+    <div class="grid2" style="margin-bottom:14px;">
+
+      <!-- PAINEL DE BUSCA -->
+      <div class="card">
+        <div class="ct">Buscar navio ou rastrear carga</div>
+        <div class="field">
+          <div class="fl">Tipo de busca</div>
+          <select id="track-type" onchange="updateTrackUI()" style="font-size:16px;">
+            <option value="imo">Número IMO do navio</option>
+            <option value="mmsi">Número MMSI</option>
+            <option value="nome">Nome do navio</option>
+            <option value="container">Contêiner / BL</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="fl" id="track-label">Número IMO (7 dígitos)</div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="track-input" placeholder="Ex: 9242138" style="flex:1;font-size:16px;" oninput="this.value=this.value.toUpperCase()">
+            <button onclick="rastrearCarga()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;">Rastrear →</button>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;">Navios de exemplo — clique para testar</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div onclick="usarExemplo('imo','9242138')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div><div style="font-size:12px;font-weight:500;color:var(--text);">MSC OSCAR</div><div style="font-size:10px;color:var(--text3);">IMO 9242138 · Porta-contêineres MSC</div></div>
+              <span style="font-size:10px;color:var(--accent-bright);">Usar →</span>
+            </div>
+            <div onclick="usarExemplo('imo','9321483')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div><div style="font-size:12px;font-weight:500;color:var(--text);">MAERSK EDINBURGH</div><div style="font-size:10px;color:var(--text3);">IMO 9321483 · Porta-contêineres Maersk</div></div>
+              <span style="font-size:10px;color:var(--accent-bright);">Usar →</span>
+            </div>
+            <div onclick="usarExemplo('imo','9757187')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div><div style="font-size:12px;font-weight:500;color:var(--text);">CMA CGM BRAZIL</div><div style="font-size:10px;color:var(--text3);">IMO 9757187 · Rota dedicada Brasil</div></div>
+              <span style="font-size:10px;color:var(--accent-bright);">Usar →</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;">Focar em porto brasileiro</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="focarPorto(-23.95,-46.33,12)" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--text2);font-size:11px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">⚓ Santos</button>
+            <button onclick="focarPorto(-25.52,-48.52,12)" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--text2);font-size:11px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">⚓ Paranaguá</button>
+            <button onclick="focarPorto(-26.90,-48.66,12)" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--text2);font-size:11px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">⚓ Itajaí</button>
+            <button onclick="focarPorto(-22.88,-43.17,12)" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--text2);font-size:11px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">⚓ Rio</button>
+            <button onclick="focarPorto(-8.06,-34.87,12)" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--text2);font-size:11px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">⚓ Suape</button>
+            <button onclick="focarPorto(-15,-45,4)" style="background:var(--a3);border:1px solid var(--a4);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--accent-bright);font-size:11px;">🌎 Brasil todo</button>
+          </div>
+        </div>
+
+        <div id="track-result" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- MAPA LEAFLET -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="leaflet-map" style="width:100%;height:500px;"></div>
+        <div style="padding:7px 12px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span id="mapa-info">Clique num navio para ver detalhes</span>
+          <span style="color:var(--accent-bright);" id="mapa-zoom"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GUIA -->
+    <div class="card">
+      <div class="ct">Guia de rastreamento</div>
+      <div class="grid2">
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);">No mapa</strong> — todos os navios com transponder AIS ativo aparecem em tempo real. Navegue, dê zoom nos portos e clique em qualquer navio.<br><br>
+          <strong style="color:var(--text);">IMO</strong> — número permanente do navio (7 dígitos). Encontrado no BL ou site da armadora.<br><br>
+          <strong style="color:var(--text);">MMSI</strong> — identidade de rádio marítima (9 dígitos).
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);">Para rastrear por contêiner ou BL:</strong><br>
+          🔗 <a href="https://www.track-trace.com" target="_blank" style="color:var(--accent-bright);">track-trace.com</a> — 50+ armadoras<br>
+          🔗 <a href="https://shipsgo.com" target="_blank" style="color:var(--accent-bright);">shipsgo.com</a> — contêiner e BL<br>
+          🔗 <a href="https://www.searates.com" target="_blank" style="color:var(--accent-bright);">searates.com</a> — rastreamento + frete<br><br>
+          <strong style="color:var(--text);">Direto nas armadoras:</strong>
+          <a href="https://www.msc.com/track-a-shipment" target="_blank" style="color:var(--accent-bright);"> MSC</a> ·
+          <a href="https://www.maersk.com/tracking" target="_blank" style="color:var(--accent-bright);">Maersk</a> ·
+          <a href="https://www.cma-cgm.com/ebusiness/tracking" target="_blank" style="color:var(--accent-bright);">CMA CGM</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MERCADO ══ -->
+  <div class="section" id="sec-mercado">
+    <div class="grid3" style="margin-bottom:12px;">
+      <div class="stat"><div class="sl">USD/BRL hoje</div><div class="sv" id="m-hoje">—</div><div class="ss" id="m-var">—</div></div>
+      <div class="stat"><div class="sl">Mínimo 90 dias</div><div class="sv" id="m-min">—</div><div class="ss" style="color:var(--accent);">↓ menor custo</div></div>
+      <div class="stat"><div class="sl">Máximo 90 dias</div><div class="sv" id="m-max">—</div><div class="ss" style="color:var(--danger);">↑ maior custo</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="ct">Histórico USD/BRL — 90 dias</div><div class="spark" id="spark" style="height:52px;gap:2px;"></div><div style="display:flex;justify-content:space-between;margin-top:5px;"><span style="font-size:9px;color:var(--text3);">90d atrás</span><span style="font-size:9px;color:var(--text3);">Hoje</span></div></div>
+      <div class="card"><div class="ct">Frete Ásia→Brasil — 7 meses</div><div class="fc" id="fc"></div><div class="alert aw" style="margin-top:9px;"><div class="alert-i">⚠</div><div><div class="at">+34% em 7 meses — conflito Mar Vermelho</div><div class="ab">Desvios pelo Cabo da Boa Esperança. +10–14 dias e custo extra por contêiner.</div></div></div></div>
+    </div>
+    <div class="card" style="margin-top:0;"><div class="ct">Impacto cambial na operação atual</div><div id="imp-tab"><div style="font-size:12px;color:var(--text3);padding:8px 0;">Preencha o simulador para ver.</div></div></div>
+  </div>
+
+  <!-- ══ NCM COMPLETO ══ -->
+  <div class="section" id="sec-ncm">
+    <div class="card">
+      <div class="ct">
+        Base NCM — Siscomex / Receita Federal
+        <span id="ncm-db-info" style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;">carregando...</span>
+      </div>
+      <div id="ncm-loading-msg" class="ncm-loading"><div class="spin"></div>Carregando tabela NCM completa do Portal Único Siscomex...</div>
+      <div id="ncm-search-section" style="display:none;">
+        <input type="text" id="ncm-page-search" placeholder="Buscar por descrição ou código NCM..." oninput="filterFullNcm(this.value)" style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="ncm-result-count"></div>
+        <div id="ncm-page-results"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;" id="ncm-pagination">
+          <button onclick="ncmPagePrev()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">← Anterior</button>
+          <span id="ncm-page-info" style="font-size:11px;color:var(--text2);"></span>
+          <button onclick="ncmPageNext()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">Próxima →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REGIMES & BENEFÍCIOS ══ -->
+  <div class="section" id="sec-alertas">
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:16px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:4px;">Regimes Aduaneiros Especiais & Benefícios Fiscais</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;">Guia completo dos principais benefícios disponíveis para importadores brasileiros. Entenda o que é cada regime, quem tem direito, e quando e como solicitar. Os benefícios podem reduzir significativamente o custo de importação.</div>
+    </div>
+
+    <!-- EX-TARIFÁRIO -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bd">Encerrado jan/2026 — NCM 8450.90</span><span class="badge bw">Próxima janela: 2º sem. 2026</span></div>
+          <div class="rc-title">Ex-tarifário — Redução do II para Bens de Capital e Bens de Informática</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Mecanismo que reduz a alíquota do Imposto de Importação para 0% ou 2% em bens sem similar nacional fabricado no Brasil.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Redução do II</div><div class="ib-v">Para 0% ou 2%</div><div class="ib-s">vs. alíquota TEC padrão (ex: 14% para linha branca)</div></div>
+        <div class="info-box"><div class="ib-l">Validade típica</div><div class="ib-v">2 anos</div><div class="ib-s">Renovável mediante novo pleito antes do vencimento</div></div>
+        <div class="info-box"><div class="ib-l">Prazo para renovação</div><div class="ib-v">6 meses antes</div><div class="ib-s">Do vencimento do benefício em vigor</div></div>
+        <div class="info-box"><div class="ib-l">Órgão responsável</div><div class="ib-v">GECEX/CAMEX</div><div class="ib-s">Resolução publicada no DOU</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas que importam Bens de Capital (BK) ou Bens de Informática e Telecomunicações (BIT) sem similar nacional produzido no Brasil. Aplica-se a máquinas, equipamentos, aparelhos e instrumentos industriais.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Bens com similar nacional identificado pela ABDI. Produtos de consumo final. Matérias-primas e insumos industriais. Bens já contemplados por outros regimes de isenção.</div></div>
+      </div>
+      <div class="rc-body">
+        <strong>Como solicitar:</strong> O pleito é apresentado ao MDIC pelo Sistema de Peticionamento Eletrônico (SEI). A empresa deve comprovar a inexistência de similar nacional junto à ABDI. O processo tem prazo legal de 60 dias para análise.
+        <br><br>
+        <strong>⚠ Erro crítico a evitar:</strong> O prazo de renovação é de <strong>até 6 meses antes do vencimento</strong>. Empresas que deixam vencer o benefício sem solicitar renovação perdem o regime e retornam à alíquota TEC cheia. O GeoTrade monitora o DOU e notifica com 60 dias de antecedência da janela de renovação.
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: MDIC / GECEX · Resolução CAMEX · Atualizado mar/2026</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias relacionadas</span>
+      </div>
+    </div>
+
+    <!-- DRAWBACK -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bp">Exportadores</span></div>
+          <div class="rc-title">Drawback — Suspensão ou Isenção Total de Tributos na Importação</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Um dos regimes mais vantajosos do comex brasileiro. Suspende ou isenta II, IPI, PIS, COFINS, AFRMM e ICMS para insumos que serão industrializados e exportados.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Tributos suspensos</div><div class="ib-v">Todos</div><div class="ib-s">II, IPI, PIS, COFINS, AFRMM e ICMS na importação</div></div>
+        <div class="info-box"><div class="ib-l">Modalidades</div><div class="ib-v">3 tipos</div><div class="ib-s">Suspensão, Isenção e Intermediário</div></div>
+        <div class="info-box"><div class="ib-l">Validade do ato</div><div class="ib-v">1 ano</div><div class="ib-s">Prorrogável até 5 anos para casos especiais</div></div>
+        <div class="info-box"><div class="ib-l">Órgão</div><div class="ib-v">SECEX / MDIC</div><div class="ib-s">Habilitação via SISCOMDRAWBACK</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas industriais ou comerciais exportadoras que importam matérias-primas, insumos, embalagens ou partes para industrialização e posterior exportação do produto acabado.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Empresas que não exportam. Importações de bens de consumo final. Produtos destinados ao mercado interno. Empresas optantes do Simples Nacional (limitações).</div></div>
+      </div>
+      <div class="rc-body">
+        <strong>Modalidades disponíveis:</strong>
+        <ul>
+          <li><strong>Drawback Suspensão:</strong> tributos suspensos no momento da importação, condicionado à comprovação de exportação futura.</li>
+          <li><strong>Drawback Isenção:</strong> isenção de tributos em importação futura equivalente ao que foi utilizado em exportação já realizada.</li>
+          <li><strong>Drawback Intermediário:</strong> para fabricantes de insumos que vendem para exportadoras finais.</li>
+        </ul>
+        <br>
+        <strong>Economia típica:</strong> Para uma importação com carga tributária de 65% sobre o CIF, o Drawback pode representar economia de 50–60% no custo total desembaraçado.
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: SECEX / MDIC · Portaria SECEX nº 23/2011 e alterações</span>
+        <span class="rc-btn" onclick="selectNcm('8450.90.10');showTab('sim')">Ver no simulador</span>
+      </div>
+    </div>
+
+    <!-- RECOF -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bp">Indústria de transformação</span></div>
+          <div class="rc-title">RECOF — Regime Aduaneiro Especial de Entreposto Industrial</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite importar com suspensão de II, IPI, PIS e COFINS para industrialização, com prazo de 1 ano para comprovar o destino dos insumos.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Suspensão de</div><div class="ib-v">II + IPI + PIS + COFINS</div><div class="ib-s">ICMS pode ser incluído por convênio estadual</div></div>
+        <div class="info-box"><div class="ib-l">Requisito mínimo</div><div class="ib-v">US$ 10 milhões/ano</div><div class="ib-s">Em exportações nos últimos 12 meses</div></div>
+        <div class="info-box"><div class="ib-l">Habilitação</div><div class="ib-v">Receita Federal</div><div class="ib-s">Processo complexo com auditoria fiscal prévia</div></div>
+        <div class="info-box"><div class="ib-l">Prazo de vigência</div><div class="ib-v">Permanente</div><div class="ib-s">Enquanto mantiver os requisitos de habilitação</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas industriais de grande porte com histórico de exportação acima de US$ 10 milhões/ano. Principalmente setor automotivo, aeroespacial, eletrônico e de bens de capital.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Empresas abaixo do requisito de exportação mínima. Empresas comerciais sem industrialização. Setores sem processo de transformação industrial agregado.</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · IN RFB nº 1291/2012 e alterações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias RECOF</span>
+      </div>
+    </div>
+
+    <!-- ADMISSÃO TEMPORÁRIA -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bw">Uso temporário</span></div>
+          <div class="rc-title">Admissão Temporária — Suspensão Proporcional ao Período de Uso</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite importar bens para uso temporário no Brasil com suspensão de tributos proporcional ao período de permanência — sem necessidade de exportação futura do produto transformado.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Fórmula</div><div class="ib-v">Proporcional</div><div class="ib-s">1% dos tributos por mês de permanência (para uso econômico)</div></div>
+        <div class="info-box"><div class="ib-l">Prazo máximo</div><div class="ib-v">Variável</div><div class="ib-s">Geralmente 1 a 5 anos conforme finalidade</div></div>
+        <div class="info-box"><div class="ib-l">Uso econômico</div><div class="ib-v">1%/mês</div><div class="ib-s">Aluguel, arrendamento, empréstimo de bens</div></div>
+        <div class="info-box"><div class="ib-l">Órgão</div><div class="ib-v">Receita Federal</div><div class="ib-s">Despacho aduaneiro com TA</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Casos de uso típicos</div><div class="eg-body">Equipamentos para exposições e feiras. Maquinário para uso em obra ou projeto específico. Equipamentos alugados de empresa estrangeira. Amostras comerciais. Materiais para eventos culturais ou esportivos.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Não se aplica para</div><div class="eg-body">Bens que serão vendidos ou consumidos no Brasil. Importações definitivas. Bens incorporados a produto final destinado ao mercado interno. Alimentos e outros bens perecíveis de consumo.</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · IN SRF nº 285/2003 e alterações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias aduaneiras</span>
+      </div>
+    </div>
+
+    <!-- ENTREPOSTO ADUANEIRO -->
+    <div class="regime-card" style="opacity:.85;">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bi">Logística</span></div>
+          <div class="rc-title">Entreposto Aduaneiro — Armazenagem com Suspensão de Tributos</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite armazenar mercadorias importadas em recinto alfandegado com suspensão do pagamento dos tributos até a destinação definitiva do bem.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Vantagem principal</div><div class="ib-v">Defer. tributário</div><div class="ib-s">Paga tributos só quando destinar a mercadoria</div></div>
+        <div class="info-box"><div class="ib-l">Prazo máximo</div><div class="ib-v">1 ano + 1 ano</div><div class="ib-s">Prorrogável por mais 1 ano mediante justificativa</div></div>
+        <div class="info-box"><div class="ib-l">Destinação</div><div class="ib-v">Flexível</div><div class="ib-s">Importação definitiva, reexportação ou destruição</div></div>
+        <div class="info-box"><div class="ib-l">Local</div><div class="ib-v">Recinto alfandeg.</div><div class="ib-s">Porto, aeroporto ou recinto alfandegado habilitado</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · Decreto-Lei nº 37/66 e regulamentações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ NOTÍCIAS ══ -->
+  <div class="section" id="sec-noticias">
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior</div>
+      <div style="font-size:12px;color:var(--text2);">Notícias selecionadas de fontes especializadas em comex, câmbio, tarifas e regulamentação.</div></div>
+      <button onclick="fetchNews()" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;">↻ Atualizar</button>
+    </div>
+    <div class="news-filter" id="news-filter">
+      <div class="nf-btn active" onclick="filterNews('todos')">Todos</div>
+      <div class="nf-btn" onclick="filterNews('cambio')">Câmbio</div>
+      <div class="nf-btn" onclick="filterNews('tarifas')">Tarifas & NCM</div>
+      <div class="nf-btn" onclick="filterNews('frete')">Frete & Logística</div>
+      <div class="nf-btn" onclick="filterNews('politica')">Política Comercial</div>
+      <div class="nf-btn" onclick="filterNews('commodities')">Commodities</div>
+    </div>
+    <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
+  </div>
+
+
+  <!-- ══ RASTREAMENTO DE CARGA ══ -->
+  <div class="section" id="sec-rastreio">
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent-bright);margin-bottom:4px;">Rastreamento de Carga Marítima ao Vivo</div>
+        <div style="font-size:12px;color:var(--text2);">Mapa AIS em tempo real via VesselFinder. Busque por nome do navio ou número IMO para rastrear sua carga.</div>
+      </div>
+    </div>
+
+    <!-- BUSCA + MAPA -->
+    <div class="grid2" style="margin-bottom:14px;">
+
+      <!-- PAINEL DE BUSCA -->
+      <div class="card">
+        <div class="ct">Buscar navio / contêiner</div>
+
+        <div class="field">
+          <div class="fl">Tipo de rastreamento</div>
+          <select id="track-type" onchange="updateTrackUI()">
+            <option value="imo">Número IMO do navio</option>
+            <option value="mmsi">Número MMSI</option>
+            <option value="nome">Nome do navio (abre VesselFinder)</option>
+            <option value="container">Contêiner / BL (abre Track-Trace)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="fl" id="track-label">Número IMO (7 dígitos)</div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="track-input" placeholder="Ex: 9703291" style="flex:1;font-size:16px;" oninput="this.value=this.value.toUpperCase()">
+            <button onclick="rastrearCarga()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--body);font-size:13px;font-weight:500;white-space:nowrap;">
+              Rastrear →
+            </button>
+          </div>
+        </div>
+
+        <!-- NAVIOS DE EXEMPLO -->
+        <div style="margin-top:4px;">
+          <div class="fl" style="margin-bottom:8px;">Exemplos para testar agora</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div onclick="setTrackExample('imo','9242138')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div><div style="font-size:12px;font-weight:500;color:var(--text);">MSC OSCAR</div><div style="font-size:10px;color:var(--text3);">IMO: 9242138 · Porta-contêineres MSC</div></div>
+              <span style="font-size:10px;color:var(--accent-bright);">Usar →</span>
+            </div>
+            <div onclick="setTrackExample('imo','9321483')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div><div style="font-size:12px;font-weight:500;color:var(--text);">MAERSK EDINBURGH</div><div style="font-size:10px;color:var(--text3);">IMO: 9321483 · Porta-contêineres Maersk</div></div>
+              <span style="font-size:10px;color:var(--accent-bright);">Usar →</span>
+            </div>
+            <div onclick="setTrackExample('imo','9757187')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div><div style="font-size:12px;font-weight:500;color:var(--text);">CMA CGM BRAZIL</div><div style="font-size:10px;color:var(--text3);">IMO: 9757187 · Rota Brasil dedicada CMA CGM</div></div>
+              <span style="font-size:10px;color:var(--accent-bright);">Usar →</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="track-result" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- MAPA VESSELFINDER AO VIVO -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="vf-map-container" style="width:100%;height:420px;position:relative;background:var(--bg3);">
+          <!-- Mapa geral por padrão — foco no Brasil -->
+          <div id="vf-map" style="width:100%;height:100%;"></div>
+          <div id="vf-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg3);gap:8px;">
+            <div class="spin" style="width:20px;height:20px;border-width:2px;"></div>
+            <div style="font-size:12px;color:var(--text3);">Carregando mapa AIS...</div>
+          </div>
+        </div>
+        <div style="padding:8px 12px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);">
+          Dados AIS em tempo real · VesselFinder · Clique em qualquer navio para ver detalhes
+        </div>
+      </div>
+    </div>
+
+    <!-- PORTOS BRASILEIROS -->
+    <div class="card">
+      <div class="ct">Principais portos brasileiros — referência</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">⚓ Santos — SP</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 6px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">~35% do comércio exterior BR. Desembaraço: 3–5 dias.</div>
+          <div onclick="setTrackExample('area','santos')" style="margin-top:8px;font-size:10px;color:var(--accent-bright);cursor:pointer;">Ver no mapa →</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">⚓ Paranaguá — PR</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 6px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">2º maior porto BR. Especializado em grãos.</div>
+          <div onclick="setTrackExample('area','paranagua')" style="margin-top:8px;font-size:10px;color:var(--accent-bright);cursor:pointer;">Ver no mapa →</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">⚓ Itajaí — SC</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 6px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">Porto mais competitivo do sul. Menor capatazia.</div>
+          <div onclick="setTrackExample('area','itajai')" style="margin-top:8px;font-size:10px;color:var(--accent-bright);cursor:pointer;">Ver no mapa →</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">⚓ Rio de Janeiro — RJ</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 6px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">Importante para cargas do RJ, ES e MG.</div>
+          <div onclick="setTrackExample('area','rio')" style="margin-top:8px;font-size:10px;color:var(--accent-bright);cursor:pointer;">Ver no mapa →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GUIA -->
+    <div class="card">
+      <div class="ct">Guia de rastreamento — como funciona</div>
+      <div class="grid2">
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);">Número IMO</strong> — identificador único e permanente do navio (7 dígitos). O mais confiável para rastreamento. Encontrado no site da armadora ou nos documentos de embarque.<br><br>
+          <strong style="color:var(--text);">MMSI</strong> — número de identificação marítima (9 dígitos). Usado para comunicação de rádio. Também funciona para localizar o navio no mapa AIS.<br><br>
+          <strong style="color:var(--text);">Número do contêiner</strong> — 4 letras + 7 números (ex: MSCU1234567). Encontrado na confirmação de booking ou no BL.
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);">Onde encontrar o número IMO:</strong><br>
+          → Site da armadora (MSC, Maersk, CMA CGM...)<br>
+          → Confirmação de booking enviada por email<br>
+          → Documento BL (Bill of Lading)<br>
+          → Perguntar diretamente ao agente de carga<br><br>
+          <strong style="color:var(--text);">Rastreamento por BL e contêiner:</strong><br>
+          → <a href="https://www.track-trace.com" target="_blank" style="color:var(--accent-bright);">track-trace.com</a> — agrega todas as armadoras<br>
+          → <a href="https://www.shipsgo.com" target="_blank" style="color:var(--accent-bright);">shipsgo.com</a> — BL e contêiner<br>
+          → <a href="https://www.searates.com" target="_blank" style="color:var(--accent-bright);">searates.com</a> — rastreamento + frete
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PRECIFICAÇÃO ══ -->
+  <div class="section" id="sec-precif">
+    <div class="card">
+      <div class="ct">Calculadora de preço de venda</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;">Com base no custo total desembaraçado do simulador, calcula o preço mínimo de venda para atingir a margem desejada.</div>
+      <div class="fr3">
+        <div class="field"><div class="fl">Custo total desembaraçado <span class="fh">do simulador</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="pv-custo" placeholder="0,00" oninput="calcPV()" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Margem bruta alvo (%)</div><input type="number" id="pv-margem" value="40" oninput="calcPV()" step="5"></div>
+        <div class="field"><div class="fl">Comissão / despesas comerciais (%)</div><input type="number" id="pv-com" value="5" oninput="calcPV()" step="1"></div>
+      </div>
+      <div class="fr2">
+        <div class="field"><div class="fl">Quantidade importada (unidades)</div><input type="number" id="pv-qtd" value="1" oninput="calcPV()" step="1"></div>
+        <div class="field"><div class="fl">ICMS saída estimado (%)</div><input type="number" id="pv-icms-saida" value="12" oninput="calcPV()" step="1"></div>
+      </div>
+      <div id="pv-result"></div>
+    </div>
+    <div class="card">
+      <div class="ct">Como interpretar</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        <strong style="color:var(--text);">Preço mínimo de venda</strong> é o valor abaixo do qual a operação não cobre o custo de importação com a margem desejada. Vender abaixo significa prejuízo operacional.<br><br>
+        <strong style="color:var(--text);">Margem bruta</strong> não inclui despesas fixas. Para o ponto de equilíbrio real, some as despesas fixas mensais e divida pelo volume esperado.<br><br>
+        <strong style="color:var(--text);">Dica:</strong> Use o comparador de origens para verificar se importar de outro país reduziria o custo base.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ COMPARAR ORIGENS ══ -->
+  <div class="section" id="sec-origens">
+    <div class="card">
+      <div class="ct">Comparativo de custo total por país de origem</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Mesmo produto, diferentes origens. Qual rota sai mais barata desembaraçada? Fretes são referências de mercado.</div>
+      <div class="fr3">
+        <div class="field">
+          <div class="fl">NCM selecionado</div>
+          <div id="orig-ncm-show" style="font-size:12px;color:var(--accent);padding:7px 9px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;">Selecione no Simulador</div>
+        </div>
+        <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="orig-fob" placeholder="0,00" oninput="calcOrigens()" step="1000" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Câmbio USD/BRL</div><div class="iw"><span class="ip">R$</span><input type="number" id="orig-cambio" placeholder="0,0000" oninput="calcOrigens()" step="0.01" style="padding-left:34px;"></div></div>
+      </div>
+      <div class="field"><div class="fl">Estado de destino</div>
+        <select id="orig-estado" onchange="calcOrigens()">
+          <option value="0.18">SP — 18%</option><option value="0.20">RJ — 20%</option>
+          <option value="0.19">PR — 19%</option><option value="0.17">SC — 17%</option>
+          <option value="0.175">RS — 17,5%</option><option value="0.18">MG — 18%</option>
+        </select>
+      </div>
+      <div id="origens-result"><div style="color:var(--text3);font-size:12px;padding:12px 0;">Preencha os dados para ver o comparativo.</div></div>
+    </div>
+  </div>
+
+  <!-- ══ INCOTERMS ══ -->
+  <div class="section" id="sec-incoterms">
+    <div style="padding:12px 16px;background:var(--p2);border:1px solid var(--p3);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--purple);margin-bottom:4px;">Calculadora de Incoterms</div>
+      <div style="font-size:12px;color:var(--text2);">O Incoterm define quem paga frete, seguro e riscos. A escolha errada pode aumentar o custo total.</div>
+    </div>
+    <div class="card">
+      <div class="ct">Simular impacto do Incoterm</div>
+      <div class="fr3">
+        <div class="field"><div class="fl">Valor da mercadoria (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="inc-val" placeholder="0,00" oninput="calcIncoterm()" step="1000" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Frete internacional (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="inc-frete" placeholder="0,00" oninput="calcIncoterm()" step="100" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Câmbio USD/BRL</div><div class="iw"><span class="ip">R$</span><input type="number" id="inc-cambio" placeholder="0,0000" oninput="calcIncoterm()" step="0.01" style="padding-left:34px;"></div></div>
+      </div>
+      <div id="incoterm-result"><div style="color:var(--text3);font-size:12px;padding:12px 0;">Preencha os dados para ver o comparativo de Incoterms.</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">Incoterms mais usados na importação brasileira</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.9;">
+          <strong style="color:var(--accent);">FOB</strong> — Vendedor entrega a bordo do navio. Importador paga frete e seguro. Base de cálculo dos tributos BR.<br><br>
+          <strong style="color:var(--warn);">CIF</strong> — Vendedor inclui frete e seguro até porto BR. Importador chega no porto. Base tributária maior.<br><br>
+          <strong style="color:var(--info);">EXW</strong> — Importador paga tudo desde a fábrica. Maior controle, maior complexidade.<br><br>
+          <strong style="color:var(--purple);">DDP</strong> — Vendedor entrega desembaraçado. Mais caro, menos controle. Risco de subvaloração na DI.
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Qual Incoterm escolher?</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.9;">
+          <strong style="color:var(--text);">Use FOB</strong> quando tem bom agente de carga no Brasil. É o mais comum nas importações brasileiras.<br><br>
+          <strong style="color:var(--text);">Use CIF</strong> quando o fornecedor tem frete mais competitivo ou você quer simplicidade.<br><br>
+          <strong style="color:var(--text);">Evite DDP</strong> em operações regulares — risco de subvaloração e multa na DI.<br><br>
+          <strong style="color:var(--warn);">⚠ Tributos incidem sobre o CIF.</strong> CIF maior = base tributária maior = mais impostos.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HISTÓRICO ══ -->
+  <div class="section" id="sec-historico">
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px;">Histórico de Simulações</div><div style="font-size:12px;color:var(--text2);">Últimas 10 simulações salvas no navegador. Clique em qualquer uma para recarregar.</div></div>
+      <button onclick="limparHistorico()" style="background:var(--d2);border:1px solid var(--d3);border-radius:8px;padding:5px 12px;cursor:pointer;color:var(--danger);font-size:11px;">Limpar tudo</button>
+    </div>
+    <div id="historico-lista"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva. Execute uma simulação para ela aparecer aqui automaticamente.</div></div>
+  </div>
+
+  <!-- ══ MERCADO ══ -->
+  <div class="section" id="sec-mercado">
+    <div class="grid3" style="margin-bottom:12px;">
+      <div class="stat"><div class="sl">USD/BRL hoje</div><div class="sv" id="m-hoje">—</div><div class="ss" id="m-var">—</div></div>
+      <div class="stat"><div class="sl">Mínimo 90 dias</div><div class="sv" id="m-min">—</div><div class="ss" style="color:var(--accent);">↓ menor custo</div></div>
+      <div class="stat"><div class="sl">Máximo 90 dias</div><div class="sv" id="m-max">—</div><div class="ss" style="color:var(--danger);">↑ maior custo</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="ct">Histórico USD/BRL — 90 dias</div><div class="spark" id="spark" style="height:52px;gap:2px;"></div><div style="display:flex;justify-content:space-between;margin-top:5px;"><span style="font-size:9px;color:var(--text3);">90d atrás</span><span style="font-size:9px;color:var(--text3);">Hoje</span></div></div>
+      <div class="card"><div class="ct">Frete Ásia→Brasil — 7 meses</div><div class="fc" id="fc"></div><div class="alert aw" style="margin-top:9px;"><div class="alert-i">⚠</div><div><div class="at">+34% em 7 meses — conflito Mar Vermelho</div><div class="ab">Desvios pelo Cabo da Boa Esperança. +10–14 dias e custo extra por contêiner.</div></div></div></div>
+    </div>
+    <div class="card" style="margin-top:0;"><div class="ct">Impacto cambial na operação atual</div><div id="imp-tab"><div style="font-size:12px;color:var(--text3);padding:8px 0;">Preencha o simulador para ver.</div></div></div>
+  </div>
+
+  <!-- ══ NCM COMPLETO ══ -->
+  <div class="section" id="sec-ncm">
+    <div class="card">
+      <div class="ct">
+        Base NCM — Siscomex / Receita Federal
+        <span id="ncm-db-info" style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;">carregando...</span>
+      </div>
+      <div id="ncm-loading-msg" class="ncm-loading"><div class="spin"></div>Carregando tabela NCM completa do Portal Único Siscomex...</div>
+      <div id="ncm-search-section" style="display:none;">
+        <input type="text" id="ncm-page-search" placeholder="Buscar por descrição ou código NCM..." oninput="filterFullNcm(this.value)" style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="ncm-result-count"></div>
+        <div id="ncm-page-results"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;" id="ncm-pagination">
+          <button onclick="ncmPagePrev()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">← Anterior</button>
+          <span id="ncm-page-info" style="font-size:11px;color:var(--text2);"></span>
+          <button onclick="ncmPageNext()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">Próxima →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REGIMES & BENEFÍCIOS ══ -->
+  <div class="section" id="sec-alertas">
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:16px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:4px;">Regimes Aduaneiros Especiais & Benefícios Fiscais</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;">Guia completo dos principais benefícios disponíveis para importadores brasileiros. Entenda o que é cada regime, quem tem direito, e quando e como solicitar. Os benefícios podem reduzir significativamente o custo de importação.</div>
+    </div>
+
+    <!-- EX-TARIFÁRIO -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bd">Encerrado jan/2026 — NCM 8450.90</span><span class="badge bw">Próxima janela: 2º sem. 2026</span></div>
+          <div class="rc-title">Ex-tarifário — Redução do II para Bens de Capital e Bens de Informática</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Mecanismo que reduz a alíquota do Imposto de Importação para 0% ou 2% em bens sem similar nacional fabricado no Brasil.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Redução do II</div><div class="ib-v">Para 0% ou 2%</div><div class="ib-s">vs. alíquota TEC padrão (ex: 14% para linha branca)</div></div>
+        <div class="info-box"><div class="ib-l">Validade típica</div><div class="ib-v">2 anos</div><div class="ib-s">Renovável mediante novo pleito antes do vencimento</div></div>
+        <div class="info-box"><div class="ib-l">Prazo para renovação</div><div class="ib-v">6 meses antes</div><div class="ib-s">Do vencimento do benefício em vigor</div></div>
+        <div class="info-box"><div class="ib-l">Órgão responsável</div><div class="ib-v">GECEX/CAMEX</div><div class="ib-s">Resolução publicada no DOU</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas que importam Bens de Capital (BK) ou Bens de Informática e Telecomunicações (BIT) sem similar nacional produzido no Brasil. Aplica-se a máquinas, equipamentos, aparelhos e instrumentos industriais.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Bens com similar nacional identificado pela ABDI. Produtos de consumo final. Matérias-primas e insumos industriais. Bens já contemplados por outros regimes de isenção.</div></div>
+      </div>
+      <div class="rc-body">
+        <strong>Como solicitar:</strong> O pleito é apresentado ao MDIC pelo Sistema de Peticionamento Eletrônico (SEI). A empresa deve comprovar a inexistência de similar nacional junto à ABDI. O processo tem prazo legal de 60 dias para análise.
+        <br><br>
+        <strong>⚠ Erro crítico a evitar:</strong> O prazo de renovação é de <strong>até 6 meses antes do vencimento</strong>. Empresas que deixam vencer o benefício sem solicitar renovação perdem o regime e retornam à alíquota TEC cheia. O GeoTrade monitora o DOU e notifica com 60 dias de antecedência da janela de renovação.
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: MDIC / GECEX · Resolução CAMEX · Atualizado mar/2026</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias relacionadas</span>
+      </div>
+    </div>
+
+    <!-- DRAWBACK -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bp">Exportadores</span></div>
+          <div class="rc-title">Drawback — Suspensão ou Isenção Total de Tributos na Importação</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Um dos regimes mais vantajosos do comex brasileiro. Suspende ou isenta II, IPI, PIS, COFINS, AFRMM e ICMS para insumos que serão industrializados e exportados.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Tributos suspensos</div><div class="ib-v">Todos</div><div class="ib-s">II, IPI, PIS, COFINS, AFRMM e ICMS na importação</div></div>
+        <div class="info-box"><div class="ib-l">Modalidades</div><div class="ib-v">3 tipos</div><div class="ib-s">Suspensão, Isenção e Intermediário</div></div>
+        <div class="info-box"><div class="ib-l">Validade do ato</div><div class="ib-v">1 ano</div><div class="ib-s">Prorrogável até 5 anos para casos especiais</div></div>
+        <div class="info-box"><div class="ib-l">Órgão</div><div class="ib-v">SECEX / MDIC</div><div class="ib-s">Habilitação via SISCOMDRAWBACK</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas industriais ou comerciais exportadoras que importam matérias-primas, insumos, embalagens ou partes para industrialização e posterior exportação do produto acabado.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Empresas que não exportam. Importações de bens de consumo final. Produtos destinados ao mercado interno. Empresas optantes do Simples Nacional (limitações).</div></div>
+      </div>
+      <div class="rc-body">
+        <strong>Modalidades disponíveis:</strong>
+        <ul>
+          <li><strong>Drawback Suspensão:</strong> tributos suspensos no momento da importação, condicionado à comprovação de exportação futura.</li>
+          <li><strong>Drawback Isenção:</strong> isenção de tributos em importação futura equivalente ao que foi utilizado em exportação já realizada.</li>
+          <li><strong>Drawback Intermediário:</strong> para fabricantes de insumos que vendem para exportadoras finais.</li>
+        </ul>
+        <br>
+        <strong>Economia típica:</strong> Para uma importação com carga tributária de 65% sobre o CIF, o Drawback pode representar economia de 50–60% no custo total desembaraçado.
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: SECEX / MDIC · Portaria SECEX nº 23/2011 e alterações</span>
+        <span class="rc-btn" onclick="selectNcm('8450.90.10');showTab('sim')">Ver no simulador</span>
+      </div>
+    </div>
+
+    <!-- RECOF -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bp">Indústria de transformação</span></div>
+          <div class="rc-title">RECOF — Regime Aduaneiro Especial de Entreposto Industrial</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite importar com suspensão de II, IPI, PIS e COFINS para industrialização, com prazo de 1 ano para comprovar o destino dos insumos.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Suspensão de</div><div class="ib-v">II + IPI + PIS + COFINS</div><div class="ib-s">ICMS pode ser incluído por convênio estadual</div></div>
+        <div class="info-box"><div class="ib-l">Requisito mínimo</div><div class="ib-v">US$ 10 milhões/ano</div><div class="ib-s">Em exportações nos últimos 12 meses</div></div>
+        <div class="info-box"><div class="ib-l">Habilitação</div><div class="ib-v">Receita Federal</div><div class="ib-s">Processo complexo com auditoria fiscal prévia</div></div>
+        <div class="info-box"><div class="ib-l">Prazo de vigência</div><div class="ib-v">Permanente</div><div class="ib-s">Enquanto mantiver os requisitos de habilitação</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Quem tem direito</div><div class="eg-body">Empresas industriais de grande porte com histórico de exportação acima de US$ 10 milhões/ano. Principalmente setor automotivo, aeroespacial, eletrônico e de bens de capital.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Quem não tem direito</div><div class="eg-body">Empresas abaixo do requisito de exportação mínima. Empresas comerciais sem industrialização. Setores sem processo de transformação industrial agregado.</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · IN RFB nº 1291/2012 e alterações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias RECOF</span>
+      </div>
+    </div>
+
+    <!-- ADMISSÃO TEMPORÁRIA -->
+    <div class="regime-card">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bw">Uso temporário</span></div>
+          <div class="rc-title">Admissão Temporária — Suspensão Proporcional ao Período de Uso</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite importar bens para uso temporário no Brasil com suspensão de tributos proporcional ao período de permanência — sem necessidade de exportação futura do produto transformado.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Fórmula</div><div class="ib-v">Proporcional</div><div class="ib-s">1% dos tributos por mês de permanência (para uso econômico)</div></div>
+        <div class="info-box"><div class="ib-l">Prazo máximo</div><div class="ib-v">Variável</div><div class="ib-s">Geralmente 1 a 5 anos conforme finalidade</div></div>
+        <div class="info-box"><div class="ib-l">Uso econômico</div><div class="ib-v">1%/mês</div><div class="ib-s">Aluguel, arrendamento, empréstimo de bens</div></div>
+        <div class="info-box"><div class="ib-l">Órgão</div><div class="ib-v">Receita Federal</div><div class="ib-s">Despacho aduaneiro com TA</div></div>
+      </div>
+      <div class="elegib-grid">
+        <div class="eg-box eg-ok"><div class="eg-title">✓ Casos de uso típicos</div><div class="eg-body">Equipamentos para exposições e feiras. Maquinário para uso em obra ou projeto específico. Equipamentos alugados de empresa estrangeira. Amostras comerciais. Materiais para eventos culturais ou esportivos.</div></div>
+        <div class="eg-box eg-nok"><div class="eg-title">✗ Não se aplica para</div><div class="eg-body">Bens que serão vendidos ou consumidos no Brasil. Importações definitivas. Bens incorporados a produto final destinado ao mercado interno. Alimentos e outros bens perecíveis de consumo.</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · IN SRF nº 285/2003 e alterações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias aduaneiras</span>
+      </div>
+    </div>
+
+    <!-- ENTREPOSTO ADUANEIRO -->
+    <div class="regime-card" style="opacity:.85;">
+      <div class="rc-hdr">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="badge bo">Disponível</span><span class="badge bi">Logística</span></div>
+          <div class="rc-title">Entreposto Aduaneiro — Armazenagem com Suspensão de Tributos</div>
+        </div>
+      </div>
+      <div class="rc-subtitle">Permite armazenar mercadorias importadas em recinto alfandegado com suspensão do pagamento dos tributos até a destinação definitiva do bem.</div>
+      <div class="info-grid">
+        <div class="info-box"><div class="ib-l">Vantagem principal</div><div class="ib-v">Defer. tributário</div><div class="ib-s">Paga tributos só quando destinar a mercadoria</div></div>
+        <div class="info-box"><div class="ib-l">Prazo máximo</div><div class="ib-v">1 ano + 1 ano</div><div class="ib-s">Prorrogável por mais 1 ano mediante justificativa</div></div>
+        <div class="info-box"><div class="ib-l">Destinação</div><div class="ib-v">Flexível</div><div class="ib-s">Importação definitiva, reexportação ou destruição</div></div>
+        <div class="info-box"><div class="ib-l">Local</div><div class="ib-v">Recinto alfandeg.</div><div class="ib-s">Porto, aeroporto ou recinto alfandegado habilitado</div></div>
+      </div>
+      <div class="rc-foot">
+        <span class="rc-date">Fonte: Receita Federal · Decreto-Lei nº 37/66 e regulamentações</span>
+        <span class="rc-btn" onclick="showTab('noticias')">Ver notícias</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ NOTÍCIAS ══ -->
+  <div class="section" id="sec-noticias">
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior</div>
+      <div style="font-size:12px;color:var(--text2);">Notícias selecionadas de fontes especializadas em comex, câmbio, tarifas e regulamentação.</div></div>
+      <button onclick="fetchNews()" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;">↻ Atualizar</button>
+    </div>
+    <div class="news-filter" id="news-filter">
+      <div class="nf-btn active" onclick="filterNews('todos')">Todos</div>
+      <div class="nf-btn" onclick="filterNews('cambio')">Câmbio</div>
+      <div class="nf-btn" onclick="filterNews('tarifas')">Tarifas & NCM</div>
+      <div class="nf-btn" onclick="filterNews('frete')">Frete & Logística</div>
+      <div class="nf-btn" onclick="filterNews('politica')">Política Comercial</div>
+      <div class="nf-btn" onclick="filterNews('commodities')">Commodities</div>
+    </div>
+    <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
+  </div>
+
+
+  <!-- ══ RASTREAMENTO DE CARGA ══ -->
+  <div class="section" id="sec-rastreio">
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent-bright);margin-bottom:4px;">Rastreamento de Carga Marítima</div>
+      <div style="font-size:12px;color:var(--text2);">Rastreie seu contêiner em tempo real por número de BL, contêiner ou navio. Dados via MarineTraffic AIS e Shipsgo.</div>
+    </div>
+
+    <div class="grid2">
+      <!-- BUSCA DE CONTÊINER -->
+      <div class="card">
+        <div class="ct">Rastrear contêiner / BL</div>
+        <div class="field">
+          <div class="fl">Tipo de busca</div>
+          <select id="track-type" onchange="updateTrackPlaceholder()">
+            <option value="container">Número do contêiner (ex: MSCU1234567)</option>
+            <option value="bl">Número do BL (Bill of Lading)</option>
+            <option value="vessel">Nome do navio</option>
+            <option value="imo">Número IMO do navio</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="fl">Número / identificador</div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="track-input" placeholder="Ex: MSCU1234567" style="flex:1;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            <button onclick="rastrearCarga()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:var(--body);font-size:13px;font-weight:500;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='var(--a2)'" onmouseout="this.style.background='var(--accent)'">Rastrear →</button>
+          </div>
+        </div>
+        <div id="track-result" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- MAPA AIS EMBED -->
+      <div class="card">
+        <div class="ct">Mapa de tráfego marítimo ao vivo — MarineTraffic</div>
+        <div style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border2);">
+          <iframe
+            src="https://www.marinetraffic.com/pt/ais/embed/zoom:4/centery:-15/centerx:-40/maptype:4/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:/remember:false"
+            width="100%"
+            height="340"
+            frameborder="0"
+            style="display:block;"
+            title="MarineTraffic - Navios ao vivo"
+            loading="lazy">
+          </iframe>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">Dados AIS em tempo real · MarineTraffic · Zoom e clique nos navios para ver detalhes</div>
+      </div>
+    </div>
+
+    <!-- PORTOS BRASILEIROS -->
+    <div class="card">
+      <div class="ct">Status dos principais portos brasileiros</div>
+      <div class="grid3" id="porto-status" style="gap:10px;">
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">Santos — SP</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 7px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">Principal porto do Brasil. ~35% do comércio exterior nacional. Tempo médio de desembaraço: 3–5 dias.</div>
+          <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono);">IATA: BRSAO · IMO: BR SAO</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">Paranaguá — PR</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 7px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">2º maior porto do Brasil. Especializado em grãos e fertilizantes. Boa alternativa ao Santos para PR e SC.</div>
+          <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono);">IATA: BRPNG · IMO: BR PNG</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:500;color:var(--text);">Itajaí — SC</span>
+            <span style="font-size:10px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 7px;">Operando</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">Porto mais competitivo do sul. Menor custo de capatazia. Crescimento forte em containers industriais.</div>
+          <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono);">IATA: BRITJ · IMO: BR ITJ</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GUIA DE RASTREAMENTO -->
+    <div class="card">
+      <div class="ct">Como rastrear sua carga — guia rápido</div>
+      <div class="grid2">
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);">Número do contêiner</strong> — 4 letras + 7 números (ex: MSCU1234567). Encontrado na confirmação de booking da armadora ou no BL.<br><br>
+          <strong style="color:var(--text);">BL (Bill of Lading)</strong> — Documento de embarque emitido pela armadora. Número geralmente tem entre 9 e 14 caracteres.<br><br>
+          <strong style="color:var(--text);">Principais armadoras</strong> — MSC, Maersk, CMA CGM, Hapag-Lloyd, COSCO, Evergreen. Cada uma tem rastreamento próprio além das plataformas agregadoras.
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);">Plataformas de rastreamento gratuitas:</strong><br><br>
+          🔗 <a href="https://www.marinetraffic.com" target="_blank" style="color:var(--accent-bright);">MarineTraffic.com</a> — posição do navio em tempo real<br>
+          🔗 <a href="https://www.shipsgo.com" target="_blank" style="color:var(--accent-bright);">Shipsgo.com</a> — rastreamento por BL e contêiner<br>
+          🔗 <a href="https://www.track-trace.com" target="_blank" style="color:var(--accent-bright);">Track-Trace.com</a> — agrega múltiplas armadoras<br>
+          🔗 <a href="https://www.searates.com" target="_blank" style="color:var(--accent-bright);">SeaRates.com</a> — rastreamento + tempo de trânsito<br><br>
+          <strong style="color:var(--text);">Rastreamento direto por armadora:</strong><br>
+          MSC, Maersk, CMA CGM, Hapag-Lloyd — cada uma tem área de rastreamento gratuita no site oficial.
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 </div>
 
@@ -939,19 +1878,109 @@ async function loadNcmDB(){
 
 // Base local de fallback
 const NCM_LOCAL=[
-  {code:'8450.90.10',desc:'Partes de máquinas de lavar roupa acima 10kg'},{code:'8450.90.90',desc:'Partes de máquinas de lavar roupa domésticas'},
-  {code:'8418.21.00',desc:'Refrigerador doméstico tipo compressão'},{code:'8418.10.00',desc:'Combinado refrigerador-congelador'},
-  {code:'8415.10.11',desc:'Aparelhos de ar condicionado split até 30000 BTU'},{code:'8415.10.12',desc:'Aparelhos de ar condicionado split acima 30000 BTU'},
-  {code:'8516.50.00',desc:'Fornos de micro-ondas'},{code:'8450.20.00',desc:'Máquinas de lavar roupa acima 10kg'},
-  {code:'2005.70.00',desc:'Azeitonas preparadas ou conservadas'},{code:'0711.20.00',desc:'Azeitonas conservadas provisoriamente'},
-  {code:'2103.90.21',desc:'Alcaparras preparadas ou conservadas'},{code:'2005.99.00',desc:'Outros produtos hortícolas conservados'},
-  {code:'8471.30.12',desc:'Máquinas para processamento de dados portáteis (notebook)'},{code:'8517.12.31',desc:'Aparelhos para transmissão de voz por celular (smartphone)'},
-  {code:'7108.12.00',desc:'Ouro em formas brutas para uso não monetário'},{code:'7403.11.00',desc:'Cátodos e suas secções de cobre refinado'},
-  {code:'3004.90.99',desc:'Medicamentos para uso humano não especificados'},{code:'8701.20.00',desc:'Tratores para semi-reboques'},
-  {code:'6109.10.00',desc:'Camisetas de malha de algodão'},{code:'6403.99.90',desc:'Calçados com sola de borracha ou couro'},
-  {code:'8703.21.00',desc:'Automóveis com motor até 1000cc'},{code:'0901.11.90',desc:'Café não torrado não descafeinado'},
-  {code:'8528.72.20',desc:'Monitores de vídeo LCD'},{code:'8529.90.92',desc:'Partes para aparelhos receptores de televisão'},
-  {code:'9403.20.00',desc:'Móveis metálicos para escritório'},{code:'8443.31.90',desc:'Impressoras a laser e outras máquinas multifuncionais'},
+  // LINHA BRANCA E ELETRDOMÉSTICOS
+  {code:'8450.90.10',desc:'Partes de máquinas de lavar roupa acima 10kg'},
+  {code:'8450.90.90',desc:'Partes de máquinas de lavar roupa domésticas'},
+  {code:'8450.20.00',desc:'Máquinas de lavar roupa acima 10kg capacidade'},
+  {code:'8450.11.00',desc:'Máquinas de lavar roupa até 10kg uso doméstico'},
+  {code:'8418.10.00',desc:'Combinado refrigerador-congelador doméstico'},
+  {code:'8418.21.00',desc:'Refrigerador doméstico tipo compressão'},
+  {code:'8418.22.00',desc:'Refrigerador doméstico tipo absorção elétrica'},
+  {code:'8418.30.00',desc:'Congeladores tipo arca horizontal até 800 litros'},
+  {code:'8415.10.11',desc:'Aparelhos de ar condicionado split até 30000 BTU'},
+  {code:'8415.10.12',desc:'Aparelhos de ar condicionado split acima 30000 BTU'},
+  {code:'8415.10.19',desc:'Outros aparelhos de ar condicionado de parede'},
+  {code:'8415.81.10',desc:'Aparelhos de ar condicionado com motor elétrico'},
+  {code:'8516.50.00',desc:'Fornos de micro-ondas domésticos'},
+  {code:'8516.60.00',desc:'Outros fornos elétricos domésticos'},
+  {code:'8509.40.00',desc:'Trituradores e misturadores de alimentos'},
+  {code:'8508.11.00',desc:'Aspiradores de pó até 1500W potência'},
+  {code:'8516.31.00',desc:'Secadores de cabelo elétricos'},
+  {code:'8516.72.00',desc:'Torradeiras elétricas domésticas'},
+  // INFORMÁTICA E ELETRÔNICOS
+  {code:'8471.30.12',desc:'Máquinas para processamento de dados portáteis notebook laptop'},
+  {code:'8471.30.19',desc:'Outras máquinas portáteis de processamento de dados'},
+  {code:'8471.41.10',desc:'Microcomputadores desktop all-in-one'},
+  {code:'8471.41.90',desc:'Outros microcomputadores'},
+  {code:'8471.60.54',desc:'Unidades de entrada tipo teclado'},
+  {code:'8471.60.52',desc:'Mouse para computador'},
+  {code:'8517.12.31',desc:'Aparelhos de telefonia celular smartphone'},
+  {code:'8517.12.11',desc:'Telefones fixos com fio residenciais'},
+  {code:'8528.72.20',desc:'Monitores de vídeo LCD para computador'},
+  {code:'8528.59.20',desc:'Monitores e projetores sem receptor televisão'},
+  {code:'8443.31.90',desc:'Impressoras a laser multifuncionais'},
+  {code:'8443.32.21',desc:'Impressoras a jato de tinta'},
+  {code:'8519.81.20',desc:'Aparelhos de reprodução de som MP3 portáteis'},
+  {code:'8521.10.10',desc:'Aparelhos videocassete e DVD players'},
+  {code:'8525.80.19',desc:'Câmeras digitais de fotografia'},
+  {code:'8544.42.00',desc:'Cabos elétricos para tensão não superior a 1000V'},
+  // ALIMENTOS E BEBIDAS
+  {code:'2005.70.00',desc:'Azeitonas preparadas ou conservadas'},
+  {code:'0711.20.00',desc:'Azeitonas conservadas provisoriamente não próprias para alimentação'},
+  {code:'2103.90.21',desc:'Alcaparras preparadas ou conservadas'},
+  {code:'2005.99.00',desc:'Outros produtos hortícolas preparados ou conservados'},
+  {code:'0901.11.90',desc:'Café não torrado não descafeinado outros'},
+  {code:'0901.21.00',desc:'Café torrado não descafeinado em grão'},
+  {code:'1806.31.10',desc:'Chocolate em tabletes barras ou paus recheados'},
+  {code:'2009.61.00',desc:'Suco de uva incluindo mostos'},
+  {code:'2204.21.00',desc:'Outros vinhos vinho de uvas frescas em recipientes'},
+  {code:'2208.30.00',desc:'Uísque whisky'},
+  {code:'1905.31.00',desc:'Biscoitos e bolachas adicionados de edulcorante'},
+  {code:'0303.89.00',desc:'Outros peixes congelados exceto filés'},
+  {code:'1604.14.10',desc:'Atum preparado ou conservado inteiro em pedaços'},
+  {code:'2001.10.00',desc:'Pepinos e pepinilhos preparados em vinagre'},
+  {code:'1509.10.00',desc:'Azeite de oliva virgem'},
+  // VESTUÁRIO E CALÇADOS
+  {code:'6109.10.00',desc:'Camisetas de malha de algodão'},
+  {code:'6109.90.00',desc:'Camisetas de malha de outras matérias têxteis'},
+  {code:'6110.20.00',desc:'Camisolas e pulôveres de algodão malha'},
+  {code:'6203.42.00',desc:'Calças compridas de algodão masculinas'},
+  {code:'6204.62.00',desc:'Calças compridas de algodão femininas'},
+  {code:'6211.43.00',desc:'Uniformes escolares ou esportivos femininos'},
+  {code:'6403.99.90',desc:'Calçados com sola de borracha plástico ou couro'},
+  {code:'6404.11.00',desc:'Calçados com sola de borracha tênis esportivos'},
+  {code:'6217.10.00',desc:'Acessórios de vestuário de malha'},
+  // METAIS E INSUMOS INDUSTRIAIS
+  {code:'7108.12.00',desc:'Ouro em formas brutas para uso não monetário'},
+  {code:'7403.11.00',desc:'Cátodos e suas secções de cobre refinado'},
+  {code:'7601.10.00',desc:'Alumínio não ligado em formas brutas'},
+  {code:'7204.10.00',desc:'Desperdícios de ferro fundido'},
+  {code:'7217.10.90',desc:'Fios de ferro ou aço não ligado outros'},
+  {code:'7318.15.00',desc:'Outros parafusos e porcas de ferro ou aço'},
+  {code:'3901.10.10',desc:'Polietileno de baixa densidade em formas primárias'},
+  {code:'3902.10.00',desc:'Polipropileno em formas primárias'},
+  {code:'2836.30.00',desc:'Carbonato de sódio'},
+  {code:'2814.10.00',desc:'Amônia anidra'},
+  // VEÍCULOS E PEÇAS
+  {code:'8703.21.00',desc:'Automóveis com motor explosão até 1000cc'},
+  {code:'8703.22.10',desc:'Automóveis com motor explosão 1000cc a 1500cc'},
+  {code:'8703.23.10',desc:'Automóveis com motor explosão 1500cc a 3000cc'},
+  {code:'8708.29.99',desc:'Outras partes e acessórios de carroçarias'},
+  {code:'8708.99.90',desc:'Outras partes e acessórios para veículos'},
+  {code:'8706.00.10',desc:'Chassis com motor para ônibus'},
+  {code:'8701.20.00',desc:'Tratores para semi-reboques'},
+  {code:'8716.40.00',desc:'Outros reboques e semi-reboques'},
+  // SAÚDE E FARMACÊUTICO
+  {code:'3004.90.99',desc:'Medicamentos para uso humano não especificados'},
+  {code:'3004.20.19',desc:'Medicamentos contendo antibióticos outros'},
+  {code:'3006.10.19',desc:'Outros suturas cirúrgicas esterilizadas'},
+  {code:'9018.90.99',desc:'Outros instrumentos e aparelhos de medicina'},
+  {code:'9021.10.10',desc:'Artigos e aparelhos de ortopedia'},
+  // MÁQUINAS E EQUIPAMENTOS
+  {code:'8479.89.99',desc:'Outras máquinas e aparelhos mecânicos'},
+  {code:'8462.10.10',desc:'Máquinas de forjar ou estampar comandadas numericamente'},
+  {code:'8501.10.19',desc:'Outros motores elétricos até 37.5W'},
+  {code:'8537.10.20',desc:'Quadros painéis para controle elétrico até 1000V'},
+  {code:'8544.30.00',desc:'Conjuntos de fios para velas de ignição'},
+  {code:'8529.90.92',desc:'Partes para aparelhos receptores de televisão'},
+  {code:'9403.20.00',desc:'Móveis metálicos para escritório'},
+  {code:'9403.30.00',desc:'Móveis de madeira para escritório'},
+  {code:'9401.61.00',desc:'Assentos com armação de madeira estofados'},
+  // AGRÍCOLA
+  {code:'8432.80.00',desc:'Outras máquinas e aparelhos para preparar solo'},
+  {code:'8433.53.00',desc:'Máquinas para colheita de raízes ou tubérculos'},
+  {code:'3808.91.29',desc:'Outros inseticidas apresentados de outra forma'},
+  {code:'3105.20.10',desc:'Adubos ou fertilizantes minerais contendo nitrogênio fósforo potássio'},
 ].map(n=>({...n,codRaw:n.code}));
 
 // NCM page renderização
@@ -988,7 +2017,7 @@ function filterFullNcm(q){
 let searchTimer=null;
 function searchNcm(q){
   const dd=document.getElementById('ndd');
-  if(!q||q.length<2){dd.classList.remove('open');return;}
+  q=q.trim();if(!q||q.length<2){dd.classList.remove('open');return;}
   clearTimeout(searchTimer);
   // Busca imediata na base local enquanto a API carrega
   const qLow=q.toLowerCase();
@@ -1342,15 +2371,20 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','mercado','ncm','alertas','noticias'];
+  const allTabs=['sim','precif','origens','incoterms','historico','rastreio','mercado','ncm','alertas','noticias'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
   document.getElementById('tab-'+name)?.classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+name+"'"))n.classList.add('active');});
+  // Sync mobile nav
+  const mobileMap={sim:'mn-sim',rastreio:'mn-rastreio',mercado:'mn-mercado',alertas:'mn-alertas',noticias:'mn-noticias'};
+  document.querySelectorAll('.mn-item').forEach(m=>m.classList.remove('active'));
+  const mnId=mobileMap[name];if(mnId)document.getElementById(mnId)?.classList.add('active');
   if(name==='mercado')buildImpTab(parseFloat(document.getElementById('cambio').value)||5.22);
   if(name==='noticias'&&!allNews.length)fetchNews();
   if(name==='historico')renderHistorico();
+  if(name==='rastreio'){setTimeout(()=>initLeafletMap(),100);}
   if(name==='origens'){
     const oc=document.getElementById('orig-cambio');if(oc&&!oc.value&&taxas.USD)oc.value=taxas.USD.toFixed(4);
     const of2=document.getElementById('orig-fob');const sf=document.getElementById('fob');if(of2&&!of2.value&&sf&&sf.value)of2.value=sf.value;
@@ -1423,6 +2457,169 @@ function exportPDF(){
 }
 
 // ══════════════════════════
+// RASTREAMENTO — Leaflet + OpenSeaMap
+// ══════════════════════════
+let leafletMap = null;
+let leafletLoaded = false;
+
+function initLeafletMap() {
+  if (leafletLoaded) return;
+  const el = document.getElementById('leaflet-map');
+  if (!el) return;
+
+  // Carregar Leaflet CSS
+  if (!document.getElementById('leaflet-css')) {
+    const lk = document.createElement('link');
+    lk.id = 'leaflet-css';
+    lk.rel = 'stylesheet';
+    lk.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(lk);
+  }
+
+  // Carregar Leaflet JS
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  script.onload = () => {
+    leafletLoaded = true;
+
+    // Criar mapa centrado no Brasil
+    leafletMap = L.map('leaflet-map', {
+      center: [-15, -45],
+      zoom: 4,
+      zoomControl: true,
+      attributionControl: true,
+    });
+
+    // Camada base: OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(leafletMap);
+
+    // Camada náutica: OpenSeaMap (marcas marítimas, portos, rotas)
+    L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+      attribution: '© OpenSeaMap contributors',
+      maxZoom: 18,
+      opacity: 0.8,
+    }).addTo(leafletMap);
+
+    // Marcadores dos portos brasileiros principais
+    const portos = [
+      { nome: 'Porto de Santos', lat: -23.9515, lon: -46.3336, info: 'Maior porto da América Latina · ~35% do comex BR' },
+      { nome: 'Porto de Paranaguá', lat: -25.5225, lon: -48.5218, info: '2º maior porto · especializado em grãos' },
+      { nome: 'Porto de Itajaí', lat: -26.9031, lon: -48.6656, info: 'Porto mais competitivo do sul · menor capatazia' },
+      { nome: 'Porto do Rio de Janeiro', lat: -22.8834, lon: -43.1786, info: 'Importante para RJ, ES e MG' },
+      { nome: 'Porto de Suape', lat: -8.3989, lon: -35.0331, info: 'Principal porto do Nordeste' },
+      { nome: 'Porto de Salvador', lat: -12.9697, lon: -38.5108, info: 'Porto estratégico da Bahia' },
+      { nome: 'Porto de Manaus (MUSA)', lat: -3.1316, lon: -60.0227, info: 'Zona Franca de Manaus · regime especial' },
+    ];
+
+    const iconePorto = L.divIcon({
+      html: '<div style="background:#3b82f6;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px rgba(59,130,246,.6);"></div>',
+      className: '',
+      iconSize: [10, 10],
+      iconAnchor: [5, 5],
+    });
+
+    portos.forEach(p => {
+      L.marker([p.lat, p.lon], { icon: iconePorto })
+        .addTo(leafletMap)
+        .bindPopup(`<strong>${p.nome}</strong><br><span style="font-size:11px;">${p.info}</span>`);
+    });
+
+    // Atualizar zoom display
+    leafletMap.on('zoomend', () => {
+      const z = document.getElementById('mapa-zoom');
+      if (z) z.textContent = 'Zoom: ' + leafletMap.getZoom();
+    });
+
+    document.getElementById('mapa-info').textContent = 'Mapa AIS carregado · ' + portos.length + ' portos marcados';
+  };
+  script.onerror = () => {
+    el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;padding:20px;text-align:center;color:var(--text2);"><div style="font-size:24px;">🗺</div><div>Mapa indisponível offline.</div><a href="https://www.marinetraffic.com" target="_blank" style="color:var(--accent-bright);">Abrir MarineTraffic →</a></div>';
+  };
+  document.head.appendChild(script);
+}
+
+function focarPorto(lat, lon, zoom) {
+  if (!leafletMap) { initLeafletMap(); setTimeout(() => focarPorto(lat, lon, zoom), 1200); return; }
+  leafletMap.setView([lat, lon], zoom);
+}
+
+function usarExemplo(tipo, valor) {
+  const sel = document.getElementById('track-type');
+  const inp = document.getElementById('track-input');
+  if (sel) sel.value = tipo;
+  if (inp) inp.value = valor;
+  updateTrackUI();
+}
+
+function updateTrackUI() {
+  const type = document.getElementById('track-type').value;
+  const labels = { imo:'Número IMO (7 dígitos)', mmsi:'Número MMSI (9 dígitos)', nome:'Nome do navio', container:'Número do contêiner ou BL' };
+  const ph = { imo:'Ex: 9242138', mmsi:'Ex: 538006717', nome:'Ex: MSC OSCAR', container:'Ex: MSCU1234567' };
+  const lbl = document.getElementById('track-label');
+  const inp = document.getElementById('track-input');
+  if (lbl) lbl.textContent = labels[type] || 'Número';
+  if (inp) { inp.placeholder = ph[type] || ''; inp.value = ''; }
+}
+
+function rastrearCarga() {
+  const type = document.getElementById('track-type').value;
+  const val = document.getElementById('track-input').value.trim();
+  const res = document.getElementById('track-result');
+  if (!val) { res.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Digite um número para rastrear.</div>'; return; }
+
+  res.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:8px 0;"><div class="spin"></div>Buscando...</div>';
+
+  setTimeout(() => {
+    if (type === 'imo' || type === 'mmsi') {
+      res.innerHTML = `
+        <div class="alert ao" style="margin-bottom:8px;">
+          <div class="alert-i">✓</div>
+          <div><div class="at">Rastreando ${type.toUpperCase()}: ${val}</div>
+          <div class="ab">Abra os links abaixo para ver posição, rota e histórico do navio.</div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <a href="https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">MarineTraffic</div><div style="font-size:10px;color:var(--text3);">Posição ao vivo, rota, histórico completo</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
+          </a>
+          <a href="https://www.vesselfinder.com/?imo=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">VesselFinder</div><div style="font-size:10px;color:var(--text3);">Perfil do navio e posição atual</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
+          </a>
+          <a href="https://www.fleetmon.com/vessels/?s=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">FleetMon</div><div style="font-size:10px;color:var(--text3);">Dados técnicos e histórico de escalas</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
+          </a>
+        </div>`;
+    } else if (type === 'nome') {
+      window.open(`https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${encodeURIComponent(val)}`, '_blank');
+      res.innerHTML = `<div class="alert ai"><div class="alert-i">🔍</div><div><div class="at">Buscando por nome</div><div class="ab">Abrindo MarineTraffic com busca por "<strong>${val}</strong>".</div></div></div>`;
+    } else {
+      // Contêiner / BL
+      res.innerHTML = `
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Rastrear: <span style="font-family:var(--mono);color:var(--accent-bright);">${val}</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <a href="https://www.track-trace.com/container?id=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">Track-Trace</div><div style="font-size:10px;color:var(--text3);">Agrega MSC, Maersk, CMA CGM e +50 armadoras</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
+          </a>
+          <a href="https://shipsgo.com/container-tracking/${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">Shipsgo</div><div style="font-size:10px;color:var(--text3);">Especializado em contêineres e BL</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
+          </a>
+          <a href="https://www.searates.com/container/tracking/?container=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">SeaRates</div><div style="font-size:10px;color:var(--text3);">Rastreamento + cotação de frete</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
+          </a>
+        </div>`;
+    }
+  }, 400);
+}
+
+// ══════════════════════════
 // PRECIFICAÇÃO
 // ══════════════════════════
 function calcPV(){
@@ -1433,8 +2630,10 @@ function calcPV(){
   const icmsSaida=parseFloat(document.getElementById('pv-icms-saida').value)||0;
   if(!custo){document.getElementById('pv-result').innerHTML='';return;}
   const custUnit=custo/qtd;
-  const fator=1-(margem/100)-(com/100)-(icmsSaida/100);
-  const pvUnit=fator>0?custUnit/fator:0;
+  const fatorBruto = (margem/100)+(com/100)+(icmsSaida/100);
+  // Protege contra divisão por zero ou negativo
+  const fator = fatorBruto >= 0.99 ? 0.01 : 1 - fatorBruto;
+  const pvUnit = custUnit / fator;
   const pvTotal=pvUnit*qtd;
   const margemR=pvTotal-custo;
   const markupPct=custo>0?((pvTotal/custo)-1)*100:0;
@@ -1612,6 +2811,7 @@ fetchCambio();
 setInterval(fetchCambio,30000);
 loadNcmDB();
 renderHistorico();
+// Mapa Leaflet: inicia quando usuário abre aba de rastreamento
 </script>
 </body>
 </html>
