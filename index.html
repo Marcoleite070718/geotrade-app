@@ -221,21 +221,13 @@ function hideSplash(callback) {
   }, 600);
 }
 
-// Mostrar splash por 2.5s depois transiciona
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    hideSplash(() => {
-      // Após splash, verificar se deve mostrar login
-      const skipped = localStorage.getItem('gt_skipped_login');
-      if (!window.gtUser && !skipped) showLoginScreen();
-    });
-  }, 2500);
-});
+// Mostrar tela de login na inicialização — controlado pelo script principal
 
 function showLoginScreen() {
   const ls = document.getElementById('login-screen');
   if (ls) ls.classList.add('visible');
 }
+window.showLoginScreen = showLoginScreen;
 function hideLoginScreen() {
   const ls = document.getElementById('login-screen');
   if (ls) ls.classList.remove('visible');
@@ -901,7 +893,7 @@ iframe{border-radius:var(--r);}
 </head>
 <body>
 <!-- SPLASH SCREEN -->
-<div id="splash">
+<div id="splash" style="display:flex;">
   <div class="splash-logo-wrap">
     <div class="splash-ring"></div>
     <svg class="splash-icon" width="56" height="56" viewBox="0 0 48 48" fill="none">
@@ -3885,6 +3877,22 @@ fetchCambio();
 setInterval(fetchCambio,30000);
 loadNcmDB();
 renderHistoricoLocal();
+
+// Iniciar splash — DOM garantidamente pronto aqui
+(function initSplash(){
+  const splash = document.getElementById('splash');
+  if(splash) splash.style.display = 'flex';
+  setTimeout(()=>{
+    if(splash){
+      splash.classList.add('hide');
+      setTimeout(()=>{
+        splash.style.display='none';
+        const skipped=localStorage.getItem('gt_skipped_login');
+        if(!window.gtUser && !skipped && window.showLoginScreen) window.showLoginScreen();
+      }, 600);
+    }
+  }, 2500);
+})();
 // Mapa Leaflet: inicia quando usuário abre aba de rastreamento
 </script>
 </body>
