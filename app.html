@@ -1054,7 +1054,20 @@ iframe{border-radius:var(--r);}
     Rastreamento
   </div>
   <div class="ns">Inteligência</div>
-  <div class="ni" id="nav-admin" onclick="showTab('admin')" style="display:none;">
+  <div class="ni" onclick="showTab('antecip')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 11V5l5-3 5 3v6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="4.5" y="7" width="5" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Antecipação
+  </div>
+  <div class="ni" onclick="showTab('fretes')">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="9" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 6h2l1 2v2h-3V6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="3.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/><circle cx="10.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Fretes por Rota
+  </div>
+  <div class="ni" onclick="showTab('monitor')">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Monitor NCMs
+    <span class="ni-dot" id="monitor-dot" style="display:none;"></span>
+  </div>
+  <div id="nav-admin" onclick="showTab('admin')" class="ni" style="display:none;">
     <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="11" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
     Admin<span class="admin-badge">ADM</span>
   </div>
@@ -2438,6 +2451,102 @@ iframe{border-radius:var(--r);}
       </div>
     </div>
   </div>
+  <!-- ══ ANTECIPAÇÃO DE ESTOQUE ══ -->
+  <div class="section" id="sec-antecip">
+    <div style="padding:12px 16px;background:var(--s2);border:1px solid var(--s3);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--success);margin-bottom:4px;">Calculadora de Antecipação de Estoque</div>
+      <div style="font-size:12px;color:var(--text2);">Vale importar agora ou esperar 60–90 dias? Compara o custo do capital com o risco cambial e tendência de frete.</div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">Dados da operação</div>
+        <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="ant-fob" placeholder="0,00" oninput="calcAntecip()" step="1000" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Câmbio hoje (USD/BRL)</div><div class="iw"><span class="ip">R$</span><input type="number" id="ant-cambio" placeholder="0,0000" oninput="calcAntecip()" step="0.01" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Prazo para importar (dias)</div><input type="number" id="ant-prazo" placeholder="60" value="60" oninput="calcAntecip()" step="15"></div>
+        <div class="field"><div class="fl">Custo de capital (% a.m.)</div><input type="number" id="ant-cdi" placeholder="0,83" value="0.83" oninput="calcAntecip()" step="0.1"></div>
+        <div class="field"><div class="fl">Expectativa do câmbio em ${ant-prazo} dias</div><div class="iw"><span class="ip">R$</span><input type="number" id="ant-cambio-fut" placeholder="0,0000" oninput="calcAntecip()" step="0.01" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Variação esperada no frete (%)</div><input type="number" id="ant-frete-var" placeholder="0" value="0" oninput="calcAntecip()" step="5"></div>
+      </div>
+      <div>
+        <div id="ant-result"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha os dados para ver a análise.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FRETES POR ROTA ══ -->
+  <div class="section" id="sec-fretes">
+    <div style="padding:12px 16px;background:var(--teal2);border:1px solid rgba(6,182,212,.2);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--teal);margin-bottom:4px;">Tabela de Fretes por Rota — Referência de Mercado</div>
+      <div style="font-size:12px;color:var(--text2);">Fretes spot de referência por rota e tipo de contêiner. Atualizado mensalmente com dados de mercado. Use como base para negociação com armadores.</div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="ct">Filtros</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;">Porto de destino</div>
+          <select id="fr-porto" onchange="renderFretesTable(fretesFiltro)" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;">
+            <option value="santos">🔵 Santos — SP (base)</option>
+            <option value="paranagua">Paranaguá — PR (+8%)</option>
+            <option value="itajai">Itajaí — SC (+10%)</option>
+            <option value="rio">Rio de Janeiro — RJ (+12%)</option>
+            <option value="vitoria">Vitória — ES (+11%)</option>
+            <option value="salvador">Salvador — BA (+18%)</option>
+            <option value="suape">Suape — PE (+22%)</option>
+            <option value="fortaleza">Fortaleza — CE (+25%)</option>
+            <option value="manaus">Manaus — AM (+35%)</option>
+          </select>
+          <div id="fr-porto-info" style="font-size:10px;color:var(--text3);margin-top:5px;"></div>
+        </div>
+        <div style="flex:2;min-width:280px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;">Filtrar por origem</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="filtrarFrete('todos')" id="fr-btn-todos" class="nf-btn active">Todas</button>
+            <button onclick="filtrarFrete('china')" id="fr-btn-china" class="nf-btn">🇨🇳 China</button>
+            <button onclick="filtrarFrete('eua')" id="fr-btn-eua" class="nf-btn">🇺🇸 EUA</button>
+            <button onclick="filtrarFrete('europa')" id="fr-btn-europa" class="nf-btn">🇪🇺 Europa</button>
+            <button onclick="filtrarFrete('asia')" id="fr-btn-asia" class="nf-btn">🌏 Ásia</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="fretes-table"></div>
+    <div class="alert ai" style="margin-top:10px;"><div class="alert-i">ℹ</div><div><div class="at">Como usar esta tabela</div><div class="ab">Valores em USD por contêiner de 20' (FCL). 40' = ~1,6× o valor do 20'. LCL (carga fracionada) = USD 80–140 por CBM. Fretes para portos fora de Santos incluem sobretaxa de destino (DDC). Frete interno (porto → CD) não está incluído — varia muito por localização.</div></div></div>
+  </div>
+
+  <!-- ══ MONITOR DE NCMs ══ -->
+  <div class="section" id="sec-monitor">
+    <div style="padding:12px 16px;background:var(--p2);border:1px solid var(--p3);border-radius:var(--r2);margin-bottom:14px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--purple);margin-bottom:4px;">Monitor de NCMs</div>
+      <div style="font-size:12px;color:var(--text2);">Cadastre os NCMs que você importa. O sistema verifica mudanças de alíquota e publica alertas aqui quando detectar alterações no DOU.</div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">Adicionar NCM monitorado</div>
+        <div class="field"><div class="fl">Código NCM</div><input type="text" id="mon-ncm" placeholder="Ex: 8450.11.00" maxlength="10"></div>
+        <div class="field"><div class="fl">Descrição (opcional)</div><input type="text" id="mon-desc" placeholder="Ex: Máquina de lavar doméstica"></div>
+        <div class="field"><div class="fl">II atual (%)</div><input type="number" id="mon-ii" placeholder="14" step="1"></div>
+        <button onclick="adicionarMonitor()" style="width:100%;background:var(--p2);border:1px solid var(--p3);border-radius:8px;padding:9px;cursor:pointer;color:var(--purple);font-size:12px;font-weight:500;margin-top:4px;">+ Adicionar ao monitor</button>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">NCMs mais monitorados no mercado:</div>
+          ${[['8450.11.00','Máquina de lavar doméstica','14'],['8471.30.12','Notebook / Laptop','0'],['8517.12.13','Smartphone 5G','16'],['6403.99.90','Calçados couro','35'],['0201.30.00','Carne bovina desossada','10']].map(([c,d,ii])=>`<div onclick="preencherMonitor('${c}','${d}','${ii}')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .1s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><span style="font-family:var(--mono);font-size:10px;color:var(--accent);">${c}</span><span style="font-size:11px;color:var(--text2);flex:1;">${d}</span><span style="font-family:var(--mono);font-size:10px;color:var(--text3);">II ${ii}%</span></div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px;">
+          <div class="ct">NCMs monitorados <span id="monitor-count" style="font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0;"></span></div>
+          <div id="monitor-list"><div style="color:var(--text3);font-size:12px;padding:12px 0;text-align:center;">Nenhum NCM adicionado ainda.</div></div>
+        </div>
+        <div class="card">
+          <div class="ct" style="color:var(--warn);">⚠ Alertas recentes</div>
+          <div id="monitor-alertas">
+            <div class="alert aw" style="margin-bottom:8px;"><div class="alert-i">📋</div><div><div class="at">Ex-tarifário encerrado — NCM 8450.90</div><div class="ab">A janela de pleito de ex-tarifário para o NCM 8450.90 (partes de lavadoras) encerrou em jan/2026. Próxima janela prevista para 2º sem. 2026. Empresas afetadas devem planejar reajuste de custos.</div></div></div>
+            <div class="alert ai"><div class="alert-i">ℹ</div><div><div class="at">TEC: novos NCMs de eletrônicos em consulta</div><div class="ab">GECEX abriu consulta pública para revisão de alíquotas do Capítulo 85 (eletrônicos). Possível redução de II para componentes de telecomunicações. Acompanhe o DOU.</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ ADMIN ══ -->
   <div class="section" id="sec-admin">
     <div style="padding:12px 16px;background:var(--w2);border:1px solid var(--w3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -3337,7 +3446,7 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
@@ -3352,6 +3461,14 @@ function showTab(name){
   if(name==='historico')renderHistorico();
   if(name==='rastreio'){setTimeout(()=>initLeafletMap(),100);}
   if(name==='admin'&&window.gtIsAdmin){loadAdminData();}
+  if(name==='fretes'){renderFretesTable('todos');}
+  if(name==='monitor'){renderMonitorList();}
+  if(name==='antecip'){
+    const c=document.getElementById('ant-cambio');
+    if(c&&!c.value&&taxas.USD)c.value=taxas.USD.toFixed(4);
+    const cf=document.getElementById('ant-cambio-fut');
+    if(cf&&!cf.value&&taxas.USD)cf.value=(taxas.USD*1.03).toFixed(4);
+  }
   if(name==='origens'){
     const oc=document.getElementById('orig-cambio');if(oc&&!oc.value&&taxas.USD)oc.value=taxas.USD.toFixed(4);
     const of2=document.getElementById('orig-fob');const sf=document.getElementById('fob');if(of2&&!of2.value&&sf&&sf.value)of2.value=sf.value;
@@ -3382,45 +3499,145 @@ function exportPDF(){
   if(!fob||!selNcm){alert('Preencha o simulador antes de exportar.');return;}
   const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
   const icms=parseFloat(document.getElementById('estado').value)||.18;
-  const fr=parseFloat(document.getElementById('frete').value)||0;const sg=parseFloat(document.getElementById('seguro').value)||0;
-  const dep=parseFloat(document.getElementById('desp').value)||0;const cap=parseFloat(document.getElementById('cap').value)||0;
-  const arm=parseFloat(document.getElementById('arm').value)||0;const fi=parseFloat(document.getElementById('fi').value)||0;
+  const fr=parseFloat(document.getElementById('frete').value)||0;
+  const sg=parseFloat(document.getElementById('seguro').value)||0;
+  const dep=parseFloat(document.getElementById('desp').value)||0;
+  const cap=parseFloat(document.getElementById('cap').value)||0;
+  const arm=parseFloat(document.getElementById('arm').value)||0;
+  const fi=parseFloat(document.getElementById('fi').value)||0;
   const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
   const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
   const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
-  const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const modal=modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário';
+  const estEl=document.getElementById('estado');
+  const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'—':'—';
+  const userName=window.gtUser?.displayName||'Visitante';
   const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>GeoTrade — Simulação</title>
-  <style>body{font-family:'Segoe UI',sans-serif;font-size:13px;color:#1a1a1a;max-width:700px;margin:0 auto;padding:32px;}
-  h1{font-size:22px;font-weight:700;color:#00b87a;margin-bottom:4px;}.sub{font-size:12px;color:#666;margin-bottom:20px;}
-  .ig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}.ib{background:#f8f8f8;border-radius:8px;padding:10px 12px;}.ibl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:3px;}.ibv{font-size:14px;font-weight:700;font-family:'Courier New',monospace;}
-  table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{text-align:left;font-size:10px;text-transform:uppercase;color:#888;padding:0 8px 7px;border-bottom:2px solid #eee;}td{padding:7px 8px;border-bottom:1px solid #f0f0f0;font-size:12px;}.mono{font-family:'Courier New',monospace;}
-  .total-row td{font-weight:700;font-size:15px;border-top:2px solid #333;padding-top:12px;}.total-row .mono{color:#00b87a;font-size:18px;}
-  footer{margin-top:28px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#aaa;}</style></head><body>
-  <h1>GeoTrade — Simulação de Importação</h1>
-  <div class="sub">${now} · NCM ${selNcm.code} · ${selNcm.desc?.substring(0,50)} · Modal ${modal}</div>
-  <div class="ig">
-    <div class="ib"><div class="ibl">Valor FOB</div><div class="ibv">${fN(fob,2)} ${moedaSel}</div></div>
-    <div class="ib"><div class="ibl">Câmbio</div><div class="ibv">R$\u00a0${fN(cambio,4)}</div></div>
-    <div class="ib"><div class="ibl">Carga tributária</div><div class="ibv">${pct(r.trib/r.cifBRL*100)}</div></div>
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>GeoTrade — Relatório de Importação</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;font-size:13px;color:#1a2035;background:#fff;padding:0;}
+    .page{max-width:720px;margin:0 auto;padding:48px 48px 60px;}
+    /* HEADER */
+    .header{display:flex;align-items:center;justify-content:space-between;padding-bottom:24px;border-bottom:2px solid #3b82f6;margin-bottom:32px;}
+    .logo{display:flex;align-items:center;gap:10px;}
+    .logo-text{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-1px;color:#1a2035;}
+    .logo-text span{color:#3b82f6;}
+    .header-meta{text-align:right;font-size:11px;color:#7a90b0;line-height:1.8;}
+    .report-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#3b82f6;margin-bottom:6px;}
+    /* OPERAÇÃO */
+    .op-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+    .op-box{background:#f8faff;border:1px solid #e2eaf8;border-radius:8px;padding:12px 14px;}
+    .op-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#7a90b0;margin-bottom:4px;}
+    .op-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#1a2035;}
+    /* TABELAS */
+    .section-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#3b82f6;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #e2eaf8;}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+    th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#7a90b0;padding:0 10px 8px;border-bottom:1px solid #e2eaf8;}
+    td{padding:8px 10px;border-bottom:1px solid #f5f7ff;font-size:12px;color:#3a4a6a;}
+    td.mono{font-family:'DM Mono',monospace;text-align:right;}
+    tr:hover td{background:#fafbff;}
+    .subtotal td{background:#f0f4ff;font-weight:500;}
+    .subtotal td.mono{color:#3b82f6;}
+    /* TOTAL */
+    .total-box{background:linear-gradient(135deg,#eff6ff,#f0fdff);border:2px solid #3b82f6;border-radius:12px;padding:20px 24px;margin:20px 0;display:flex;justify-content:space-between;align-items:center;}
+    .total-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3b82f6;margin-bottom:4px;}
+    .total-sub{font-size:11px;color:#7a90b0;}
+    .total-val{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:-1.5px;color:#1a2035;}
+    /* MEMÓRIA */
+    .mem-box{background:#fafbff;border:1px solid #e2eaf8;border-radius:8px;padding:14px;margin-bottom:8px;}
+    .mem-title{font-size:11px;font-weight:500;color:#1a2035;margin-bottom:3px;}
+    .mem-formula{font-family:'DM Mono',monospace;font-size:10px;color:#7a90b0;margin-bottom:3px;}
+    .mem-explain{font-size:11px;color:#5a6a8a;line-height:1.5;}
+    /* FOOTER */
+    .footer{margin-top:40px;padding-top:16px;border-top:1px solid #e2eaf8;display:flex;justify-content:space-between;align-items:center;}
+    .footer-text{font-size:10px;color:#aab0c0;line-height:1.6;}
+    .footer-badge{background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:4px 10px;font-size:10px;font-family:'DM Mono',monospace;color:#3b82f6;}
+    @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}
+  </style></head><body><div class="page">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+        <polygon points="24,4 44,24 24,44 4,24" fill="url(#lg)" opacity="0.15" stroke="url(#lg)" stroke-width="1.5"/>
+        <line x1="24" y1="4" x2="24" y2="44" stroke="url(#lg)" stroke-width="1" opacity="0.5"/>
+        <line x1="4" y1="24" x2="44" y2="24" stroke="url(#lg)" stroke-width="1" opacity="0.5"/>
+        <circle cx="24" cy="24" r="5" fill="url(#lg)"/>
+        <circle cx="24" cy="24" r="2.5" fill="#fff" opacity="0.9"/>
+      </svg>
+      <div>
+        <div class="logo-text">Geo<span>Trade</span></div>
+        <div style="font-size:9px;letter-spacing:.12em;color:#7a90b0;text-transform:uppercase;">Inteligência de Importação</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="report-title">Relatório de Simulação</div>
+      <div>${now} às ${hora}</div>
+      <div>Gerado por ${userName}</div>
+    </div>
   </div>
-  <table><thead><tr><th>Tributo</th><th>Alíquota</th><th>Valor</th></tr></thead><tbody>
-  <tr><td>Valor CIF</td><td>—</td><td class="mono">${R(r.cifBRL)}</td></tr>
-  <tr><td>II</td><td>${(selNcm.II*100).toFixed(0)}%</td><td class="mono">${R(r.II)}</td></tr>
-  <tr><td>IPI</td><td>${(selNcm.IPI*100).toFixed(0)}% sobre CIF+II</td><td class="mono">${R(r.IPI)}</td></tr>
-  <tr><td>PIS + COFINS</td><td>11,75%</td><td class="mono">${R(r.PIS+r.COFINS)}</td></tr>
-  ${afrmm?`<tr><td>AFRMM</td><td>8% frete + R$20</td><td class="mono">${R(r.AFRMM)}</td></tr>`:''}
-  <tr><td>ICMS (${pct(icms*100)} por dentro)</td><td>—</td><td class="mono">${R(r.ICMS)}</td></tr>
-  <tr style="background:#f8f8f8;"><td><b>Total tributos</b></td><td><b>${pct(r.trib/r.cifBRL*100)} do CIF</b></td><td class="mono"><b>${R(r.trib)}</b></td></tr>
+  <!-- DADOS DA OPERAÇÃO -->
+  <div class="section-title">Dados da operação</div>
+  <div class="op-grid">
+    <div class="op-box"><div class="op-label">NCM</div><div class="op-val">${selNcm.code}</div></div>
+    <div class="op-box"><div class="op-label">Produto</div><div class="op-val" style="font-size:11px;font-family:'DM Sans',sans-serif;">${selNcm.desc?.substring(0,40)||'—'}</div></div>
+    <div class="op-box"><div class="op-label">Modal</div><div class="op-val">${modal}</div></div>
+    <div class="op-box"><div class="op-label">Valor FOB</div><div class="op-val">${fN(fob,2)} ${moedaSel}</div></div>
+    <div class="op-box"><div class="op-label">Câmbio ${moedaSel}/BRL</div><div class="op-val">R$ ${fN(cambio,4)}</div></div>
+    <div class="op-box"><div class="op-label">Estado destino</div><div class="op-val">${estadoTxt}</div></div>
+  </div>
+  <!-- TRIBUTOS -->
+  <div class="section-title">Composição tributária</div>
+  <table><thead><tr><th>Tributo</th><th>Base de cálculo</th><th>Alíquota</th><th>Valor</th></tr></thead><tbody>
+  <tr><td>Valor CIF (base)</td><td>FOB + Frete + Seguro × Câmbio</td><td>—</td><td class="mono">${R(r.cifBRL)}</td></tr>
+  <tr><td>II — Imposto de Importação</td><td>CIF</td><td class="mono">${(selNcm.II*100).toFixed(0)}%</td><td class="mono">${R(r.II)}</td></tr>
+  <tr><td>IPI</td><td>CIF + II</td><td class="mono">${(selNcm.IPI*100).toFixed(0)}%</td><td class="mono">${R(r.IPI)}</td></tr>
+  <tr><td>PIS</td><td>CIF + II + IPI</td><td class="mono">2,10%</td><td class="mono">${R(r.PIS)}</td></tr>
+  <tr><td>COFINS</td><td>CIF + II + IPI</td><td class="mono">9,65%</td><td class="mono">${R(r.COFINS)}</td></tr>
+  ${afrmm?`<tr><td>AFRMM</td><td>8% frete + R$ 20</td><td class="mono">8%</td><td class="mono">${R(r.AFRMM)}</td></tr>`:''}
+  <tr><td>ICMS (por dentro)</td><td>CIF + II + IPI + PIS + COFINS + desp.</td><td class="mono">${pct(icms*100)}</td><td class="mono">${R(r.ICMS)}</td></tr>
+  <tr class="subtotal"><td><b>Total tributos</b></td><td colspan="2"><b>${pct(r.trib/r.cifBRL*100)} do CIF</b></td><td class="mono"><b>${R(r.trib)}</b></td></tr>
   </tbody></table>
-  <table><thead><tr><th>Despesa</th><th>Valor</th></tr></thead><tbody>
-  <tr><td>Despacho</td><td class="mono">${R(dep)}</td></tr><tr><td>Capatazia/THC</td><td class="mono">${R(cap)}</td></tr>
-  <tr><td>Armazenagem</td><td class="mono">${R(arm)}</td></tr><tr><td>Frete interno</td><td class="mono">${R(fi)}</td></tr>
+  <!-- DESPESAS -->
+  <div class="section-title">Despesas operacionais</div>
+  <table><thead><tr><th>Despesa</th><th>Observação</th><th>Valor</th></tr></thead><tbody>
+  <tr><td>Despacho aduaneiro</td><td>Honorários do despachante</td><td class="mono">${R(dep)}</td></tr>
+  <tr><td>Capatazia / THC</td><td>Terminal Handling Charge</td><td class="mono">${R(cap)}</td></tr>
+  <tr><td>Armazenagem</td><td>Porto / CDA</td><td class="mono">${R(arm)}</td></tr>
+  <tr><td>Frete interno</td><td>Porto → CD destino</td><td class="mono">${R(fi)}</td></tr>
+  <tr class="subtotal"><td><b>Total despesas</b></td><td></td><td class="mono"><b>${R(dep+cap+arm+fi)}</b></td></tr>
   </tbody></table>
-  <table><tbody><tr class="total-row"><td>CUSTO TOTAL DESEMBARAÇADO</td><td class="mono">${R0(r.total)}</td></tr></tbody></table>
-  <footer>Simulação estimativa · GeoTrade · Alíquotas de II e IPI baseadas na TEC vigente para o NCM informado. PIS/COFINS e ICMS conforme legislação federal e estadual. Consulte um despachante aduaneiro habilitado.</footer>
-  </html>`);w.document.close();setTimeout(()=>w.print(),600);
+  <!-- TOTAL -->
+  <div class="total-box">
+    <div>
+      <div class="total-label">Custo total desembaraçado</div>
+      <div class="total-sub">Tributos + despesas operacionais · sem margem</div>
+    </div>
+    <div class="total-val">${R0(r.total)}</div>
+  </div>
+  <!-- DADOS ADICIONAIS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px;">
+    <div class="op-box"><div class="op-label">Peso estimado</div><div class="op-val">${fN(peso,0)} kg</div></div>
+    <div class="op-box"><div class="op-label">Custo / kg</div><div class="op-val">R$ ${fN(r.total/Math.max(peso,1),2)}</div></div>
+    <div class="op-box"><div class="op-label">Markup s/ FOB</div><div class="op-val">${pct((r.total/(fob*cambio)-1)*100)}</div></div>
+  </div>
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-text">
+      Simulação estimativa gerada pelo GeoTrade · geotrade.com.br<br>
+      Alíquotas baseadas na TEC vigente. ICMS calculado "por dentro" conforme legislação de importação.<br>
+      <b>Este documento é uma ferramenta de planejamento. Consulte um despachante aduaneiro habilitado para a DI.</b>
+    </div>
+    <div class="footer-badge">GeoTrade v11</div>
+  </div>
+  </div></body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(),800);
 }
 
 // ══════════════════════════
@@ -3756,8 +3973,18 @@ function salvarHistorico(dados){
   if(window.gtUser && window.salvarHistoricoCloud){
     window.salvarHistoricoCloud(dados);
   } else {
+    // Visitante: controlar limite de 5 simulações por mês via localStorage
+    const mes = new Date().toISOString().substring(0,7); // "2026-03"
+    const key = `gt_sim_count_${mes}`;
+    const count = parseInt(localStorage.getItem(key)||'0');
+    if(count >= 5){
+      window.showPlanWarning();
+      return false;
+    }
+    localStorage.setItem(key, count+1);
     window.salvarHistoricoLocal(dados);
   }
+  return true;
 }
 function renderHistorico(){
   if(window.gtUser && window.renderHistoricoCloud){
@@ -3865,6 +4092,187 @@ function calcSBS(){
     </div>`;
 }
 
+// ══════════════════════════════════════════
+// CALCULADORA DE ANTECIPAÇÃO DE ESTOQUE
+// ══════════════════════════════════════════
+function calcAntecip(){
+  const fob=parseFloat(document.getElementById('ant-fob').value)||0;
+  const cambio=parseFloat(document.getElementById('ant-cambio').value)||0;
+  const prazo=parseInt(document.getElementById('ant-prazo').value)||60;
+  const cdiMes=parseFloat(document.getElementById('ant-cdi').value)||0.83;
+  const cambioFut=parseFloat(document.getElementById('ant-cambio-fut').value)||0;
+  const freteVar=parseFloat(document.getElementById('ant-frete-var').value)||0;
+  const el=document.getElementById('ant-result');
+  if(!fob||!cambio){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha os dados para ver a análise.</div>';return;}
+  // Custo de importar AGORA
+  const valorHoje=fob*cambio;
+  const meses=prazo/30;
+  const custCapital=valorHoje*(Math.pow(1+cdiMes/100,meses)-1);
+  const totalAntes=valorHoje+custCapital;
+  // Custo de importar DEPOIS
+  const cambioFutVal=cambioFut||cambio*1.03;
+  const valorDepois=fob*cambioFutVal*(1+freteVar/100);
+  const diff=valorDepois-totalAntes;
+  const vantagem=diff>0?'ANTECIPAR':'AGUARDAR';
+  const cor=diff>0?'var(--success)':'var(--warn)';
+  el.innerHTML=`
+    <div class="card" style="border-color:${cor}44;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div style="font-family:var(--head);font-size:20px;font-weight:800;color:${cor};">${vantagem}</div>
+        <div style="font-size:12px;color:var(--text2);">${diff>0?'Antecipar economiza':'Aguardar economiza'} <strong style="color:${cor};">${R0(Math.abs(diff))}</strong></div>
+      </div>
+      <div class="rl"><span class="rl-l">Valor FOB em BRL hoje</span><span class="rl-v">${R0(valorHoje)}</span></div>
+      <div class="rl"><span class="rl-l">Custo de capital (${meses.toFixed(1)} meses × ${cdiMes}% a.m.)</span><span class="rl-v" style="color:var(--danger);">+ ${R0(custCapital)}</span></div>
+      <div class="rl" style="font-weight:500;"><span class="rl-l">Total importando AGORA</span><span class="rl-v" style="color:var(--accent);">${R0(totalAntes)}</span></div>
+      <div class="divider"></div>
+      <div class="rl"><span class="rl-l">Câmbio projetado daqui ${prazo} dias</span><span class="rl-v">R$ ${fN(cambioFutVal,4)}</span></div>
+      <div class="rl"><span class="rl-l">Variação esperada no frete</span><span class="rl-v">${freteVar>=0?'+':''}${freteVar}%</span></div>
+      <div class="rl" style="font-weight:500;"><span class="rl-l">Total importando em ${prazo} dias</span><span class="rl-v" style="color:var(--warn);">${R0(valorDepois)}</span></div>
+    </div>
+    <div class="alert ${diff>0?'ao':'aw'}">
+      <div class="alert-i">${diff>0?'✓':'⚠'}</div>
+      <div><div class="at">${diff>0?'Antecipar é vantajoso':'Pode valer esperar'}</div>
+      <div class="ab">${diff>0?`Com câmbio projetado de R$ ${fN(cambioFutVal,4)} e variação de frete de ${freteVar}%, importar agora economiza ${R0(diff)} em relação a aguardar ${prazo} dias. O custo do capital de ${R0(custCapital)} é compensado pela alta cambial.`:`Com câmbio projetado de R$ ${fN(cambioFutVal,4)}, aguardar ${prazo} dias economiza ${R0(Math.abs(diff))}. Mas atenção: se o câmbio subir mais do que o esperado, a vantagem desaparece.`}</div></div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// TABELA DE FRETES POR ROTA
+// ══════════════════════════════════════════
+const FRETES_DB=[
+  // China
+  {origem:'Xangai',destino:'Santos',pais:'china',flag:'🇨🇳',dias:35,c20:2800,c40:3600,tipo:'FCL',armadores:'MSC, CMA CGM, Cosco',upd:'mar/2026'},
+  {origem:'Ningbo',destino:'Santos',pais:'china',flag:'🇨🇳',dias:33,c20:2750,c40:3500,tipo:'FCL',armadores:'Evergreen, Yang Ming',upd:'mar/2026'},
+  {origem:'Shenzhen',destino:'Santos',pais:'china',flag:'🇨🇳',dias:36,c20:2900,c40:3700,tipo:'FCL',armadores:'OOCL, Hapag-Lloyd',upd:'mar/2026'},
+  {origem:'Guangzhou',destino:'Santos',pais:'china',flag:'🇨🇳',dias:37,c20:2850,c40:3650,tipo:'FCL',armadores:'MSC, Maersk',upd:'mar/2026'},
+  {origem:'Tianjin',destino:'Santos',pais:'china',flag:'🇨🇳',dias:40,c20:3100,c40:3900,tipo:'FCL',armadores:'Cosco, Evergreen',upd:'mar/2026'},
+  // EUA
+  {origem:'Los Angeles',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:18,c20:1800,c40:2400,tipo:'FCL',armadores:'Hapag-Lloyd, Maersk',upd:'mar/2026'},
+  {origem:'New York',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:14,c20:1600,c40:2100,tipo:'FCL',armadores:'MSC, Evergreen',upd:'mar/2026'},
+  {origem:'Miami',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:12,c20:1400,c40:1900,tipo:'FCL',armadores:'CMA CGM, OOCL',upd:'mar/2026'},
+  // Europa
+  {origem:'Rotterdam',destino:'Santos',pais:'europa',flag:'🇳🇱',dias:22,c20:2200,c40:2900,tipo:'FCL',armadores:'Maersk, MSC',upd:'mar/2026'},
+  {origem:'Hamburgo',destino:'Santos',pais:'europa',flag:'🇩🇪',dias:24,c20:2300,c40:3000,tipo:'FCL',armadores:'Hapag-Lloyd, Evergreen',upd:'mar/2026'},
+  {origem:'Gênova',destino:'Santos',pais:'europa',flag:'🇮🇹',dias:21,c20:2100,c40:2800,tipo:'FCL',armadores:'MSC, CMA CGM',upd:'mar/2026'},
+  {origem:'Barcelona',destino:'Santos',pais:'europa',flag:'🇪🇸',dias:20,c20:2000,c40:2700,tipo:'FCL',armadores:'Maersk, Hapag-Lloyd',upd:'mar/2026'},
+  // Ásia outros
+  {origem:'Hong Kong',destino:'Santos',pais:'asia',flag:'🇭🇰',dias:32,c20:2700,c40:3500,tipo:'FCL',armadores:'OOCL, Evergreen',upd:'mar/2026'},
+  {origem:'Tóquio',destino:'Santos',pais:'asia',flag:'🇯🇵',dias:38,c20:3200,c40:4100,tipo:'FCL',armadores:'K Line, Yang Ming',upd:'mar/2026'},
+  {origem:'Seul / Busan',destino:'Santos',pais:'asia',flag:'🇰🇷',dias:36,c20:3000,c40:3800,tipo:'FCL',armadores:'HMM, Evergreen',upd:'mar/2026'},
+  {origem:'Singapura',destino:'Santos',pais:'asia',flag:'🇸🇬',dias:28,c20:2600,c40:3300,tipo:'FCL',armadores:'PIL, Maersk',upd:'mar/2026'},
+  {origem:'Mumbai',destino:'Santos',pais:'asia',flag:'🇮🇳',dias:25,c20:2400,c40:3100,tipo:'FCL',armadores:'MSC, CMA CGM',upd:'mar/2026'},
+];
+
+const PORTOS={
+  santos:  {label:'Santos — SP',    mult:1.00, fi:1800, ddc:0},
+  paranagua:{label:'Paranaguá — PR', mult:1.08, fi:2200, ddc:150},
+  itajai:  {label:'Itajaí — SC',    mult:1.10, fi:2600, ddc:200},
+  rio:     {label:'Rio de Janeiro — RJ', mult:1.12, fi:2400, ddc:250},
+  vitoria: {label:'Vitória — ES',   mult:1.11, fi:2800, ddc:200},
+  salvador:{label:'Salvador — BA',  mult:1.18, fi:3600, ddc:350},
+  suape:   {label:'Suape — PE',     mult:1.22, fi:4200, ddc:400},
+  fortaleza:{label:'Fortaleza — CE', mult:1.25, fi:4800, ddc:450},
+  manaus:  {label:'Manaus — AM',    mult:1.35, fi:6500, ddc:800},
+};
+
+let fretesFiltro='todos';
+function filtrarFrete(cat){
+  fretesFiltro=cat;
+  document.querySelectorAll('[id^="fr-btn-"]').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById(`fr-btn-${cat}`);
+  if(btn)btn.classList.add('active');
+  renderFretesTable(cat);
+}
+function renderFretesTable(cat){
+  const dados=cat==='todos'?FRETES_DB:FRETES_DB.filter(f=>f.pais===cat);
+  const el=document.getElementById('fretes-table');if(!el)return;
+  const portoSel=document.getElementById('fr-porto')?.value||'santos';
+  const porto=PORTOS[portoSel]||PORTOS.santos;
+  const infoEl=document.getElementById('fr-porto-info');
+  if(infoEl){
+    infoEl.innerHTML=porto.mult===1
+      ? '✓ Porto base — sem sobretaxa de destino'
+      : `Sobretaxa DDC: USD ${porto.ddc}/cont. · Frete interno estimado: R$ ${porto.fi.toLocaleString('pt-BR')}`;
+  }
+  el.innerHTML=`<div class="card"><div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 10px;background:var(--bg3);border-radius:6px;display:flex;justify-content:space-between;">
+    <span>Porto de destino: <strong style="color:var(--teal);">${porto.label}</strong></span>
+    <span>${porto.mult>1?`+${((porto.mult-1)*100).toFixed(0)}% sobre Santos`:'Base de referência'}</span>
+  </div>
+  <table class="nt">
+    <thead><tr>
+      <th>Origem</th><th>Trânsito</th>
+      <th>20' (USD)</th><th>40' (USD)</th>
+      <th>DDC</th><th>Frete interno est.</th>
+      <th style="font-size:9px;">Armadores ref.</th>
+    </tr></thead><tbody>
+    ${dados.map(f=>{
+      const c20=Math.round(f.c20*porto.mult+porto.ddc);
+      const c40=Math.round(f.c40*porto.mult+porto.ddc);
+      return`<tr>
+        <td><span style="margin-right:5px;">${f.flag}</span><strong style="font-size:12px;">${f.origem}</strong></td>
+        <td><span style="font-family:var(--mono);color:var(--accent);">${f.dias}d</span></td>
+        <td><span style="font-family:var(--mono);font-weight:500;">USD ${c20.toLocaleString('pt-BR')}</span></td>
+        <td><span style="font-family:var(--mono);font-weight:500;">USD ${c40.toLocaleString('pt-BR')}</span></td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text3);">${porto.ddc?'USD '+porto.ddc:'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--warn);">R$ ${porto.fi.toLocaleString('pt-BR')}</td>
+        <td style="font-size:11px;color:var(--text3);">${f.armadores}</td>
+      </tr>`;}).join('')}
+    </tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════
+// MONITOR DE NCMs
+// ══════════════════════════════════════════
+function getMonitorList(){
+  try{return JSON.parse(localStorage.getItem('gt_monitor')||'[]');}catch(e){return[];}
+}
+function saveMonitorList(list){
+  localStorage.setItem('gt_monitor',JSON.stringify(list));
+  renderMonitorList();
+  // Atualizar badge no menu
+  const dot=document.getElementById('monitor-dot');
+  if(dot)dot.style.display=list.length?'block':'none';
+}
+function preencherMonitor(code,desc,ii){
+  document.getElementById('mon-ncm').value=code;
+  document.getElementById('mon-desc').value=desc;
+  document.getElementById('mon-ii').value=ii;
+}
+function adicionarMonitor(){
+  const code=document.getElementById('mon-ncm').value.trim();
+  const desc=document.getElementById('mon-desc').value.trim();
+  const ii=parseFloat(document.getElementById('mon-ii').value)||0;
+  if(!code){alert('Informe o código NCM.');return;}
+  const list=getMonitorList();
+  if(list.find(x=>x.code===code)){alert('Este NCM já está sendo monitorado.');return;}
+  list.push({code,desc:desc||code,ii,adicionado:new Date().toLocaleDateString('pt-BR')});
+  saveMonitorList(list);
+  document.getElementById('mon-ncm').value='';
+  document.getElementById('mon-desc').value='';
+  document.getElementById('mon-ii').value='';
+}
+function removerMonitor(code){
+  const list=getMonitorList().filter(x=>x.code!==code);
+  saveMonitorList(list);
+}
+function renderMonitorList(){
+  const list=getMonitorList();
+  const el=document.getElementById('monitor-list');if(!el)return;
+  const count=document.getElementById('monitor-count');
+  if(count)count.textContent=`· ${list.length} NCM${list.length!==1?'s':''}`;
+  if(!list.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:12px 0;text-align:center;">Nenhum NCM monitorado ainda.</div>';return;}
+  el.innerHTML=list.map(n=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);">${n.code}</div>
+        <div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.desc}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text2);flex-shrink:0;">II ${n.ii}%</div>
+      <div style="font-size:10px;color:var(--text3);flex-shrink:0;">${n.adicionado}</div>
+      <button onclick="removerMonitor('${n.code}')" style="background:var(--d2);border:1px solid var(--d3);border-radius:5px;padding:3px 8px;cursor:pointer;color:var(--danger);font-size:10px;">✕</button>
+    </div>`).join('');
+}
+
 // ══════════════════════════
 // INIT
 // ══════════════════════════
@@ -3877,6 +4285,8 @@ fetchCambio();
 setInterval(fetchCambio,30000);
 loadNcmDB();
 renderHistoricoLocal();
+renderMonitorList();
+renderFretesTable('todos');
 
 // Iniciar splash — DOM garantidamente pronto aqui
 (function initSplash(){
