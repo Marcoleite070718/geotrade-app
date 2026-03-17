@@ -817,6 +817,10 @@ iframe{border-radius:var(--r);}
 .sbs-container{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media(max-width:600px){.sbs-container{grid-template-columns:1fr;}.pm-plans{grid-template-columns:1fr;}}
 
+/* MOBILE MORE MENU */
+#mobile-more{display:none;position:fixed;bottom:calc(56px + env(safe-area-inset-bottom));left:0;right:0;background:var(--bg2);border-top:1px solid var(--border2);z-index:999;padding:12px 16px;box-shadow:0 -8px 24px rgba(0,0,0,.3);}
+#mobile-more .mn-item{min-width:0;font-size:8px;}
+
 /* Leaflet dark mode */
 .leaflet-container{background:#0d1929 !important;font-family:var(--body);}
 .leaflet-tile{filter:brightness(.85) saturate(.9) hue-rotate(200deg);}
@@ -2576,6 +2580,80 @@ iframe{border-radius:var(--r);}
   </div>
 
 </main>
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav" id="mobile-nav">
+  <div class="mn-item active" id="mn-sim" onclick="showTab('sim');closeMobileMore()">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Simular
+  </div>
+  <div class="mn-item" id="mn-mercado" onclick="showTab('mercado');closeMobileMore()">
+    <svg viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,7 7,9 10,4 13,6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+    Câmbio
+  </div>
+  <div class="mn-item" id="mn-ncm" onclick="showTab('ncm');closeMobileMore()">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h6M2 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    NCM
+  </div>
+  <div class="mn-item" id="mn-historico" onclick="showTab('historico');closeMobileMore()">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Histórico
+  </div>
+  <div class="mn-item" id="mn-mais" onclick="toggleMobileMore()">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="2.5" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="11.5" cy="7" r="1" fill="currentColor"/></svg>
+    Mais
+  </div>
+</div>
+
+<!-- MOBILE MORE MENU -->
+<div id="mobile-more" style="display:none;position:fixed;bottom:calc(56px + env(safe-area-inset-bottom));left:0;right:0;background:var(--bg2);border-top:1px solid var(--border2);z-index:999;padding:12px 16px;display:none;">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+    <div class="mn-item" style="min-width:0;" onclick="showTab('precif');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 3 2 4-6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Preço
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('origens');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5C5.5 4 5.5 10 7 12.5M7 1.5C8.5 4 8.5 10 7 12.5M1.5 7h11" stroke="currentColor" stroke-width="1.2"/></svg>
+      Origens
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('incoterms');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Incoterms
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('sidebyside');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="5" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="2" width="5" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Side-by
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('antecip');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 11V5l5-3 5 3v6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="4.5" y="7" width="5" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Antecip.
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('fretes');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="9" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 6h2l1 2v2h-3V6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="3.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/><circle cx="10.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Fretes
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('monitor');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Monitor
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('rastreio');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 11 L5 7 L8 9 L11 5 L13 7" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="4" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      Rastreio
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('alertas');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M7 1a3.5 3.5 0 013.5 3.5c0 2.5 1 3.5 1 3.5H2.5s1-1 1-3.5A3.5 3.5 0 017 1z" stroke="currentColor" stroke-width="1.2"/><path d="M6 12h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Regimes
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('noticias');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Notícias
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="showTab('mercado');closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,7 7,9 10,4 13,6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+      Frete Ref.
+    </div>
+  </div>
+</div>
 </div>
 
 <script>
@@ -3453,9 +3531,12 @@ function showTab(name){
   document.getElementById('tab-'+name)?.classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+name+"'"))n.classList.add('active');});
   // Sync mobile nav
-  const mobileMap={sim:'mn-sim',rastreio:'mn-rastreio',mercado:'mn-mercado',alertas:'mn-alertas',noticias:'mn-noticias'};
+  const mobileMap={sim:'mn-sim',mercado:'mn-mercado',ncm:'mn-ncm',historico:'mn-historico'};
   document.querySelectorAll('.mn-item').forEach(m=>m.classList.remove('active'));
   const mnId=mobileMap[name];if(mnId)document.getElementById(mnId)?.classList.add('active');
+  // Para abas do menu "Mais", destaca o botão Mais
+  const maisAbas=['precif','origens','incoterms','sidebyside','antecip','fretes','monitor','rastreio','alertas','noticias'];
+  if(maisAbas.includes(name)){const mn=document.getElementById('mn-mais');if(mn)mn.classList.add('active');}
   if(name==='mercado')buildImpTab(parseFloat(document.getElementById('cambio').value)||5.22);
   if(name==='noticias'&&!allNews.length)fetchNews();
   if(name==='historico')renderHistorico();
@@ -4272,6 +4353,24 @@ function renderMonitorList(){
       <button onclick="removerMonitor('${n.code}')" style="background:var(--d2);border:1px solid var(--d3);border-radius:5px;padding:3px 8px;cursor:pointer;color:var(--danger);font-size:10px;">✕</button>
     </div>`).join('');
 }
+
+// ── MOBILE MORE MENU ──
+function toggleMobileMore(){
+  const el=document.getElementById('mobile-more');
+  if(!el)return;
+  const open=el.style.display==='grid'||el.style.display==='block';
+  el.style.display=open?'none':'grid';
+}
+function closeMobileMore(){
+  const el=document.getElementById('mobile-more');
+  if(el)el.style.display='none';
+}
+// Fechar more ao clicar fora
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#mobile-more')&&!e.target.closest('#mn-mais')){
+    closeMobileMore();
+  }
+});
 
 // ══════════════════════════
 // INIT
