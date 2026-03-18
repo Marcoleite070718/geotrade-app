@@ -440,6 +440,40 @@ window.salvarHistoricoLocal = window.salvarHistoricoLocal || function(dados) {
   --mono:'DM Mono',monospace;--head:'Syne',sans-serif;--body:'DM Sans',sans-serif;
   --r:10px;--r2:14px;
 }
+
+/* ══ TEMA CLARO ══ */
+[data-theme="light"]:root, :root[data-theme="light"]{
+  --bg:#f8fafc;--bg2:#ffffff;--bg3:#f1f5f9;--bg4:#e2e8f0;
+  --border:rgba(15,23,42,.10);--border2:rgba(15,23,42,.18);
+  --accent:#2563eb;--a2:#1d4ed8;--a3:rgba(37,99,235,.08);--a4:rgba(37,99,235,.18);
+  --accent-bright:#3b82f6;--accent-glow:rgba(37,99,235,.12);
+  --teal:#0891b2;--teal2:rgba(8,145,178,.08);
+  --warn:#d97706;--w2:rgba(217,119,6,.08);--w3:rgba(217,119,6,.18);
+  --danger:#dc2626;--d2:rgba(220,38,38,.08);--d3:rgba(220,38,38,.18);
+  --success:#059669;--s2:rgba(5,150,105,.08);--s3:rgba(5,150,105,.18);
+  --info:#7c3aed;--i2:rgba(124,58,237,.08);--i3:rgba(124,58,237,.18);
+  --purple:#7c3aed;--p2:rgba(124,58,237,.08);--p3:rgba(124,58,237,.18);
+  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
+}
+[data-theme="light"] body{background:var(--bg);color:var(--text);}
+[data-theme="light"] body::before{background-image:linear-gradient(rgba(15,23,42,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.04) 1px,transparent 1px);}
+[data-theme="light"] nav{background:#ffffff;border-right-color:var(--border2);}
+[data-theme="light"] .card{background:#ffffff;border-color:var(--border2);box-shadow:0 1px 3px rgba(15,23,42,.08);}
+[data-theme="light"] input,[data-theme="light"] select{background:#f8fafc;border-color:var(--border2);color:var(--text);}
+[data-theme="light"] .topbar{background:rgba(248,250,252,.95);border-bottom-color:var(--border2);}
+[data-theme="light"] .tab.active{background:var(--bg4);color:var(--text);}
+[data-theme="light"] .tab{color:var(--text2);}
+[data-theme="light"] .cpill{background:#f1f5f9;border-color:var(--border2);}
+[data-theme="light"] .nf-btn{background:#f1f5f9;border-color:var(--border2);color:var(--text2);}
+[data-theme="light"] .nf-btn:hover,[data-theme="light"] .nf-btn.active{background:var(--a3);border-color:var(--accent);color:var(--accent);}
+[data-theme="light"] .news-card{background:#ffffff;border-color:var(--border2);}
+[data-theme="light"] .news-card:hover{border-color:var(--accent);}
+[data-theme="light"] .rl{border-bottom-color:var(--border);}
+[data-theme="light"] .mobile-nav{background:#ffffff;border-top-color:var(--border2);}
+[data-theme="light"] #mobile-more{background:#ffffff;border-top-color:var(--border2);}
+[data-theme="light"] .section{background:transparent;}
+[data-theme="light"] #theme-knob{left:16px !important;background:var(--accent) !important;}
+[data-theme="light"] #theme-switch{background:var(--a3) !important;border-color:var(--accent) !important;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.6;min-height:100vh;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
@@ -1090,6 +1124,14 @@ iframe{border-radius:var(--r);}
   </div>
   <div class="nav-bot">
     <div id="auth-bar" style="margin-bottom:10px;"></div>
+    <!-- THEME TOGGLE -->
+    <div onclick="toggleTheme()" id="theme-toggle" style="display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;color:var(--text3);font-size:11px;transition:color .15s;margin-bottom:6px;user-select:none;" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">
+      <span id="theme-icon" style="font-size:13px;">🌙</span>
+      <span id="theme-label">Tema escuro</span>
+      <div id="theme-switch" style="margin-left:auto;width:32px;height:18px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;position:relative;transition:background .2s;">
+        <div id="theme-knob" style="position:absolute;top:2px;left:2px;width:12px;height:12px;background:var(--text3);border-radius:50%;transition:all .2s;"></div>
+      </div>
+    </div>
     <div class="live-ind"><div class="ld"></div><span id="lst">Conectando...</span></div>
   </div>
 </nav>
@@ -2664,6 +2706,10 @@ iframe{border-radius:var(--r);}
     <div class="mn-item" style="min-width:0;" onclick="showTab('alertas');closeMobileMore()">
       <svg viewBox="0 0 14 14" fill="none"><path d="M7 1a3.5 3.5 0 013.5 3.5c0 2.5 1 3.5 1 3.5H2.5s1-1 1-3.5A3.5 3.5 0 017 1z" stroke="currentColor" stroke-width="1.2"/><path d="M6 12h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       Regimes
+    </div>
+    <div class="mn-item" style="min-width:0;" onclick="toggleTheme();closeMobileMore()">
+      <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v1M7 12v1M1 7h1M12 7h1M3 3l.7.7M10.3 10.3l.7.7M10.3 3.7L11 3M3 11l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Tema
     </div>
     <div class="mn-item" style="min-width:0;" onclick="showTab('noticias');closeMobileMore()">
       <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5h6M4 7.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -20908,6 +20954,31 @@ function renderMonitorList(){
       <button onclick="removerMonitor('${n.code}')" style="background:var(--d2);border:1px solid var(--d3);border-radius:5px;padding:3px 8px;cursor:pointer;color:var(--danger);font-size:10px;">✕</button>
     </div>`).join('');
 }
+
+// ── THEME TOGGLE ──
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('gt_theme', theme);
+  const icon = document.getElementById('theme-icon');
+  const label = document.getElementById('theme-label');
+  if (theme === 'light') {
+    if (icon) icon.textContent = '☀️';
+    if (label) label.textContent = 'Tema claro';
+  } else {
+    if (icon) icon.textContent = '🌙';
+    if (label) label.textContent = 'Tema escuro';
+  }
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+// Aplicar tema salvo ou preferência do sistema
+(function initTheme() {
+  const saved = localStorage.getItem('gt_theme');
+  const preferLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(saved || (preferLight ? 'light' : 'dark'));
+})();
 
 // ── MOBILE MORE MENU ──
 function toggleMobileMore(){
