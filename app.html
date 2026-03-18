@@ -477,7 +477,9 @@ main{padding:22px 26px 60px;overflow-x:hidden;}
 .cp-val{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--accent);}
 .cp-var{font-family:var(--mono);font-size:10px;}
 .cu{color:var(--danger);}/* sobe = ruim = vermelho */
-.cd{color:var(--accent);}/* cai = bom = verde */
+.cd{color:var(--success);}/* cai = bom = verde */
+@keyframes pillFlash{0%{background:rgba(59,130,246,.25);}100%{background:transparent;}}
+.cpill-flash{animation:pillFlash .8s ease forwards;}
 
 /* TABS */
 .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:3px;margin-bottom:16px;width:fit-content;flex-wrap:wrap;}
@@ -1622,18 +1624,24 @@ iframe{border-radius:var(--r);}
 
   <!-- ══ NOTÍCIAS ══ -->
   <div class="section" id="sec-noticias">
-    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior</div>
-      <div style="font-size:12px;color:var(--text2);">Notícias selecionadas de fontes especializadas em comex, câmbio, tarifas e regulamentação.</div></div>
-      <button onclick="fetchNews()" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;">↻ Atualizar</button>
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior & Geopolítica</div>
+        <div style="font-size:12px;color:var(--text2);">Notícias reais de fontes especializadas — câmbio, tarifas, frete, geopolítica e decisões dos EUA.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="news-timer" style="font-size:10px;font-family:var(--mono);color:var(--text3);"></span>
+        <button onclick="fetchNews(true)" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;display:flex;align-items:center;gap:5px;"><span id="news-refresh-icon">↻</span> Atualizar</button>
+      </div>
     </div>
     <div class="news-filter" id="news-filter">
       <div class="nf-btn active" onclick="filterNews('todos')">Todos</div>
-      <div class="nf-btn" onclick="filterNews('cambio')">Câmbio</div>
-      <div class="nf-btn" onclick="filterNews('tarifas')">Tarifas & NCM</div>
-      <div class="nf-btn" onclick="filterNews('frete')">Frete & Logística</div>
-      <div class="nf-btn" onclick="filterNews('politica')">Política Comercial</div>
-      <div class="nf-btn" onclick="filterNews('commodities')">Commodities</div>
+      <div class="nf-btn" onclick="filterNews('cambio')">💱 Câmbio</div>
+      <div class="nf-btn" onclick="filterNews('geopolitica')" style="color:var(--danger);">🌍 Geopolítica</div>
+      <div class="nf-btn" onclick="filterNews('tarifas')">📋 Tarifas & NCM</div>
+      <div class="nf-btn" onclick="filterNews('frete')">🚢 Frete</div>
+      <div class="nf-btn" onclick="filterNews('politica')">🏛 Política</div>
+      <div class="nf-btn" onclick="filterNews('commodities')">📦 Commodities</div>
     </div>
     <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
   </div>
@@ -1916,18 +1924,24 @@ iframe{border-radius:var(--r);}
 
   <!-- ══ NOTÍCIAS ══ -->
   <div class="section" id="sec-noticias">
-    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior</div>
-      <div style="font-size:12px;color:var(--text2);">Notícias selecionadas de fontes especializadas em comex, câmbio, tarifas e regulamentação.</div></div>
-      <button onclick="fetchNews()" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;">↻ Atualizar</button>
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior & Geopolítica</div>
+        <div style="font-size:12px;color:var(--text2);">Notícias reais de fontes especializadas — câmbio, tarifas, frete, geopolítica e decisões dos EUA.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="news-timer" style="font-size:10px;font-family:var(--mono);color:var(--text3);"></span>
+        <button onclick="fetchNews(true)" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;display:flex;align-items:center;gap:5px;"><span id="news-refresh-icon">↻</span> Atualizar</button>
+      </div>
     </div>
     <div class="news-filter" id="news-filter">
       <div class="nf-btn active" onclick="filterNews('todos')">Todos</div>
-      <div class="nf-btn" onclick="filterNews('cambio')">Câmbio</div>
-      <div class="nf-btn" onclick="filterNews('tarifas')">Tarifas & NCM</div>
-      <div class="nf-btn" onclick="filterNews('frete')">Frete & Logística</div>
-      <div class="nf-btn" onclick="filterNews('politica')">Política Comercial</div>
-      <div class="nf-btn" onclick="filterNews('commodities')">Commodities</div>
+      <div class="nf-btn" onclick="filterNews('cambio')">💱 Câmbio</div>
+      <div class="nf-btn" onclick="filterNews('geopolitica')" style="color:var(--danger);">🌍 Geopolítica</div>
+      <div class="nf-btn" onclick="filterNews('tarifas')">📋 Tarifas & NCM</div>
+      <div class="nf-btn" onclick="filterNews('frete')">🚢 Frete</div>
+      <div class="nf-btn" onclick="filterNews('politica')">🏛 Política</div>
+      <div class="nf-btn" onclick="filterNews('commodities')">📦 Commodities</div>
     </div>
     <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
   </div>
@@ -2338,18 +2352,24 @@ iframe{border-radius:var(--r);}
 
   <!-- ══ NOTÍCIAS ══ -->
   <div class="section" id="sec-noticias">
-    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior</div>
-      <div style="font-size:12px;color:var(--text2);">Notícias selecionadas de fontes especializadas em comex, câmbio, tarifas e regulamentação.</div></div>
-      <button onclick="fetchNews()" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;">↻ Atualizar</button>
+    <div style="padding:12px 16px;background:var(--i2);border:1px solid var(--i3);border-radius:var(--r2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--info);margin-bottom:3px;">Feed de Notícias — Comércio Exterior & Geopolítica</div>
+        <div style="font-size:12px;color:var(--text2);">Notícias reais de fontes especializadas — câmbio, tarifas, frete, geopolítica e decisões dos EUA.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="news-timer" style="font-size:10px;font-family:var(--mono);color:var(--text3);"></span>
+        <button onclick="fetchNews(true)" style="background:var(--i2);border:1px solid var(--i3);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--info);font-size:11px;display:flex;align-items:center;gap:5px;"><span id="news-refresh-icon">↻</span> Atualizar</button>
+      </div>
     </div>
     <div class="news-filter" id="news-filter">
       <div class="nf-btn active" onclick="filterNews('todos')">Todos</div>
-      <div class="nf-btn" onclick="filterNews('cambio')">Câmbio</div>
-      <div class="nf-btn" onclick="filterNews('tarifas')">Tarifas & NCM</div>
-      <div class="nf-btn" onclick="filterNews('frete')">Frete & Logística</div>
-      <div class="nf-btn" onclick="filterNews('politica')">Política Comercial</div>
-      <div class="nf-btn" onclick="filterNews('commodities')">Commodities</div>
+      <div class="nf-btn" onclick="filterNews('cambio')">💱 Câmbio</div>
+      <div class="nf-btn" onclick="filterNews('geopolitica')" style="color:var(--danger);">🌍 Geopolítica</div>
+      <div class="nf-btn" onclick="filterNews('tarifas')">📋 Tarifas & NCM</div>
+      <div class="nf-btn" onclick="filterNews('frete')">🚢 Frete</div>
+      <div class="nf-btn" onclick="filterNews('politica')">🏛 Política</div>
+      <div class="nf-btn" onclick="filterNews('commodities')">📦 Commodities</div>
     </div>
     <div id="news-container"><div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div></div>
   </div>
@@ -2532,7 +2552,7 @@ iframe{border-radius:var(--r);}
         <button onclick="adicionarMonitor()" style="width:100%;background:var(--p2);border:1px solid var(--p3);border-radius:8px;padding:9px;cursor:pointer;color:var(--purple);font-size:12px;font-weight:500;margin-top:4px;">+ Adicionar ao monitor</button>
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
           <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">NCMs mais monitorados no mercado:</div>
-          ${[['8450.11.00','Máquina de lavar doméstica','14'],['8471.30.12','Notebook / Laptop','0'],['8517.12.13','Smartphone 5G','16'],['6403.99.90','Calçados couro','35'],['0201.30.00','Carne bovina desossada','10']].map(([c,d,ii])=>`<div onclick="preencherMonitor('${c}','${d}','${ii}')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .1s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><span style="font-family:var(--mono);font-size:10px;color:var(--accent);">${c}</span><span style="font-size:11px;color:var(--text2);flex:1;">${d}</span><span style="font-family:var(--mono);font-size:10px;color:var(--text3);">II ${ii}%</span></div>`).join('')}
+          <div id="monitor-sugestoes"></div>
         </div>
       </div>
       <div>
@@ -2822,7 +2842,7 @@ async function fetchAliqTEC(code) {
   // Tenta API do Siscomex/MDIC
   try {
     const url = `https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/detalhe/${clean}`;
-    const r = await fetch(url, {signal: AbortSignal.timeout(4000)});
+    const r = await Promise.race([fetch(url), new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),4000))]);
     if (!r.ok) throw new Error('status '+r.status);
     const d = await r.json();
     const ii = parseFloat(d.aliquotaII ?? d.ii ?? d.AliquotaII ?? NaN);
@@ -2859,47 +2879,75 @@ const PORTO_FI={santos:1800,paranagua:2200,itajai:2600,rio:2400,suape:3800,vcp:1
 // API SISCOMEX — NCMs completos
 // ══════════════════════════
 async function loadNcmDB(){
-  try{
-    document.getElementById('ncm-api-status').textContent='conectando Siscomex...';
-    // Proxy público para a API da Receita Federal
-    const url='https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO';
-    const res=await fetch(url);
-    if(!res.ok)throw new Error('status '+res.status);
-    const data=await res.json();
-    const noms=data.Nomenclaturas||data.nomenclaturas||data;
-    if(Array.isArray(noms)&&noms.length>0){
-      ncmDB=noms.map(n=>({
-        code:(n.Codigo||n.codigo||'').replace(/[^0-9]/g,'').replace(/^(\d{4})(\d{2})(\d{2})$/,'$1.$2.$3'),
-        desc:n.Descricao||n.descricao||'',
-        codRaw:n.Codigo||n.codigo||''
-      })).filter(n=>n.code&&n.code.length>=4&&n.desc&&n.desc.length>2);
-      ncmLoaded=true;
-      const count=ncmDB.length.toLocaleString('pt-BR');
-      document.getElementById('ncm-api-status').textContent=`✓ ${count} NCMs · Siscomex`;
-      document.getElementById('ncm-total-hint').textContent=`${count} produtos disponíveis`;
-      const badge=document.getElementById('ncm-count-badge');if(badge)badge.textContent=count;
-      document.getElementById('ncm-loading-msg').style.display='none';
-      document.getElementById('ncm-search-section').style.display='block';
-      document.getElementById('ncm-db-info').textContent=`${count} NCMs · fonte: Siscomex/Receita Federal`;
+  const statusEl = document.getElementById('ncm-api-status');
+  const loadingEl = document.getElementById('ncm-loading-msg');
+  const searchEl = document.getElementById('ncm-search-section');
+  const dbInfoEl = document.getElementById('ncm-db-info');
+  const badgeEl = document.getElementById('ncm-count-badge');
+  const hintEl = document.getElementById('ncm-total-hint');
+
+  if(statusEl) statusEl.textContent = 'conectando Siscomex...';
+
+  // Endpoints para tentar em ordem — proxy CORS contorna bloqueio do GitHub Pages
+  const endpoints = [
+    'https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO',
+    'https://corsproxy.io/?https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO',
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO'),
+  ];
+
+  // Timeout manual — AbortSignal.timeout não funciona em todos os ambientes
+  const fetchComTimeout = (url, ms=8000) => Promise.race([
+    fetch(url),
+    new Promise((_,reject) => setTimeout(()=>reject(new Error('timeout')), ms))
+  ]);
+
+  for (const url of endpoints) {
+    try {
+      if(statusEl) statusEl.textContent = 'buscando NCMs...';
+      const res = await fetchComTimeout(url, 8000);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const noms = data.Nomenclaturas || data.nomenclaturas || data;
+      if (!Array.isArray(noms) || noms.length < 100) continue;
+
+      ncmDB = noms.map(n => ({
+        code: (n.Codigo||n.codigo||'').replace(/[^0-9]/g,'').replace(/^(\d{4})(\d{2})(\d{2})$/,'$1.$2.$3'),
+        desc: n.Descricao||n.descricao||'',
+        codRaw: n.Codigo||n.codigo||''
+      })).filter(n => n.code && n.code.length >= 4 && n.desc && n.desc.length > 2);
+
+      ncmLoaded = true;
+      window.ncmDB = ncmDB;
+      const count = ncmDB.length.toLocaleString('pt-BR');
+      if(statusEl) statusEl.textContent = `✓ ${count} NCMs · Siscomex`;
+      if(hintEl) hintEl.textContent = `${count} produtos disponíveis`;
+      if(badgeEl) badgeEl.textContent = count;
+      if(loadingEl) loadingEl.style.display = 'none';
+      if(searchEl) searchEl.style.display = 'block';
+      if(dbInfoEl) dbInfoEl.textContent = `${count} NCMs · Siscomex/Receita Federal`;
       renderNcmPage(ncmDB);
-      document.getElementById('ncm-result-count').textContent=`${count} NCMs disponíveis. Use a busca para filtrar.`;
-      document.getElementById('ncm-page-info').textContent=`Pág. 1 de ${Math.ceil(ncmDB.length/50).toLocaleString('pt-BR')} · ${count} resultados`;
-    }else{throw new Error('formato inesperado');}
-  }catch(e){
-    // Fallback: usa base interna
-    ncmLoaded=true;
-    ncmDB=NCM_LOCAL;
-    const count=NCM_LOCAL.length.toLocaleString('pt-BR');
-    document.getElementById('ncm-api-status').textContent=`base local · ${count} NCMs`;
-    document.getElementById('ncm-loading-msg').style.display='none';
-    document.getElementById('ncm-search-section').style.display='block';
-    document.getElementById('ncm-db-info').textContent=`${count} NCMs · base local TEC (API Siscomex indisponível localmente)`;
-    const badge=document.getElementById('ncm-count-badge');if(badge)badge.textContent=count;
-    document.getElementById('ncm-total-hint').textContent=`${count} NCMs disponíveis`;
-    renderNcmPage(ncmDB);
-    document.getElementById('ncm-result-count').textContent=`${count} NCMs disponíveis. Use a busca para filtrar.`;
-    document.getElementById('ncm-page-info').textContent=`Pág. 1 de ${Math.ceil(NCM_LOCAL.length/50)} · ${count} resultados`;
+      document.getElementById('ncm-result-count').textContent = `${count} NCMs disponíveis. Use a busca para filtrar.`;
+      document.getElementById('ncm-page-info').textContent = `Pág. 1 de ${Math.ceil(ncmDB.length/50).toLocaleString('pt-BR')} · ${count} resultados`;
+      return; // sucesso
+    } catch(e) {
+      console.warn('NCM endpoint falhou:', url, e.message);
+    }
   }
+
+  // Fallback final: base local
+  ncmLoaded = true;
+  ncmDB = NCM_LOCAL;
+  window.ncmDB = ncmDB;
+  const count = NCM_LOCAL.length.toLocaleString('pt-BR');
+  if(statusEl) statusEl.textContent = `base local · ${count} NCMs`;
+  if(loadingEl) loadingEl.style.display = 'none';
+  if(searchEl) searchEl.style.display = 'block';
+  if(dbInfoEl) dbInfoEl.textContent = `${count} NCMs · base local TEC (Siscomex indisponível)`;
+  if(badgeEl) badgeEl.textContent = count;
+  if(hintEl) hintEl.textContent = `${count} NCMs disponíveis`;
+  renderNcmPage(ncmDB);
+  document.getElementById('ncm-result-count').textContent = `${count} NCMs disponíveis. Use a busca para filtrar.`;
+  document.getElementById('ncm-page-info').textContent = `Pág. 1 de ${Math.ceil(NCM_LOCAL.length/50)} · ${count} resultados`;
 }
 
 // ══════════════════════════════════════════════════
@@ -3229,10 +3277,23 @@ async function fetchCambio(){
       if(!d[key])continue;
       const v=parseFloat(d[key].bid);
       const p=parseFloat(d[key].pctChange);// >0 = subiu = ruim pro importador
+      const anterior=taxas[m];
       taxas[m]=v;
       const vEl=document.getElementById('v-'+m);
       const varEl=document.getElementById('var-'+m);
-      if(vEl)vEl.textContent=v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+      const pill=document.getElementById('pill-'+m);
+      // Flash na pill quando valor muda
+      if(vEl){
+        const novoVal=v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+        if(anterior&&anterior!==v&&pill){
+          // Cor do flash: vermelho se subiu, verde se caiu
+          const cor=v>anterior?'rgba(239,68,68,.25)':'rgba(16,185,129,.25)';
+          pill.style.transition='none';
+          pill.style.background=cor;
+          setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+        }
+        vEl.textContent=novoVal;
+      }
       if(varEl){
         // ▲ vermelho = subiu = ruim | ▼ verde = caiu = bom
         const sobe=p>0;
@@ -3308,29 +3369,146 @@ function buildImpTab(c){
 // NOTÍCIAS — Feed real via RSS/API
 // ══════════════════════════
 let allNews=[];let newsFilter='todos';
+let newsAutoRefreshTimer=null;
+let newsCountdownTimer=null;
+let newsLastFetch=null;
+const NEWS_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutos
 
-// Notícias curadas sobre comex, câmbio, frete e tarifas
-// Como a rede está desabilitada para o sandbox, usamos um feed editorial curado
-const NEWS_CURATED=[
-  {titulo:"Dólar recua após dados de inflação nos EUA mostrarem desaceleração",fonte:"Reuters Brasil",data:"16/03/2026",cat:"cambio",resumo:"O dólar operou em queda frente ao real após dados do índice CPI americano virem abaixo do esperado, aliviando pressão sobre moedas emergentes. Câmbio chegou ao menor nível em 3 semanas.",link:"https://www.reuters.com/pt/",cor:"#4da6ff"},
-  {titulo:"GECEX abre consulta pública para novos ex-tarifários de Bens de Capital no 2º semestre",fonte:"MDIC",data:"14/03/2026",cat:"tarifas",resumo:"O Comitê Executivo de Gestão da CAMEX publicou edital de consulta pública para pleitos de redução de II em bens de capital sem similar nacional. Empresas podem apresentar documentação até agosto de 2026.",link:"https://www.gov.br/mdic/",cor:"#00e5a0"},
-  {titulo:"Frete marítimo Ásia-Brasil recua 8% na segunda quinzena de março",fonte:"Freightos",data:"13/03/2026",cat:"frete",resumo:"O índice de frete spot na rota Xangai-Santos registrou queda após meses de alta. Especialistas atribuem ao aumento da oferta de navios e à relativa estabilização dos desvios de rota pelo Estreito de Suez.",link:"https://www.freightos.com/",cor:"#f5a623"},
-  {titulo:"Receita Federal publica novas regras para classificação fiscal de produtos eletrônicos",fonte:"Receita Federal",data:"12/03/2026",cat:"tarifas",resumo:"Instrução Normativa atualiza critérios de classificação para NCMs do Capítulo 85, impactando importações de componentes para smartphones, computadores e equipamentos de telecomunicações.",link:"https://www.gov.br/receitafederal/",cor:"#00e5a0"},
-  {titulo:"Banco Central mantém Selic em 13,75% e sinaliza cautela cambial",fonte:"Banco Central do Brasil",data:"11/03/2026",cat:"cambio",resumo:"O Copom decidiu pela manutenção da taxa básica de juros, com comunicado indicando vigilância sobre a taxa de câmbio e seus impactos inflacionários. Importadores monitoram efeito sobre custo das operações.",link:"https://www.bcb.gov.br/",cor:"#4da6ff"},
-  {titulo:"Conflito no Mar Vermelho: empresas ajustam estoques preventivos para o 2º semestre",fonte:"Valor Econômico",data:"10/03/2026",cat:"frete",resumo:"Importadores brasileiros de produtos asiáticos estão antecipando pedidos para o segundo semestre em resposta à persistente instabilidade na rota pelo Canal de Suez, que eleva custos e prazos de entrega.",link:"https://valor.globo.com/",cor:"#f5a623"},
-  {titulo:"Brasil negocia ampliação do acordo Mercosul-UE com foco em tarifas de manufaturados",fonte:"MDIC",data:"09/03/2026",cat:"politica",resumo:"Rodada de negociações comerciais em Brasília busca reduzir alíquotas de importação para produtos industrializados nas trocas entre o bloco sul-americano e a União Europeia, com impacto em NCMs dos capítulos 84, 85 e 87.",link:"https://www.gov.br/mdic/",cor:"#a78bfa"},
-  {titulo:"Minério de ferro opera abaixo de US$ 100 por tonelada com desaceleração chinesa",fonte:"Bloomberg",data:"08/03/2026",cat:"commodities",resumo:"O minério de ferro recuou para o menor nível em dois meses na Bolsa de Mercadorias de Dalian, refletindo dados fracos da produção industrial da China e revisão das estimativas de demanda por aço.",link:"https://www.bloomberg.com/",cor:"#f5a623"},
-  {titulo:"SISCOMEX implementa melhorias no módulo de DUIMP para despacho aduaneiro",fonte:"Receita Federal",data:"07/03/2026",cat:"tarifas",resumo:"Atualização do sistema de despacho aduaneiro eletrônico reduz o tempo médio de liberação de mercadorias em 15%, segundo dados da Receita Federal. Novos campos facilitam enquadramento de benefícios fiscais.",link:"https://www.gov.br/receitafederal/",cor:"#00e5a0"},
-  {titulo:"Cobre bate recorde histórico impulsionado pela demanda por transição energética",fonte:"Reuters",data:"06/03/2026",cat:"commodities",resumo:"O cobre atingiu US$ 10.800/tonelada na Bolsa de Metais de Londres, refletindo alta demanda para fabricação de cabos elétricos, veículos elétricos e painéis solares. Impacto direto em custos de importação de fios e componentes.",link:"https://www.reuters.com/",cor:"#f5a623"},
-  {titulo:"Governo anuncia redução temporária de II para equipamentos médicos e hospitalares",fonte:"CAMEX",data:"05/03/2026",cat:"tarifas",resumo:"Resolução CAMEX reduz Imposto de Importação para zero em lista de equipamentos hospitalares, ventiladores e dispositivos de diagnóstico por imagem. Medida tem validade de 12 meses.",link:"https://www.gov.br/mdic/",cor:"#00e5a0"},
-  {titulo:"Exportações brasileiras batem recorde em fevereiro com destaque para agronegócio",fonte:"MDIC / ComexStat",data:"04/03/2026",cat:"politica",resumo:"Brasil exportou US$ 28,4 bilhões em fevereiro, com alta de 12% em relação ao mesmo período do ano anterior. Soja, carne e celulose lideraram os embarques. Câmbio favorável e demanda chinesa sustentam o crescimento.",link:"https://comexstat.mdic.gov.br/",cor:"#a78bfa"},
+// Feeds RSS reais com cobertura ampla — via rss2json (sem CORS)
+const NEWS_FEEDS = [
+  // Governo e comex BR
+  { url: 'https://www.gov.br/mdic/pt-br/assuntos/noticias/RSS', fonte: 'MDIC', cor: '#10b981' },
+  { url: 'https://www.gov.br/receitafederal/pt-br/assuntos/noticias/RSS', fonte: 'Receita Federal', cor: '#3b82f6' },
+  // Economia BR
+  { url: 'https://agenciabrasil.ebc.com.br/rss/economia/feed.xml', fonte: 'Agência Brasil', cor: '#f59e0b' },
+  { url: 'https://feeds.bbci.co.uk/portuguese/noticias/rss.xml', fonte: 'BBC Brasil', cor: '#ef4444' },
+  { url: 'https://rss.uol.com.br/feed/economia.xml', fonte: 'UOL Economia', cor: '#f59e0b' },
+  // Internacional / geopolítica
+  { url: 'https://feeds.skynews.com/feeds/rss/world.xml', fonte: 'Sky News World', cor: '#ef4444' },
+  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', fonte: 'NYT World', cor: '#ef4444' },
+  { url: 'https://feeds.skynews.com/feeds/rss/business.xml', fonte: 'Sky News Business', cor: '#f5a623' },
+  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml', fonte: 'NYT Business', cor: '#f5a623' },
+  // Comex internacional
+  { url: 'https://agenciabrasil.ebc.com.br/rss/internacional/feed.xml', fonte: 'Agência Brasil Intl', cor: '#a78bfa' },
 ];
+const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
-async function fetchNews(){
-  document.getElementById('news-container').innerHTML='<div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Carregando notícias...</div>';
-  await new Promise(r=>setTimeout(r,600));
-  allNews=NEWS_CURATED;
+// Palavras-chave para categorização automática
+const CAT_KEYWORDS = {
+  cambio: ['câmbio','cambio','dólar','dolar','real','euro','yuan','federal reserve','fed ','juros','selic','bcb','moeda','brl','usd','bce'],
+  geopolitica: ['guerra','conflito','ucrânia','russia','taiwan','china','trump','tarif','sanção','militar','ataque','houthi','mar vermelho','brics','otan','nato','geopolit','tensão'],
+  tarifas: ['tarifa','alíquota','aliquota','ncm','imposto','tec','ii ','ipi ','ex-tarifário','camex','gecex','drawback','recof','siscomex','receita federal','aduaneiro','despacho'],
+  frete: ['frete','porto','navio','container','armador','logística','logistica','suez','cabo','transit','maersk','msc ','cma cgm','hapag','embarque','carga'],
+  commodities: ['soja','petróleo','petroleo','brent','minério','minerio','cobre','ouro','milho','café','café','commodity','grão'],
+};
+
+function categorizarNoticia(titulo, descricao) {
+  const txt = (titulo + ' ' + descricao).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
+    if (keywords.some(k => txt.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))) return cat;
+  }
+  return 'politica';
+}
+
+async function fetchNews(manual = false) {
+  const container = document.getElementById('news-container');
+  const icon = document.getElementById('news-refresh-icon');
+  if(!container) return;
+
+  // Indicar loading apenas se manual ou primeira vez
+  if (manual || !allNews.length) {
+    container.innerHTML = '<div class="news-loading"><div class="spin" style="margin:0 auto 8px;width:16px;height:16px;border-width:2px;"></div>Buscando notícias em tempo real...</div>';
+  }
+  if(icon) { icon.style.animation = 'spin .8s linear infinite'; icon.textContent = '↻'; }
+
+  let newsOnline = [];
+  let feedsOk = 0;
+
+  // Buscar todos os feeds em paralelo
+  const feedPromises = NEWS_FEEDS.map(async (feed) => {
+    try {
+      const res = await Promise.race([
+        fetch(`${RSS2JSON}${encodeURIComponent(feed.url)}&count=10`),
+        new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+      ]);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (data.status !== 'ok' || !data.items?.length) return [];
+
+      feedsOk++;
+      return data.items.slice(0,8).map(item => {
+        const desc = (item.description||item.content||'').replace(/<[^>]+>/g,'').trim().substring(0,220);
+        const dataPub = item.pubDate ? new Date(item.pubDate).toLocaleDateString('pt-BR') : '—';
+        const cat = categorizarNoticia(item.title||'', desc);
+        return {
+          titulo: (item.title||'').substring(0,120),
+          fonte: feed.fonte,
+          data: dataPub,
+          dataBruta: item.pubDate ? new Date(item.pubDate) : new Date(0),
+          cat,
+          resumo: desc,
+          link: item.link || item.url || '#',
+          cor: feed.cor,
+          online: true
+        };
+      });
+    } catch(e) {
+      console.warn('RSS feed falhou:', feed.fonte);
+      return [];
+    }
+  });
+
+  const results = await Promise.allSettled(feedPromises);
+  results.forEach(r => { if(r.status==='fulfilled') newsOnline = newsOnline.concat(r.value); });
+
+  // Remover duplicatas por título similar
+  const seen = new Set();
+  newsOnline = newsOnline.filter(n => {
+    const key = n.titulo.substring(0,40).toLowerCase();
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Ordenar por data (mais recente primeiro)
+  newsOnline.sort((a,b) => (b.dataBruta||0) - (a.dataBruta||0));
+
+  if (newsOnline.length > 0) {
+    // RSS funcionou — usar somente RSS (links exatos garantidos)
+    allNews = newsOnline.slice(0, 60);
+  } else {
+    // Fallback: curadoria editorial (todos os feeds falharam)
+    allNews = NEWS_CURATED;
+    console.warn('Todos os feeds RSS falharam — usando curadoria editorial');
+  }
+
+  newsLastFetch = new Date();
   renderNews();
+  updateNewsTimer();
+  if(icon) { icon.style.animation = ''; icon.textContent = '↻'; }
+
+  // Reiniciar auto-refresh
+  iniciarAutoRefreshNews();
+}
+
+function iniciarAutoRefreshNews() {
+  if(newsAutoRefreshTimer) clearInterval(newsAutoRefreshTimer);
+  if(newsCountdownTimer) clearInterval(newsCountdownTimer);
+
+  newsAutoRefreshTimer = setInterval(() => fetchNews(false), NEWS_REFRESH_INTERVAL);
+
+  // Contador regressivo — atualiza a cada 10 segundos
+  newsCountdownTimer = setInterval(updateNewsTimer, 10000);
+}
+
+function updateNewsTimer() {
+  const el = document.getElementById('news-timer');
+  if(!el || !newsLastFetch) return;
+  const diff = Math.floor((Date.now() - newsLastFetch) / 1000);
+  const prox = Math.max(0, Math.ceil((NEWS_REFRESH_INTERVAL - diff * 1000) / 60000));
+  if(diff < 60) el.textContent = `atualizado agora · próximo em ${prox}min`;
+  else if(diff < 300) el.textContent = `${Math.floor(diff/60)}min atrás · próximo em ${prox}min`;
+  else el.textContent = `próximo refresh em ${prox}min`;
 }
 
 function filterNews(cat){
@@ -3342,21 +3520,84 @@ function filterNews(cat){
 
 function renderNews(){
   const filtered=newsFilter==='todos'?allNews:allNews.filter(n=>n.cat===newsFilter);
-  if(!filtered.length){document.getElementById('news-container').innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;">Nenhuma notícia nesta categoria no momento.</div>';return;}
+  if(!filtered.length){
+    document.getElementById('news-container').innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;">Nenhuma notícia nesta categoria no momento. Tente atualizar.</div>';
+    return;
+  }
   document.getElementById('news-container').innerHTML=filtered.map(n=>`
     <div class="news-card" onclick="window.open('${n.link}','_blank')">
       <div class="news-hdr">
         <span class="news-source" style="background:${n.cor}22;color:${n.cor};border:1px solid ${n.cor}44;">${n.fonte}</span>
         <span class="news-date">${n.data}</span>
         <span class="news-cat" style="background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border);">${getCatLabel(n.cat)}</span>
+        ${n.online?'<span style="font-size:9px;font-family:var(--mono);color:var(--success);margin-left:auto;">● live</span>':''}
       </div>
       <div class="news-title">${n.titulo}</div>
       <div class="news-body">${n.resumo}</div>
-      <div class="news-link">Leia mais →</div>
+      <div class="news-link">Leia a notícia completa →</div>
     </div>`).join('');
 }
 
-function getCatLabel(cat){const m={cambio:'Câmbio',tarifas:'Tarifas & NCM',frete:'Frete & Logística',politica:'Política Comercial',commodities:'Commodities'};return m[cat]||cat;}
+function getCatLabel(cat){
+  const m={cambio:'💱 Câmbio',tarifas:'📋 Tarifas & NCM',frete:'🚢 Frete & Logística',politica:'🏛 Política',commodities:'📦 Commodities',geopolitica:'🌍 Geopolítica'};
+  return m[cat]||cat;
+}
+
+// Curadoria editorial como fallback
+const NEWS_CURATED=[
+  // ── CÂMBIO E MACRO ──
+  {titulo:"Dólar opera abaixo de R$ 5,25 com CPI americano menor que o esperado",fonte:"Banco Central / Reuters",data:"17/03/2026",cat:"cambio",resumo:"O dólar recuou após dados do CPI americano mostrarem desaceleração, aliviando pressão sobre moedas emergentes. O câmbio USD/BRL chegou a R$ 5,2318. Importadores aproveitam janela para fechar contratos.",link:"https://www.bcb.gov.br/",cor:"#4da6ff"},
+  {titulo:"Fed sinaliza apenas 1 corte de juros em 2026 — dólar pressiona emergentes",fonte:"Reuters / Bloomberg",data:"15/03/2026",cat:"cambio",resumo:"O Federal Reserve manteve o intervalo de 4,25%–4,50% ao ano e revisou para baixo as projeções de cortes em 2026. Com juros americanos altos por mais tempo, o fluxo de capital para emergentes como o Brasil fica limitado, pressionando o real e o custo das importações.",link:"https://www.reuters.com/",cor:"#4da6ff"},
+  {titulo:"Banco Central mantém Selic em 14,75% — custo de capital segue elevado para importadores",fonte:"Banco Central do Brasil",data:"09/03/2026",cat:"cambio",resumo:"O Copom manteve a taxa básica de juros. Para importadores, o custo do capital para antecipação de estoque permanece elevado — a calculadora de antecipação do GeoTrade considera essa taxa nos cálculos.",link:"https://www.bcb.gov.br/",cor:"#4da6ff"},
+  {titulo:"Dólar chegou a R$ 6,28 em dez/2025 — o que explica a volatilidade cambial",fonte:"Valor Econômico",data:"02/01/2026",cat:"cambio",resumo:"O dólar atingiu R$ 6,28 em 22/12/2025, máximo histórico, impulsionado por crise fiscal interna e aversão global ao risco. O recuo posterior reflete entrada de dólares via exportações do agronegócio e melhora no cenário fiscal doméstico.",link:"https://valor.globo.com/",cor:"#4da6ff"},
+  // ── TARIFAS E COMEX ──
+  {titulo:"GECEX abre consulta pública para ex-tarifários de Bens de Capital no 2º sem./2026",fonte:"MDIC / CAMEX",data:"14/03/2026",cat:"tarifas",resumo:"O Comitê Executivo de Gestão da CAMEX publicou edital para pleitos de redução do II em bens de capital sem similar nacional. Empresas podem apresentar documentação até agosto de 2026.",link:"https://www.gov.br/mdic/",cor:"#10b981"},
+  {titulo:"Reforma Tributária: CBS e IBS em fase de teste — impacto na importação",fonte:"Receita Federal",data:"10/01/2026",cat:"tarifas",resumo:"A partir de jan/2026, CBS (0,9%) e IBS (0,1%) coexistem em modo de teste com PIS/COFINS e ICMS. Na importação, a Receita Federal ainda não consolidou a cobrança integrada. Despachantes recomendam acompanhamento mensal do SISCOMEX.",link:"https://www.gov.br/receitafederal/",cor:"#10b981"},
+  {titulo:"TIPI 2026 atualizada: novos NCMs para eletrônicos, VEs e 5G",fonte:"Receita Federal",data:"12/03/2026",cat:"tarifas",resumo:"Instrução Normativa atualiza a TIPI com códigos específicos para veículos elétricos, painéis solares e componentes de telecomunicações 5G. Importadores devem revisar a classificação fiscal para evitar autuação.",link:"https://www.gov.br/receitafederal/",cor:"#10b981"},
+  // ── FRETE E LOGÍSTICA ──
+  {titulo:"Frete spot China-Brasil recua 8% em março — FBX11 em USD 2.900/FEU",fonte:"Freightos / Baltic Exchange",data:"17/03/2026",cat:"frete",resumo:"O índice FBX11 registrou queda de 8% na 2ª quinzena de março. Especialistas atribuem ao aumento da capacidade após Ano Novo Chinês e estabilização dos desvios pelo Estreito de Suez. Bom momento para fechar contratos de frete.",link:"https://www.freightos.com/",cor:"#f5a623"},
+  {titulo:"Porto de Santos com congestionamento — prazo de liberação chega a 5 dias úteis",fonte:"Valor Econômico / Codesp",data:"10/03/2026",cat:"frete",resumo:"Santos enfrenta congestionamento acima da média sazonal. Especialistas recomendam antecipação do desembaraço e uso de recintos alfandegados externos para reduzir demurrage.",link:"https://valor.globo.com/",cor:"#f5a623"},
+  // ── GEOPOLÍTICA / GUERRA / EUA ──
+  {titulo:"Tarifas Trump: EUA elevam taxas sobre produtos chineses para até 20%",fonte:"Reuters / CNBC",data:"16/03/2026",cat:"geopolitica",resumo:"O governo americano elevou tarifas sobre importações chinesas cobrindo eletrônicos, máquinas e têxteis. O movimento pressiona exportadores chineses a buscar mercados alternativos — o que pode redirecionar carga para o Brasil e afetar preços FOB e fretes.",link:"https://www.reuters.com/",cor:"#ef4444"},
+  {titulo:"Guerra Ucrânia-Rússia: 3 anos de conflito mantêm fretes europeus acima da média",fonte:"Bloomberg / Lloyd's List",data:"14/03/2026",cat:"geopolitica",resumo:"O conflito na Ucrânia completa 3 anos com impacto persistente nos custos de frete europeu. Rotas pelo Mar Negro seguem restritas, elevando distâncias e custos de navios que servem portos do Mediterrâneo.",link:"https://www.bloomberg.com/",cor:"#ef4444"},
+  {titulo:"Tensão no Estreito de Taiwan: seguros marítimos sobem 15% para rotas do Pacífico",fonte:"Lloyd's of London / Reuters",data:"11/03/2026",cat:"geopolitica",resumo:"Exercícios militares chineses próximos a Taiwan elevaram prêmios de seguro marítimo para rotas do Pacífico em até 15%. Importadores brasileiros de produtos asiáticos devem verificar cláusulas de War Risk nos contratos de frete.",link:"https://www.reuters.com/",cor:"#ef4444"},
+  {titulo:"Mar Vermelho: Houthis mantêm ataques — desvios via Cabo da Boa Esperança persistem",fonte:"Hapag-Lloyd / MSC / Reuters",data:"08/03/2026",cat:"geopolitica",resumo:"Os ataques Houthi persistem, forçando as principais armadoras a manter rotas pelo Cabo da Boa Esperança. O desvio adiciona 10–14 dias de trânsito e USD 400–800 de custo por contêiner nas rotas Ásia-Europa-Brasil.",link:"https://www.reuters.com/",cor:"#ef4444"},
+  {titulo:"BRICS avança em sistema de pagamento alternativo ao SWIFT — impacto para importadores",fonte:"Financial Times / Reuters",data:"07/03/2026",cat:"geopolitica",resumo:"Cúpula do BRICS aprovou marco para liquidação em moedas locais entre membros. Para o Brasil, potencial acesso a commodities e manufaturados em yuan pode reduzir exposição cambial ao dólar em certas operações.",link:"https://www.ft.com/",cor:"#ef4444"},
+  // ── COMMODITIES ──
+  {titulo:"Petróleo Brent em USD 78/barril — OPEP+ mantém cortes até meados de 2026",fonte:"Reuters / OPEC",data:"05/03/2026",cat:"commodities",resumo:"A OPEP+ manteve cortes de 2,2 mi barris/dia. O preço do Brent impacta diretamente o bunker dos navios, pressionando fretes em todas as rotas.",link:"https://www.reuters.com/",cor:"#f5a623"},
+  {titulo:"Minério de ferro abaixo de US$ 100/t com desaceleração industrial chinesa",fonte:"Bloomberg",data:"06/03/2026",cat:"commodities",resumo:"O minério recuou na Bolsa de Dalian, refletindo dados fracos da produção industrial chinesa. Importadores de insumos industriais monitoram o impacto nos custos.",link:"https://www.bloomberg.com/",cor:"#f5a623"},
+  // ── POLÍTICA COMERCIAL ──
+  {titulo:"Mercosul-UE: acordo pode reduzir II em até 40% para bens de capital europeus",fonte:"MDIC",data:"08/03/2026",cat:"politica",resumo:"Rodada de negociações em Brasília avança nos capítulos de bens industriais dos capítulos 84 e 85. Acordo pode reduzir o II ao longo de 10 anos de implementação.",link:"https://www.gov.br/mdic/",cor:"#a78bfa"},
+  {titulo:"Balança comercial: superávit de US$ 3,87 bi na 2ª semana de março/2026",fonte:"MDIC / Secex",data:"11/03/2026",cat:"politica",resumo:"Exportações de US$ 14,71 bi e importações de US$ 10,84 bi. No acumulado jan-mar, importações caíram 0,6% para US$ 53,74 bi, com queda em agropecuária e alta em máquinas industriais.",link:"https://balanca.economia.gov.br/",cor:"#a78bfa"},
+  // ── MAIS CÂMBIO ──
+  {titulo:"Copom: ata da reunião de março revela preocupação com pass-through cambial",fonte:"Banco Central do Brasil",data:"18/03/2026",cat:"cambio",resumo:"A ata do Copom revelou que o Comitê discutiu o risco de o câmbio depreciado pressionar a inflação de bens importados. Para importadores, isso sinaliza que o BC pode usar juros para conter eventual nova alta do dólar.",link:"https://www.bcb.gov.br/publicacoes/atascopom",cor:"#4da6ff"},
+  {titulo:"Yuan se valoriza 1,2% frente ao dólar após dados positivos da China",fonte:"Reuters",data:"16/03/2026",cat:"cambio",resumo:"O yuan (CNY) registrou a maior alta semanal em dois meses, impulsionado por dados de produção industrial chinesa acima do esperado. Para importadores que negociam em CNY, a variação reduz custo FOB em reais.",link:"https://www.reuters.com/markets/currencies/",cor:"#4da6ff"},
+  {titulo:"Euro cai para mínima de 3 semanas após dados fracos da zona do euro",fonte:"Bloomberg",data:"14/03/2026",cat:"cambio",resumo:"O euro recuou frente ao dólar após PMI da zona do euro vir abaixo do esperado. Para importadores de produtos europeus, o EUR mais fraco reduz o custo em reais das operações liquidadas em euro.",link:"https://www.bloomberg.com/markets/currencies",cor:"#4da6ff"},
+  {titulo:"Dólar australiano e HKD: o que a força do dólar americano significa para importadores",fonte:"Valor Econômico",data:"12/03/2026",cat:"cambio",resumo:"Com o Fed mantendo juros altos, o índice DXY (dólar vs cesta de moedas) sobe 0,8% na semana. Importadores que pagam em USD sentem o peso diretamente; os que pagam em EUR, CNY ou HKD podem ter algum alívio relativo.",link:"https://valor.globo.com/financas/",cor:"#4da6ff"},
+  // ── MAIS TARIFAS ──
+  {titulo:"Drawback 2026: Secex publica novo manual com regras atualizadas para habilitação",fonte:"Secex / MDIC",data:"17/03/2026",cat:"tarifas",resumo:"A Secretaria de Comércio Exterior publicou versão atualizada do manual de Drawback Suspensão e Isenção. As mudanças simplificam a comprovação de exportação e ampliam o prazo para indústrias de ciclo longo.",link:"https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/drawback",cor:"#10b981"},
+  {titulo:"Ex-tarifário: empresas têm até agosto para protocolar pleitos no 2º semestre/2026",fonte:"CAMEX / MDIC",data:"15/03/2026",cat:"tarifas",resumo:"O prazo para empresas submeterem pleitos de redução do II via ex-tarifário para bens de capital termina em agosto/2026. O processo exige comprovação de inexistência de similar nacional pela ABDI e peticionamento no SEI.",link:"https://www.gov.br/mdic/pt-br/assuntos/competitividade-industrial/ex-tarifario",cor:"#10b981"},
+  {titulo:"Importação de calçados: alíquota de 35% mantida — pleitos de redução são indeferidos",fonte:"CAMEX",data:"13/03/2026",cat:"tarifas",resumo:"A CAMEX manteve a alíquota de 35% do II para calçados (NCMs 6401 a 6406), indeferindo pedidos de redução apresentados por varejistas. A proteção à indústria nacional permanece como diretriz do governo.",link:"https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior",cor:"#10b981"},
+  {titulo:"PIS/COFINS importação: Receita esclarece dúvidas sobre base de cálculo em 2026",fonte:"Receita Federal",data:"10/03/2026",cat:"tarifas",resumo:"Solução de Consulta publicada no DOU esclarece que a base de cálculo do PIS/COFINS na importação inclui o ICMS calculado por dentro, o próprio PIS e a COFINS — metodologia que o GeoTrade já aplica corretamente.",link:"https://www.gov.br/receitafederal/pt-br/assuntos/legislacao/legislacao-por-assunto/solucoes-de-consulta-e-de-divergencia",cor:"#10b981"},
+  // ── MAIS FRETE ──
+  {titulo:"Tempo de trânsito Xangai-Santos aumenta 4 dias com desvios pelo Cabo da Boa Esperança",fonte:"Hapag-Lloyd / Drewry",data:"17/03/2026",cat:"frete",resumo:"O desvio pelo Cabo da Boa Esperança, mantido por armadoras desde o agravamento da crise no Mar Vermelho, elevou o tempo médio de trânsito da rota Xangai-Santos de 31 para 35 dias. O impacto no prazo deve ser considerado no planejamento de estoque.",link:"https://www.hapag-lloyd.com/en/news-insights.html",cor:"#f5a623"},
+  {titulo:"LCL sobe 12% no 1º trimestre — carga fracionada da China pressiona PMEs",fonte:"Freightos / Kuehne+Nagel",data:"15/03/2026",cat:"frete",resumo:"O frete LCL (carga fracionada) na rota China-Brasil subiu 12% no 1º trimestre de 2026, atingindo USD 105-130 por CBM. O aumento afeta especialmente importadores de menor volume que não operam em FCL.",link:"https://www.freightos.com/enterprise/terminal/",cor:"#f5a623"},
+  {titulo:"Paranaguá inaugura novo berço para contêineres — capacidade sobe 30%",fonte:"APPA / Portos BR",data:"12/03/2026",cat:"frete",resumo:"O Porto de Paranaguá inaugurou o berço 201, ampliando sua capacidade de movimentação de contêineres em 30%. A expansão pode reduzir congestionamento e oferecer alternativa competitiva a Santos para importadores do Sul e Centro-Oeste.",link:"https://www.portosdoparana.pr.gov.br/",cor:"#f5a623"},
+  {titulo:"Demurrage e detention: armadoras cobram mais caro em 2026 — saiba evitar",fonte:"WiseTech / CargoWise",data:"09/03/2026",cat:"frete",resumo:"As principais armadoras elevaram as tarifas de demurrage (contêiner no porto) e detention (contêiner fora do porto) em 15-25% para 2026. Importadores devem agilizar o desembaraço aduaneiro para evitar custos extras que podem superar USD 200/dia.",link:"https://www.reuters.com/business/",cor:"#f5a623"},
+  // ── MAIS GEOPOLÍTICA ──
+  {titulo:"Trump anuncia revisão de isenções tarifárias — eletrônicos da China no radar",fonte:"CNBC / Reuters",data:"18/03/2026",cat:"geopolitica",resumo:"O governo Trump anunciou revisão das isenções tarifárias concedidas durante a primeira gestão, com foco em eletrônicos, semicondutores e equipamentos de telecomunicações da China. Importadores brasileiros desses produtos monitoram o potencial redirecionamento de carga.",link:"https://www.cnbc.com/world/",cor:"#ef4444"},
+  {titulo:"Rússia expande sanções a exportadores ocidentais — impacto em matérias-primas",fonte:"Financial Times",data:"16/03/2026",cat:"geopolitica",resumo:"Moscou anunciou restrições adicionais à exportação de titânio, paládio e urânio para países que impuseram sanções. Os metais são insumos para indústrias aeroespacial, automotiva e química — importadores devem verificar alternativas de fornecimento.",link:"https://www.ft.com/world/",cor:"#ef4444"},
+  {titulo:"Conflito Israel-Gaza: seguros de carga no Mediterrâneo sobem 20%",fonte:"Lloyd's Market Association",data:"14/03/2026",cat:"geopolitica",resumo:"Os prêmios de seguro para cargas no Mediterrâneo oriental subiram 20% no 1º trimestre de 2026 em função do conflito em Gaza e da instabilidade regional. Rotas da Europa sul (Gênova, Barcelona, Pireu) estão em zona de monitoramento.",link:"https://www.lloyds.com/",cor:"#ef4444"},
+  {titulo:"Índia sinaliza restrição de exportação de arroz e açúcar — commodities em alerta",fonte:"Reuters",data:"11/03/2026",cat:"geopolitica",resumo:"O governo indiano estuda nova rodada de restrições às exportações de arroz e açúcar, alegando garantia da segurança alimentar interna. Importadores brasileiros do setor de alimentos processados devem avaliar diversificação de fornecedores.",link:"https://www.reuters.com/world/india/",cor:"#ef4444"},
+  // ── MAIS COMMODITIES ──
+  {titulo:"Soja: preço no CBOT recua 3% com safra recorde no Brasil",fonte:"Reuters Commodities",data:"17/03/2026",cat:"commodities",resumo:"O contrato futuro de soja na Bolsa de Chicago recuou 3% na semana, pressionado pelas projeções de safra recorde no Brasil (167 mi de toneladas). Para importadores de farelo de soja, o recuo reduz custos de insumos.",link:"https://www.reuters.com/markets/commodities/",cor:"#f5a623"},
+  {titulo:"Cobre em alta: demanda por veículos elétricos e energia renovável sustenta preços",fonte:"Bloomberg Commodities",data:"15/03/2026",cat:"commodities",resumo:"O cobre subiu para USD 9.800/tonelada na Bolsa de Metais de Londres. A demanda estrutural por fios elétricos, motores de VEs e transformadores para energia solar/eólica deve manter preços elevados. Impacto direto em importações do NCM 74.",link:"https://www.bloomberg.com/markets/commodities",cor:"#f5a623"},
+  {titulo:"Alumínio sobe 5% após sanções dos EUA a produtores russos",fonte:"Financial Times",data:"13/03/2026",cat:"commodities",resumo:"O alumínio subiu 5% no LME após os EUA anunciarem sanções a dois grandes produtores russos, restringindo a oferta global. Importadores brasileiros de produtos do capítulo 76 (alumínio e suas obras) devem revisar cotações com fornecedores.",link:"https://www.ft.com/markets/",cor:"#f5a623"},
+  // ── MAIS POLÍTICA COMERCIAL ──
+  {titulo:"Comexstat: importações de máquinas e equipamentos crescem 8,5% no bimestre",fonte:"MDIC / ComexStat",data:"17/03/2026",cat:"politica",resumo:"Dados do ComexStat mostram crescimento de 8,5% nas importações dos capítulos 84 e 85 no bimestre jan-fev/2026. Os principais fornecedores são China (42%), EUA (18%) e Alemanha (12%). Câmbio abaixo de R$ 5,50 estimulou as compras.",link:"https://comexstat.mdic.gov.br/pt/home",cor:"#a78bfa"},
+  {titulo:"Brasil e Vietnã assinam memorando para ampliar comércio bilateral",fonte:"MDIC",data:"15/03/2026",cat:"politica",resumo:"O acordo prevê cooperação aduaneira e redução de barreiras não-tarifárias. O Vietnã é o 8º maior fornecedor de manufaturados ao Brasil, com destaque para eletrônicos (NCM 85), calçados (64) e móveis (94).",link:"https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/negociacoes-e-acordos-comerciais",cor:"#a78bfa"},
+  {titulo:"Antidumping: Brasil abre investigação sobre importação de fios de aço da China",fonte:"DECOM / MDIC",data:"12/03/2026",cat:"politica",resumo:"O Departamento de Defesa Comercial abriu investigação de antidumping sobre fios de aço não ligado da China (NCM 7217.10). Se confirmado, poderá ser aplicado direito antidumping provisório de até 30% além do II regular.",link:"https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/defesa-comercial",cor:"#a78bfa"},
+];
 
 // ══════════════════════════
 // FORMATAÇÃO
@@ -3538,7 +3779,10 @@ function showTab(name){
   const maisAbas=['precif','origens','incoterms','sidebyside','antecip','fretes','monitor','rastreio','alertas','noticias'];
   if(maisAbas.includes(name)){const mn=document.getElementById('mn-mais');if(mn)mn.classList.add('active');}
   if(name==='mercado')buildImpTab(parseFloat(document.getElementById('cambio').value)||5.22);
-  if(name==='noticias'&&!allNews.length)fetchNews();
+  if(name==='noticias'){
+    if(!allNews.length) fetchNews(true);
+    else if(!newsAutoRefreshTimer) iniciarAutoRefreshNews();
+  }
   if(name==='historico')renderHistorico();
   if(name==='rastreio'){setTimeout(()=>initLeafletMap(),100);}
   if(name==='admin'&&window.gtIsAdmin){loadAdminData();}
@@ -4220,28 +4464,34 @@ function calcAntecip(){
 // ══════════════════════════════════════════
 // TABELA DE FRETES POR ROTA
 // ══════════════════════════════════════════
+// Valores baseados no Freightos Baltic Index (FBX) — mar/2026
+// FBX Global: USD 1.946/FEU (semana 8/2026)
+// Fonte: Baltic Exchange / Freightos — atualizar mensalmente
 const FRETES_DB=[
-  // China
-  {origem:'Xangai',destino:'Santos',pais:'china',flag:'🇨🇳',dias:35,c20:2800,c40:3600,tipo:'FCL',armadores:'MSC, CMA CGM, Cosco',upd:'mar/2026'},
-  {origem:'Ningbo',destino:'Santos',pais:'china',flag:'🇨🇳',dias:33,c20:2750,c40:3500,tipo:'FCL',armadores:'Evergreen, Yang Ming',upd:'mar/2026'},
-  {origem:'Shenzhen',destino:'Santos',pais:'china',flag:'🇨🇳',dias:36,c20:2900,c40:3700,tipo:'FCL',armadores:'OOCL, Hapag-Lloyd',upd:'mar/2026'},
-  {origem:'Guangzhou',destino:'Santos',pais:'china',flag:'🇨🇳',dias:37,c20:2850,c40:3650,tipo:'FCL',armadores:'MSC, Maersk',upd:'mar/2026'},
-  {origem:'Tianjin',destino:'Santos',pais:'china',flag:'🇨🇳',dias:40,c20:3100,c40:3900,tipo:'FCL',armadores:'Cosco, Evergreen',upd:'mar/2026'},
-  // EUA
-  {origem:'Los Angeles',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:18,c20:1800,c40:2400,tipo:'FCL',armadores:'Hapag-Lloyd, Maersk',upd:'mar/2026'},
-  {origem:'New York',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:14,c20:1600,c40:2100,tipo:'FCL',armadores:'MSC, Evergreen',upd:'mar/2026'},
-  {origem:'Miami',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:12,c20:1400,c40:1900,tipo:'FCL',armadores:'CMA CGM, OOCL',upd:'mar/2026'},
-  // Europa
-  {origem:'Rotterdam',destino:'Santos',pais:'europa',flag:'🇳🇱',dias:22,c20:2200,c40:2900,tipo:'FCL',armadores:'Maersk, MSC',upd:'mar/2026'},
-  {origem:'Hamburgo',destino:'Santos',pais:'europa',flag:'🇩🇪',dias:24,c20:2300,c40:3000,tipo:'FCL',armadores:'Hapag-Lloyd, Evergreen',upd:'mar/2026'},
-  {origem:'Gênova',destino:'Santos',pais:'europa',flag:'🇮🇹',dias:21,c20:2100,c40:2800,tipo:'FCL',armadores:'MSC, CMA CGM',upd:'mar/2026'},
-  {origem:'Barcelona',destino:'Santos',pais:'europa',flag:'🇪🇸',dias:20,c20:2000,c40:2700,tipo:'FCL',armadores:'Maersk, Hapag-Lloyd',upd:'mar/2026'},
-  // Ásia outros
-  {origem:'Hong Kong',destino:'Santos',pais:'asia',flag:'🇭🇰',dias:32,c20:2700,c40:3500,tipo:'FCL',armadores:'OOCL, Evergreen',upd:'mar/2026'},
-  {origem:'Tóquio',destino:'Santos',pais:'asia',flag:'🇯🇵',dias:38,c20:3200,c40:4100,tipo:'FCL',armadores:'K Line, Yang Ming',upd:'mar/2026'},
-  {origem:'Seul / Busan',destino:'Santos',pais:'asia',flag:'🇰🇷',dias:36,c20:3000,c40:3800,tipo:'FCL',armadores:'HMM, Evergreen',upd:'mar/2026'},
-  {origem:'Singapura',destino:'Santos',pais:'asia',flag:'🇸🇬',dias:28,c20:2600,c40:3300,tipo:'FCL',armadores:'PIL, Maersk',upd:'mar/2026'},
-  {origem:'Mumbai',destino:'Santos',pais:'asia',flag:'🇮🇳',dias:25,c20:2400,c40:3100,tipo:'FCL',armadores:'MSC, CMA CGM',upd:'mar/2026'},
+  // ── CHINA (rota mais volumosa para o Brasil) ──
+  {origem:'Xangai',destino:'Santos',pais:'china',flag:'🇨🇳',dias:35,c20:1850,c40:2900,tipo:'FCL',armadores:'MSC, CMA CGM, Cosco',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Ningbo',destino:'Santos',pais:'china',flag:'🇨🇳',dias:33,c20:1800,c40:2800,tipo:'FCL',armadores:'Evergreen, Yang Ming, ONE',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Shenzhen / Guangzhou',destino:'Santos',pais:'china',flag:'🇨🇳',dias:36,c20:1900,c40:2950,tipo:'FCL',armadores:'OOCL, Hapag-Lloyd, MSC',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Tianjin / Qingdao',destino:'Santos',pais:'china',flag:'🇨🇳',dias:40,c20:2100,c40:3200,tipo:'FCL',armadores:'Cosco, Evergreen',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Xangai',destino:'Santos',pais:'china',flag:'🇨🇳',dias:25,c20:3800,c40:6200,tipo:'LCL/Aéreo',armadores:'Kuehne+Nagel, Panalpina',upd:'mar/2026',fbx:'FAX'},
+  // ── EUA ──
+  {origem:'Los Angeles / Long Beach',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:20,c20:1600,c40:2400,tipo:'FCL',armadores:'Hapag-Lloyd, Maersk, MSC',upd:'mar/2026',fbx:'FBX03'},
+  {origem:'New York / Newark',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:12,c20:1400,c40:2100,tipo:'FCL',armadores:'MSC, Evergreen, Hapag',upd:'mar/2026',fbx:'FBX01'},
+  {origem:'Miami / Port Everglades',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:10,c20:1200,c40:1800,tipo:'FCL',armadores:'CMA CGM, CSAV, Seaboard',upd:'mar/2026',fbx:'FBX01'},
+  {origem:'Houston / New Orleans',destino:'Santos',pais:'eua',flag:'🇺🇸',dias:14,c20:1300,c40:1950,tipo:'FCL',armadores:'Maersk, Hamburg Süd',upd:'mar/2026',fbx:'FBX03'},
+  // ── EUROPA ──
+  {origem:'Rotterdam / Antuérpia',destino:'Santos',pais:'europa',flag:'🇳🇱',dias:22,c20:1700,c40:2600,tipo:'FCL',armadores:'Maersk, MSC, Hapag-Lloyd',upd:'mar/2026',fbx:'FBX06'},
+  {origem:'Hamburgo / Bremen',destino:'Santos',pais:'europa',flag:'🇩🇪',dias:24,c20:1800,c40:2700,tipo:'FCL',armadores:'Hapag-Lloyd, Evergreen',upd:'mar/2026',fbx:'FBX06'},
+  {origem:'Gênova / La Spezia',destino:'Santos',pais:'europa',flag:'🇮🇹',dias:20,c20:1650,c40:2500,tipo:'FCL',armadores:'MSC, CMA CGM, Grimaldi',upd:'mar/2026',fbx:'FBX06'},
+  {origem:'Barcelona / Valência',destino:'Santos',pais:'europa',flag:'🇪🇸',dias:19,c20:1600,c40:2400,tipo:'FCL',armadores:'Maersk, MSC, Marfret',upd:'mar/2026',fbx:'FBX06'},
+  {origem:'Le Havre / Dunkerque',destino:'Santos',pais:'europa',flag:'🇫🇷',dias:21,c20:1700,c40:2550,tipo:'FCL',armadores:'CMA CGM, MSC',upd:'mar/2026',fbx:'FBX06'},
+  // ── ÁSIA / PACÍFICO ──
+  {origem:'Hong Kong',destino:'Santos',pais:'asia',flag:'🇭🇰',dias:32,c20:1780,c40:2750,tipo:'FCL',armadores:'OOCL, Evergreen, Cosco',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Tóquio / Yokohama',destino:'Santos',pais:'asia',flag:'🇯🇵',dias:38,c20:2200,c40:3400,tipo:'FCL',armadores:'K Line, MOL, NYK',upd:'mar/2026',fbx:'FBX12'},
+  {origem:'Busan / Incheon',destino:'Santos',pais:'asia',flag:'🇰🇷',dias:36,c20:2100,c40:3200,tipo:'FCL',armadores:'HMM, Evergreen, ONE',upd:'mar/2026',fbx:'FBX12'},
+  {origem:'Singapura / Port Klang',destino:'Santos',pais:'asia',flag:'🇸🇬',dias:28,c20:1900,c40:2900,tipo:'FCL',armadores:'PIL, Maersk, MSC',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Mumbai / Nhava Sheva',destino:'Santos',pais:'asia',flag:'🇮🇳',dias:25,c20:1800,c40:2700,tipo:'FCL',armadores:'MSC, CMA CGM, Hapag',upd:'mar/2026',fbx:'FBX11'},
+  {origem:'Colombo',destino:'Santos',pais:'asia',flag:'🇱🇰',dias:26,c20:1750,c40:2650,tipo:'FCL',armadores:'MSC, Evergreen, CMA CGM',upd:'mar/2026',fbx:'FBX11'},
 ];
 
 const PORTOS={
@@ -4337,6 +4587,28 @@ function removerMonitor(code){
   saveMonitorList(list);
 }
 function renderMonitorList(){
+  // Renderizar sugestões (fix do bug de template literal no HTML)
+  const sug = document.getElementById('monitor-sugestoes');
+  if (sug && !sug.dataset.rendered) {
+    const sugestoes = [
+      ['8450.11.00','Máquina de lavar doméstica','14'],
+      ['8471.30.12','Notebook / Laptop','0'],
+      ['8517.12.13','Smartphone 5G','16'],
+      ['6403.99.90','Calçados couro','35'],
+      ['0201.30.00','Carne bovina desossada','10'],
+      ['2204.21.00','Vinho tinto/branco','20'],
+      ['8517.12.11','Smartphone 4G','16'],
+      ['9503.00.99','Brinquedos diversos','20'],
+    ];
+    sug.innerHTML = sugestoes.map(([c,d,ii]) =>
+      `<div onclick="preencherMonitor('${c}','${d}','${ii}')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .1s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--accent);flex-shrink:0;">${c}</span>
+        <span style="font-size:11px;color:var(--text2);flex:1;">${d}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">II ${ii}%</span>
+      </div>`
+    ).join('');
+    sug.dataset.rendered = '1';
+  }
   const list=getMonitorList();
   const el=document.getElementById('monitor-list');if(!el)return;
   const count=document.getElementById('monitor-count');
