@@ -2450,19 +2450,26 @@ iframe{border-radius:var(--r);}
 
       <!-- MAPA AIS EMBED -->
       <div class="card">
-        <div class="ct">Mapa de tráfego marítimo ao vivo — MarineTraffic</div>
-        <div style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border2);">
+        <div class="ct" style="margin-bottom:10px;">
+          Mapa AIS ao vivo — navios em tempo real
+          <span style="font-size:9px;background:var(--s2);color:var(--success);border:1px solid var(--s3);border-radius:4px;padding:2px 6px;font-family:var(--mono);">● LIVE</span>
+        </div>
+        <div style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border2);background:var(--bg3);">
           <iframe
-            src="https://www.marinetraffic.com/pt/ais/embed/zoom:4/centery:-15/centerx:-40/maptype:4/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:/remember:false"
+            src="https://www.vesselfinder.com/?embed=1&lat=-15&lng=-40&zoom=4&shownames=0&mmsi=0&shipid=0&fleet=&fleet_id=&vtypes=&showmenu=0&remember=0"
             width="100%"
-            height="340"
+            height="360"
             frameborder="0"
             style="display:block;"
-            title="MarineTraffic - Navios ao vivo"
-            loading="lazy">
+            title="VesselFinder - Navios ao vivo"
+            loading="lazy"
+            allowfullscreen>
           </iframe>
         </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px;">Dados AIS em tempo real · MarineTraffic · Zoom e clique nos navios para ver detalhes</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+          <div style="font-size:10px;color:var(--text3);">Dados AIS em tempo real · VesselFinder · Clique em qualquer navio para ver detalhes</div>
+          <a href="https://www.marinetraffic.com/pt/ais/home/centerx:-40/centery:-15/zoom:5" target="_blank" style="font-size:10px;color:var(--accent-bright);text-decoration:none;white-space:nowrap;margin-left:10px;">Abrir MarineTraffic ↗</a>
+        </div>
       </div>
     </div>
 
@@ -20113,7 +20120,7 @@ function showTab(name){
     else if(!newsAutoRefreshTimer) iniciarAutoRefreshNews();
   }
   if(name==='historico')renderHistorico();
-  if(name==='rastreio'){setTimeout(()=>initLeafletMap(),100);}
+  if(name==='rastreio'){ /* MarineTraffic iframe carrega automaticamente */ }
   if(name==='admin'&&window.gtIsAdmin){loadAdminData();}
   if(name==='fretes'){renderFretesTable('todos');}
   if(name==='monitor'){renderMonitorList();}
@@ -20402,59 +20409,131 @@ function updateTrackUI() {
   if (inp) { inp.placeholder = ph[type] || ''; inp.value = ''; }
 }
 
+function updateTrackPlaceholder() {
+  const type = document.getElementById('track-type').value;
+  const input = document.getElementById('track-input');
+  const placeholders = {
+    container: 'Ex: MSCU1234567 ou MSKU1234567',
+    bl: 'Ex: MEDUB1234567 ou MAEU123456789',
+    vessel: 'Ex: MSC OSCAR ou EVER GIVEN',
+    imo: 'Ex: 9321483 (7 dígitos)'
+  };
+  if (input) input.placeholder = placeholders[type] || '';
+}
+
+// Prefixos de contêineres por armadora
+const ARMADORAS = {
+  'MSCU':'MSC','MSDU':'MSC','TCKU':'MSC',
+  'MSKU':'Maersk','MAEU':'Maersk','MRKU':'Maersk',
+  'CMAU':'CMA CGM','CGMU':'CMA CGM','APHU':'CMA CGM',
+  'HLCU':'Hapag-Lloyd','HLXU':'Hapag-Lloyd',
+  'CSNU':'Cosco','CBHU':'Cosco','CCLU':'Cosco',
+  'EISU':'Evergreen','EMCU':'Evergreen','EGSU':'Evergreen',
+  'YMLU':'Yang Ming','YMMU':'Yang Ming',
+  'ONEY':'ONE (Ocean Network Express)','ONEU':'ONE',
+  'HDMU':'HMM','HMMU':'HMM',
+  'ZIMU':'ZIM','ZCSU':'ZIM',
+  'PCIU':'PIL','PONU':'PIL',
+  'WHLC':'WAN HAI',
+};
+
+// URLs de rastreamento por armadora
+const TRACK_URLS = {
+  'MSC': (v,t) => t==='bl' ? `https://www.msc.com/pt-br/track-a-shipment?agencyPath=bra&bl=${v}` : `https://www.msc.com/pt-br/track-a-shipment?agencyPath=bra&container=${v}`,
+  'Maersk': (v,t) => t==='bl' ? `https://www.maersk.com/tracking/${v}` : `https://www.maersk.com/tracking/${v}`,
+  'CMA CGM': (v,t) => `https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=${t==='bl'?'BL':'CNT'}&Reference=${v}`,
+  'Hapag-Lloyd': (v,t) => `https://www.hapag-lloyd.com/en/online-business/tracing/tracing-by-${t==='bl'?'booking':'container'}.html?reference=${v}`,
+  'Cosco': (v) => `https://elines.coscoshipping.com/ebtracking/public?trackingType=BOOKING&trackingNumber=${v}`,
+  'Evergreen': (v) => `https://www.evergreen-line.com/static/jsp/Main.jsp?autoKey=trackingno&f_cmd=%2Fcmd_CargoTracking.do&inquiry_type=Container&container_no=${v}`,
+};
+
 function rastrearCarga() {
   const type = document.getElementById('track-type').value;
-  const val = document.getElementById('track-input').value.trim();
+  const val = document.getElementById('track-input').value.trim().toUpperCase().replace(/\s+/g,'');
   const res = document.getElementById('track-result');
-  if (!val) { res.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Digite um número para rastrear.</div>'; return; }
+  if (!val) {
+    res.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Digite um número para rastrear.</div>';
+    return;
+  }
 
-  res.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:8px 0;"><div class="spin"></div>Buscando...</div>';
+  // Detectar armadora pelo prefixo do contêiner
+  const prefix = val.substring(0, 4);
+  const armadora = ARMADORAS[prefix] || null;
 
-  setTimeout(() => {
-    if (type === 'imo' || type === 'mmsi') {
-      res.innerHTML = `
-        <div class="alert ao" style="margin-bottom:8px;">
-          <div class="alert-i">✓</div>
-          <div><div class="at">Rastreando ${type.toUpperCase()}: ${val}</div>
-          <div class="ab">Abra os links abaixo para ver posição, rota e histórico do navio.</div></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <a href="https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div><div style="font-size:12px;font-weight:500;color:var(--text);">MarineTraffic</div><div style="font-size:10px;color:var(--text3);">Posição ao vivo, rota, histórico completo</div></div>
-            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
-          </a>
-          <a href="https://www.vesselfinder.com/?imo=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div><div style="font-size:12px;font-weight:500;color:var(--text);">VesselFinder</div><div style="font-size:10px;color:var(--text3);">Perfil do navio e posição atual</div></div>
-            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
-          </a>
-          <a href="https://www.fleetmon.com/vessels/?s=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div><div style="font-size:12px;font-weight:500;color:var(--text);">FleetMon</div><div style="font-size:10px;color:var(--text3);">Dados técnicos e histórico de escalas</div></div>
-            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
-          </a>
-        </div>`;
-    } else if (type === 'nome') {
-      window.open(`https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${encodeURIComponent(val)}`, '_blank');
-      res.innerHTML = `<div class="alert ai"><div class="alert-i">🔍</div><div><div class="at">Buscando por nome</div><div class="ab">Abrindo MarineTraffic com busca por "<strong>${val}</strong>".</div></div></div>`;
-    } else {
-      // Contêiner / BL
-      res.innerHTML = `
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Rastrear: <span style="font-family:var(--mono);color:var(--accent-bright);">${val}</span></div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <a href="https://www.track-trace.com/container?id=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div><div style="font-size:12px;font-weight:500;color:var(--text);">Track-Trace</div><div style="font-size:10px;color:var(--text3);">Agrega MSC, Maersk, CMA CGM e +50 armadoras</div></div>
-            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
-          </a>
-          <a href="https://shipsgo.com/container-tracking/${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div><div style="font-size:12px;font-weight:500;color:var(--text);">Shipsgo</div><div style="font-size:10px;color:var(--text3);">Especializado em contêineres e BL</div></div>
-            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
-          </a>
-          <a href="https://www.searates.com/container/tracking/?container=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div><div style="font-size:12px;font-weight:500;color:var(--text);">SeaRates</div><div style="font-size:10px;color:var(--text3);">Rastreamento + cotação de frete</div></div>
-            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
-          </a>
-        </div>`;
+  // Montar links de rastreamento conforme o tipo
+  let links = [];
+  let titulo = '';
+  let subtitulo = '';
+
+  if (type === 'imo') {
+    titulo = `IMO ${val}`;
+    subtitulo = 'Rastreamento de navio por número IMO';
+    links = [
+      { nome: 'MarineTraffic', desc: 'Posição ao vivo, rota e histórico AIS', url: `https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}`, destaque: true },
+      { nome: 'VesselFinder', desc: 'Perfil técnico e posição atual', url: `https://www.vesselfinder.com/?imo=${val}` },
+      { nome: 'FleetMon', desc: 'Histórico de escalas e dados técnicos', url: `https://www.fleetmon.com/vessels/?s=${val}` },
+      { nome: 'MyShipTracking', desc: 'Rastreamento AIS alternativo', url: `https://www.myshiptracking.com/?mmsi=&imo=${val}` },
+    ];
+  } else if (type === 'vessel') {
+    titulo = `Navio: ${val}`;
+    subtitulo = 'Busca por nome do navio';
+    links = [
+      { nome: 'MarineTraffic', desc: 'Buscar navio por nome — posição ao vivo', url: `https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${encodeURIComponent(val)}`, destaque: true },
+      { nome: 'VesselFinder', desc: 'Busca por nome do navio', url: `https://www.vesselfinder.com/?name=${encodeURIComponent(val)}` },
+      { nome: 'FleetMon', desc: 'Busca e histórico de escalas', url: `https://www.fleetmon.com/vessels/?s=${encodeURIComponent(val)}` },
+    ];
+  } else if (type === 'bl') {
+    titulo = `BL: ${val}`;
+    subtitulo = armadora ? `Armadora detectada: ${armadora}` : 'Bill of Lading — múltiplas armadoras';
+    // Link direto da armadora se detectada
+    if (armadora && TRACK_URLS[armadora]) {
+      links.push({ nome: `${armadora} (oficial)`, desc: 'Rastreamento direto na armadora — mais preciso', url: TRACK_URLS[armadora](val, 'bl'), destaque: true });
     }
-  }, 400);
+    links = [...links,
+      { nome: 'Track-Trace', desc: 'Agrega MSC, Maersk, CMA CGM e +50 armadoras', url: `https://www.track-trace.com/bill?id=${val}` },
+      { nome: 'Shipsgo', desc: 'Rastreamento por BL com ETA e status', url: `https://shipsgo.com/bl-tracking/${val}` },
+      { nome: 'SeaRates', desc: 'Rastreamento + timeline de eventos', url: `https://www.searates.com/container/tracking/?bl=${val}` },
+      { nome: 'Container Live', desc: 'Histórico completo de movimentos', url: `https://container-live.com/tracking?blnumber=${val}` },
+    ];
+  } else {
+    // Contêiner
+    titulo = `Contêiner: ${val}`;
+    subtitulo = armadora ? `Armadora detectada: ${armadora}` : 'Número de contêiner';
+    if (armadora && TRACK_URLS[armadora]) {
+      links.push({ nome: `${armadora} (oficial)`, desc: 'Rastreamento direto na armadora — mais preciso e atualizado', url: TRACK_URLS[armadora](val, 'container'), destaque: true });
+    }
+    links = [...links,
+      { nome: 'MarineTraffic', desc: 'Localizar navio que carrega o contêiner', url: `https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}`, destaque: !armadora },
+      { nome: 'Track-Trace', desc: 'Agrega +50 armadoras automaticamente', url: `https://www.track-trace.com/container?id=${val}` },
+      { nome: 'Shipsgo', desc: 'Status e ETA do contêiner', url: `https://shipsgo.com/container-tracking/${val}` },
+      { nome: 'SeaRates', desc: 'Rastreamento com timeline de eventos', url: `https://www.searates.com/container/tracking/?container=${val}` },
+    ];
+  }
+
+  // Renderizar resultado
+  const linksHTML = links.map(l => `
+    <a href="${l.url}" target="_blank" rel="noopener"
+       style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid ${l.destaque ? 'var(--accent)' : 'var(--border2)'};border-radius:8px;text-decoration:none;transition:border-color .15s;${l.destaque ? 'box-shadow:0 0 0 1px var(--a4);' : ''}"
+       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${l.destaque ? 'var(--accent)' : 'var(--border2)'}'">
+      <div>
+        <div style="font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px;">
+          ${l.destaque ? '<span style="font-size:9px;background:var(--a3);color:var(--accent);border:1px solid var(--a4);border-radius:4px;padding:1px 5px;font-family:var(--mono);">RECOMENDADO</span>' : ''}
+          ${l.nome}
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">${l.desc}</div>
+      </div>
+      <span style="font-size:11px;color:var(--accent-bright);white-space:nowrap;margin-left:12px;">Abrir →</span>
+    </a>`).join('');
+
+  res.innerHTML = `
+    <div style="padding:10px 12px;background:var(--a3);border:1px solid var(--a4);border-radius:8px;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:500;color:var(--accent-bright);">${titulo}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">${subtitulo}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">${linksHTML}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      💡 Dica: rastreamento direto na armadora é sempre mais preciso e atualizado que agregadores.
+    </div>`;
 }
 
 // ══════════════════════════
