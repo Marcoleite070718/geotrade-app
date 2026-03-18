@@ -2448,31 +2448,21 @@ iframe{border-radius:var(--r);}
         <div id="track-result" style="margin-top:8px;"></div>
       </div>
 
-      <!-- MAPA LEAFLET + OPENSEAMAP -->
+      <!-- MAPA AIS EMBED -->
       <div class="card">
-        <div class="ct" style="margin-bottom:10px;">
-          Mapa marítimo — portos brasileiros
-          <a href="https://www.marinetraffic.com/pt/ais/home/centerx:-40/centery:-15/zoom:5" target="_blank"
-             style="font-size:10px;background:var(--a3);color:var(--accent);border:1px solid var(--a4);border-radius:5px;padding:2px 8px;text-decoration:none;font-family:var(--mono);">
-            🚢 Navios ao vivo ↗
-          </a>
-        </div>
+        <div class="ct">Mapa de tráfego marítimo ao vivo — MarineTraffic</div>
         <div style="border-radius:var(--r);overflow:hidden;border:1px solid var(--border2);">
-          <div id="leaflet-map" style="width:100%;height:400px;"></div>
+          <iframe
+            src="https://www.marinetraffic.com/pt/ais/embed/zoom:4/centery:-15/centerx:-40/maptype:4/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:/remember:false"
+            width="100%"
+            height="340"
+            frameborder="0"
+            style="display:block;"
+            title="MarineTraffic - Navios ao vivo"
+            loading="lazy">
+          </iframe>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:6px;">
-          <span id="mapa-info" style="font-size:10px;color:var(--text3);">Carregando mapa...</span>
-          <span id="mapa-zoom" style="font-size:10px;color:var(--accent-bright);font-family:var(--mono);"></span>
-          <div style="display:flex;gap:10px;">
-            <a href="https://www.marinetraffic.com/pt/ais/home/centerx:-40/centery:-15/zoom:5" target="_blank"
-               style="font-size:10px;color:var(--accent-bright);text-decoration:none;">MarineTraffic ↗</a>
-            <a href="https://www.vesselfinder.com/?lat=-15&lng=-40&zoom=5" target="_blank"
-               style="font-size:10px;color:var(--accent-bright);text-decoration:none;">VesselFinder ↗</a>
-          </div>
-        </div>
-        <div style="margin-top:6px;padding:8px 10px;background:var(--a3);border:1px solid var(--a4);border-radius:6px;font-size:11px;color:var(--text2);">
-          💡 <strong style="color:var(--accent);">Para ver navios ao vivo:</strong> clique em "Navios ao vivo ↗" — abre o MarineTraffic com todos os navios em tempo real centrado no Brasil.
-        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">Dados AIS em tempo real · MarineTraffic · Zoom e clique nos navios para ver detalhes</div>
       </div>
     </div>
 
@@ -11110,7 +11100,39 @@ function getPeso(code){const cap=code.substring(0,2);return PESO_MAP[cap]??0.08;
 
 // TRANSIT / FRETE
 const TRANSIT={china:{m:35,a:5,r:999},hongkong:{m:32,a:4,r:999},eua:{m:18,a:2,r:12},europa:{m:22,a:3,r:18},mercosul:{m:10,a:2,r:6}};
-const FRETE_BASE={china:{m:3800,a:9500,r:0},hongkong:{m:3600,a:9000,r:0},eua:{m:2200,a:5000,r:1200},europa:{m:2800,a:6000,r:1600},mercosul:{m:1200,a:2500,r:600}};
+
+// Preço por contêiner 20' FCL (USD) — baseado no FBX mar/2026
+// Fonte: Freightos Baltic Index — atualizar mensalmente
+const FRETE_FCL_20 = {
+  china:    {m:1850, a:null}, // a = por kg
+  hongkong: {m:1780, a:null},
+  eua:      {m:1400, a:null},
+  europa:   {m:1700, a:null},
+  mercosul: {m: 800, a:null},
+  asia:     {m:1900, a:null},
+  india:    {m:1800, a:null},
+};
+// Fator 40' = 1.55× o 20' (capacidade maior, custo menor por CBM)
+const FATOR_40 = 1.55;
+
+// Capacidade útil por contêiner (kg e CBM)
+const CONT_20_KG  = 28000;  // 20' FCL: 28 toneladas úteis
+const CONT_20_CBM = 25;     // 20' FCL: ~25 CBM úteis
+const CONT_40_KG  = 26000;  // 40' FCL: 26 ton (mais leve por container)
+const CONT_40_CBM = 58;     // 40' FCL: ~58 CBM úteis
+
+// Frete aéreo: USD por kg (tarifa de mercado mar/2026)
+const FRETE_AEREO_KG = {
+  china:3.8, hongkong:3.5, eua:2.2, europa:2.8, mercosul:1.8, asia:3.5, india:3.2
+};
+
+// Densidade típica por capítulo NCM (kg/CBM) para estimativa volumétrica
+const DENSIDADE_CBM = {
+  '84':200,'85':150,'87':350,'39':250,'61':100,'62': 90,'64':200,
+  '72':500,'73':480,'74':400,'90':120,'94':120,'95':120,'33':250,
+  '22':500,'02':450,'03':400,'04':400,'17':500,'19':350,'20':420,
+};
+
 const PORTO_FI={santos:1800,paranagua:2200,itajai:2600,rio:2400,suape:3800,vcp:1200,gru:1200};
 
 // ══════════════════════════
@@ -19967,19 +19989,85 @@ function autoEstimar(){
   const fob=parseFloat(document.getElementById('fob').value)||0;
   const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
   if(!fob)return;
-  const pesoEst=fob*selNcm.kgPorUSD;
-  const pesoEl=document.getElementById('peso');
-  if(pesoEl&&!pesoEl.dataset.manual)pesoEl.value=Math.round(pesoEst);
+
+  // 1. Estimar peso bruto
+  const pesoEst = fob * selNcm.kgPorUSD;
+  const pesoEl = document.getElementById('peso');
+  if(pesoEl && !pesoEl.dataset.manual) pesoEl.value = Math.round(pesoEst);
+
+  // 2. Estimar frete com lógica real de contêiner
   if(!freteManual){
-    const frBase=FRETE_BASE[origemSel]?.[modalAtual]||3000;
-    const frEst=modalAtual==='m'?Math.max(frBase,pesoEst*1.2):frBase*(fob/50000);
-    document.getElementById('frete').value=Math.round(frEst/100)*100;
+    const cap = selNcm.code?.substring(0,2) || '84';
+    const densidadeCBM = DENSIDADE_CBM[cap] || 200; // kg por CBM
+    const cbmEst = pesoEst / densidadeCBM;           // volume estimado em CBM
+
+    let frEst = 0;
+
+    if(modalAtual === 'm'){
+      // MARÍTIMO: calcular por contêiner FCL
+      const preco20 = FRETE_FCL_20[origemSel]?.m || 1850;
+      const preco40 = preco20 * FATOR_40;
+
+      // Qual contêiner usar? Critério: peso OU volume, o que saturar primeiro
+      const frac20_peso = pesoEst / CONT_20_KG;
+      const frac20_cbm  = cbmEst  / CONT_20_CBM;
+      const frac20 = Math.max(frac20_peso, frac20_cbm); // fator de ocupação do 20'
+
+      if(frac20 <= 0.5){
+        // Menos de metade de um 20' → LCL (carga fracionada)
+        // LCL: ~USD 80-120/CBM dependendo da rota
+        const lclRate = {china:95, hongkong:90, eua:70, europa:80, mercosul:55, asia:95, india:90};
+        const rate = lclRate[origemSel] || 90;
+        frEst = Math.max(200, cbmEst * rate); // mínimo USD 200
+      } else if(frac20 <= 1.0){
+        // Cabe num 20' → FCL 20'
+        frEst = preco20;
+      } else if(frac20 <= (CONT_40_KG/CONT_20_KG)){
+        // Precisa de 40' → FCL 40'
+        frEst = preco40;
+      } else {
+        // Múltiplos contêineres
+        const nCont40 = Math.ceil(Math.max(pesoEst/CONT_40_KG, cbmEst/CONT_40_CBM));
+        frEst = nCont40 * preco40;
+      }
+
+    } else if(modalAtual === 'a'){
+      // AÉREO: por kg
+      const kgRate = FRETE_AEREO_KG[origemSel] || 3.5;
+      // Peso taxável = maior entre peso real e peso volumétrico (1 CBM = 167kg)
+      const pesoVol = cbmEst * 167;
+      const pesoTaxavel = Math.max(pesoEst, pesoVol);
+      frEst = pesoTaxavel * kgRate;
+
+    } else if(modalAtual === 'r'){
+      // RODOVIÁRIO
+      const rodBase = {eua:1800, mercosul:900};
+      frEst = rodBase[origemSel] || 0;
+    }
+
+    document.getElementById('frete').value = Math.round(frEst / 50) * 50; // arredondar p/ USD 50
   }
-  const frVal=parseFloat(document.getElementById('frete').value)||0;
-  const sgEl=document.getElementById('seguro');if(!sgEl.dataset.manual)sgEl.value=Math.round((fob+frVal)*.003);
-  const peso=parseFloat(document.getElementById('peso').value)||pesoEst;
-  const porto=document.getElementById('porto').value;
-  ['desp','cap','arm','fi'].forEach((id,i)=>{const el=document.getElementById(id);if(el&&!el.dataset.manual){const vs=[Math.max(2500,1500+peso*1.2),Math.max(1200,800+peso*.8),Math.max(500,300+peso*.4),PORTO_FI[porto]||1800];el.value=Math.round(vs[i]/100)*100;}});
+
+  // 3. Seguro (0,3% do CIF estimado)
+  const frVal = parseFloat(document.getElementById('frete').value)||0;
+  const sgEl = document.getElementById('seguro');
+  if(sgEl && !sgEl.dataset.manual) sgEl.value = Math.round((fob + frVal) * 0.003);
+
+  // 4. Despesas portuárias baseadas em peso
+  const peso = parseFloat(document.getElementById('peso').value) || pesoEst;
+  const porto = document.getElementById('porto')?.value || 'santos';
+  ['desp','cap','arm','fi'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    if(el && !el.dataset.manual){
+      const vs = [
+        Math.max(2500, 1500 + peso * 1.2),   // despacho
+        Math.max(1200, 800  + peso * 0.8),    // capatazia
+        Math.max(500,  300  + peso * 0.4),    // armazenagem
+        PORTO_FI[porto] || 1800               // frete interno
+      ];
+      el.value = Math.round(vs[i] / 100) * 100;
+    }
+  });
 }
 
 function calcular(){
@@ -20123,7 +20211,7 @@ function showTab(name){
     else if(!newsAutoRefreshTimer) iniciarAutoRefreshNews();
   }
   if(name==='historico')renderHistorico();
-  if(name==='rastreio'){ setTimeout(()=>initLeafletMap(), 200); }
+  if(name==='rastreio'){setTimeout(()=>initLeafletMap(),100);}
   if(name==='admin'&&window.gtIsAdmin){loadAdminData();}
   if(name==='fretes'){renderFretesTable('todos');}
   if(name==='monitor'){renderMonitorList();}
@@ -20412,131 +20500,59 @@ function updateTrackUI() {
   if (inp) { inp.placeholder = ph[type] || ''; inp.value = ''; }
 }
 
-function updateTrackPlaceholder() {
-  const type = document.getElementById('track-type').value;
-  const input = document.getElementById('track-input');
-  const placeholders = {
-    container: 'Ex: MSCU1234567 ou MSKU1234567',
-    bl: 'Ex: MEDUB1234567 ou MAEU123456789',
-    vessel: 'Ex: MSC OSCAR ou EVER GIVEN',
-    imo: 'Ex: 9321483 (7 dígitos)'
-  };
-  if (input) input.placeholder = placeholders[type] || '';
-}
-
-// Prefixos de contêineres por armadora
-const ARMADORAS = {
-  'MSCU':'MSC','MSDU':'MSC','TCKU':'MSC',
-  'MSKU':'Maersk','MAEU':'Maersk','MRKU':'Maersk',
-  'CMAU':'CMA CGM','CGMU':'CMA CGM','APHU':'CMA CGM',
-  'HLCU':'Hapag-Lloyd','HLXU':'Hapag-Lloyd',
-  'CSNU':'Cosco','CBHU':'Cosco','CCLU':'Cosco',
-  'EISU':'Evergreen','EMCU':'Evergreen','EGSU':'Evergreen',
-  'YMLU':'Yang Ming','YMMU':'Yang Ming',
-  'ONEY':'ONE (Ocean Network Express)','ONEU':'ONE',
-  'HDMU':'HMM','HMMU':'HMM',
-  'ZIMU':'ZIM','ZCSU':'ZIM',
-  'PCIU':'PIL','PONU':'PIL',
-  'WHLC':'WAN HAI',
-};
-
-// URLs de rastreamento por armadora
-const TRACK_URLS = {
-  'MSC': (v,t) => t==='bl' ? `https://www.msc.com/pt-br/track-a-shipment?agencyPath=bra&bl=${v}` : `https://www.msc.com/pt-br/track-a-shipment?agencyPath=bra&container=${v}`,
-  'Maersk': (v,t) => t==='bl' ? `https://www.maersk.com/tracking/${v}` : `https://www.maersk.com/tracking/${v}`,
-  'CMA CGM': (v,t) => `https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=${t==='bl'?'BL':'CNT'}&Reference=${v}`,
-  'Hapag-Lloyd': (v,t) => `https://www.hapag-lloyd.com/en/online-business/tracing/tracing-by-${t==='bl'?'booking':'container'}.html?reference=${v}`,
-  'Cosco': (v) => `https://elines.coscoshipping.com/ebtracking/public?trackingType=BOOKING&trackingNumber=${v}`,
-  'Evergreen': (v) => `https://www.evergreen-line.com/static/jsp/Main.jsp?autoKey=trackingno&f_cmd=%2Fcmd_CargoTracking.do&inquiry_type=Container&container_no=${v}`,
-};
-
 function rastrearCarga() {
   const type = document.getElementById('track-type').value;
-  const val = document.getElementById('track-input').value.trim().toUpperCase().replace(/\s+/g,'');
+  const val = document.getElementById('track-input').value.trim();
   const res = document.getElementById('track-result');
-  if (!val) {
-    res.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Digite um número para rastrear.</div>';
-    return;
-  }
+  if (!val) { res.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Digite um número para rastrear.</div>'; return; }
 
-  // Detectar armadora pelo prefixo do contêiner
-  const prefix = val.substring(0, 4);
-  const armadora = ARMADORAS[prefix] || null;
+  res.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:8px 0;"><div class="spin"></div>Buscando...</div>';
 
-  // Montar links de rastreamento conforme o tipo
-  let links = [];
-  let titulo = '';
-  let subtitulo = '';
-
-  if (type === 'imo') {
-    titulo = `IMO ${val}`;
-    subtitulo = 'Rastreamento de navio por número IMO';
-    links = [
-      { nome: 'MarineTraffic', desc: 'Posição ao vivo, rota e histórico AIS', url: `https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}`, destaque: true },
-      { nome: 'VesselFinder', desc: 'Perfil técnico e posição atual', url: `https://www.vesselfinder.com/?imo=${val}` },
-      { nome: 'FleetMon', desc: 'Histórico de escalas e dados técnicos', url: `https://www.fleetmon.com/vessels/?s=${val}` },
-      { nome: 'MyShipTracking', desc: 'Rastreamento AIS alternativo', url: `https://www.myshiptracking.com/?mmsi=&imo=${val}` },
-    ];
-  } else if (type === 'vessel') {
-    titulo = `Navio: ${val}`;
-    subtitulo = 'Busca por nome do navio';
-    links = [
-      { nome: 'MarineTraffic', desc: 'Buscar navio por nome — posição ao vivo', url: `https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${encodeURIComponent(val)}`, destaque: true },
-      { nome: 'VesselFinder', desc: 'Busca por nome do navio', url: `https://www.vesselfinder.com/?name=${encodeURIComponent(val)}` },
-      { nome: 'FleetMon', desc: 'Busca e histórico de escalas', url: `https://www.fleetmon.com/vessels/?s=${encodeURIComponent(val)}` },
-    ];
-  } else if (type === 'bl') {
-    titulo = `BL: ${val}`;
-    subtitulo = armadora ? `Armadora detectada: ${armadora}` : 'Bill of Lading — múltiplas armadoras';
-    // Link direto da armadora se detectada
-    if (armadora && TRACK_URLS[armadora]) {
-      links.push({ nome: `${armadora} (oficial)`, desc: 'Rastreamento direto na armadora — mais preciso', url: TRACK_URLS[armadora](val, 'bl'), destaque: true });
-    }
-    links = [...links,
-      { nome: 'Track-Trace', desc: 'Agrega MSC, Maersk, CMA CGM e +50 armadoras', url: `https://www.track-trace.com/bill?id=${val}` },
-      { nome: 'Shipsgo', desc: 'Rastreamento por BL com ETA e status', url: `https://shipsgo.com/bl-tracking/${val}` },
-      { nome: 'SeaRates', desc: 'Rastreamento + timeline de eventos', url: `https://www.searates.com/container/tracking/?bl=${val}` },
-      { nome: 'Container Live', desc: 'Histórico completo de movimentos', url: `https://container-live.com/tracking?blnumber=${val}` },
-    ];
-  } else {
-    // Contêiner
-    titulo = `Contêiner: ${val}`;
-    subtitulo = armadora ? `Armadora detectada: ${armadora}` : 'Número de contêiner';
-    if (armadora && TRACK_URLS[armadora]) {
-      links.push({ nome: `${armadora} (oficial)`, desc: 'Rastreamento direto na armadora — mais preciso e atualizado', url: TRACK_URLS[armadora](val, 'container'), destaque: true });
-    }
-    links = [...links,
-      { nome: 'MarineTraffic', desc: 'Localizar navio que carrega o contêiner', url: `https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}`, destaque: !armadora },
-      { nome: 'Track-Trace', desc: 'Agrega +50 armadoras automaticamente', url: `https://www.track-trace.com/container?id=${val}` },
-      { nome: 'Shipsgo', desc: 'Status e ETA do contêiner', url: `https://shipsgo.com/container-tracking/${val}` },
-      { nome: 'SeaRates', desc: 'Rastreamento com timeline de eventos', url: `https://www.searates.com/container/tracking/?container=${val}` },
-    ];
-  }
-
-  // Renderizar resultado
-  const linksHTML = links.map(l => `
-    <a href="${l.url}" target="_blank" rel="noopener"
-       style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid ${l.destaque ? 'var(--accent)' : 'var(--border2)'};border-radius:8px;text-decoration:none;transition:border-color .15s;${l.destaque ? 'box-shadow:0 0 0 1px var(--a4);' : ''}"
-       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${l.destaque ? 'var(--accent)' : 'var(--border2)'}'">
-      <div>
-        <div style="font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px;">
-          ${l.destaque ? '<span style="font-size:9px;background:var(--a3);color:var(--accent);border:1px solid var(--a4);border-radius:4px;padding:1px 5px;font-family:var(--mono);">RECOMENDADO</span>' : ''}
-          ${l.nome}
+  setTimeout(() => {
+    if (type === 'imo' || type === 'mmsi') {
+      res.innerHTML = `
+        <div class="alert ao" style="margin-bottom:8px;">
+          <div class="alert-i">✓</div>
+          <div><div class="at">Rastreando ${type.toUpperCase()}: ${val}</div>
+          <div class="ab">Abra os links abaixo para ver posição, rota e histórico do navio.</div></div>
         </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px;">${l.desc}</div>
-      </div>
-      <span style="font-size:11px;color:var(--accent-bright);white-space:nowrap;margin-left:12px;">Abrir →</span>
-    </a>`).join('');
-
-  res.innerHTML = `
-    <div style="padding:10px 12px;background:var(--a3);border:1px solid var(--a4);border-radius:8px;margin-bottom:10px;">
-      <div style="font-size:12px;font-weight:500;color:var(--accent-bright);">${titulo}</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:2px;">${subtitulo}</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:6px;">${linksHTML}</div>
-    <div style="font-size:10px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-      💡 Dica: rastreamento direto na armadora é sempre mais preciso e atualizado que agregadores.
-    </div>`;
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <a href="https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">MarineTraffic</div><div style="font-size:10px;color:var(--text3);">Posição ao vivo, rota, histórico completo</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
+          </a>
+          <a href="https://www.vesselfinder.com/?imo=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">VesselFinder</div><div style="font-size:10px;color:var(--text3);">Perfil do navio e posição atual</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
+          </a>
+          <a href="https://www.fleetmon.com/vessels/?s=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">FleetMon</div><div style="font-size:10px;color:var(--text3);">Dados técnicos e histórico de escalas</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Abrir →</span>
+          </a>
+        </div>`;
+    } else if (type === 'nome') {
+      window.open(`https://www.marinetraffic.com/pt/ais/index/search/all/keyword:${encodeURIComponent(val)}`, '_blank');
+      res.innerHTML = `<div class="alert ai"><div class="alert-i">🔍</div><div><div class="at">Buscando por nome</div><div class="ab">Abrindo MarineTraffic com busca por "<strong>${val}</strong>".</div></div></div>`;
+    } else {
+      // Contêiner / BL
+      res.innerHTML = `
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Rastrear: <span style="font-family:var(--mono);color:var(--accent-bright);">${val}</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <a href="https://www.track-trace.com/container?id=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">Track-Trace</div><div style="font-size:10px;color:var(--text3);">Agrega MSC, Maersk, CMA CGM e +50 armadoras</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
+          </a>
+          <a href="https://shipsgo.com/container-tracking/${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">Shipsgo</div><div style="font-size:10px;color:var(--text3);">Especializado em contêineres e BL</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
+          </a>
+          <a href="https://www.searates.com/container/tracking/?container=${val}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div><div style="font-size:12px;font-weight:500;color:var(--text);">SeaRates</div><div style="font-size:10px;color:var(--text3);">Rastreamento + cotação de frete</div></div>
+            <span style="font-size:10px;color:var(--accent-bright);">Rastrear →</span>
+          </a>
+        </div>`;
+    }
+  }, 400);
 }
 
 // ══════════════════════════
@@ -20936,30 +20952,54 @@ function renderFretesTable(cat){
       ? '✓ Porto base — sem sobretaxa de destino'
       : `Sobretaxa DDC: USD ${porto.ddc}/cont. · Frete interno estimado: R$ ${porto.fi.toLocaleString('pt-BR')}`;
   }
-  el.innerHTML=`<div class="card"><div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 10px;background:var(--bg3);border-radius:6px;display:flex;justify-content:space-between;">
-    <span>Porto de destino: <strong style="color:var(--teal);">${porto.label}</strong></span>
-    <span>${porto.mult>1?`+${((porto.mult-1)*100).toFixed(0)}% sobre Santos`:'Base de referência'}</span>
+
+  // LCL estimado por rota (~USD/CBM)
+  const lclRate = {china:95, hongkong:90, eua:70, europa:80, mercosul:55, asia:95, india:90};
+
+  el.innerHTML=`<div class="card">
+  <div style="font-size:11px;color:var(--text3);margin-bottom:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <span>Porto destino: <strong style="color:var(--teal);">${porto.label}</strong>${porto.mult>1?` <span style="color:var(--text3);">· +${((porto.mult-1)*100).toFixed(0)}% sobre Santos</span>`:''}</span>
+    <span style="font-size:10px;color:var(--text3);">Fonte: Freightos Baltic Index (FBX) · mar/2026</span>
   </div>
   <table class="nt">
     <thead><tr>
-      <th>Origem</th><th>Trânsito</th>
-      <th>20' (USD)</th><th>40' (USD)</th>
-      <th>DDC</th><th>Frete interno est.</th>
-      <th style="font-size:9px;">Armadores ref.</th>
+      <th>Origem</th>
+      <th>Trânsito</th>
+      <th title="Full Container Load — contêiner exclusivo 20 pés">FCL 20' (USD)</th>
+      <th title="Full Container Load — contêiner exclusivo 40 pés">FCL 40' (USD)</th>
+      <th title="Less than Container Load — carga fracionada, preço por CBM">LCL/CBM (USD)</th>
+      <th>Frete interno</th>
+      <th style="font-size:9px;">Armadores</th>
     </tr></thead><tbody>
     ${dados.map(f=>{
       const c20=Math.round(f.c20*porto.mult+porto.ddc);
       const c40=Math.round(f.c40*porto.mult+porto.ddc);
+      const lcl=lclRate[f.pais]||90;
       return`<tr>
         <td><span style="margin-right:5px;">${f.flag}</span><strong style="font-size:12px;">${f.origem}</strong></td>
         <td><span style="font-family:var(--mono);color:var(--accent);">${f.dias}d</span></td>
         <td><span style="font-family:var(--mono);font-weight:500;">USD ${c20.toLocaleString('pt-BR')}</span></td>
         <td><span style="font-family:var(--mono);font-weight:500;">USD ${c40.toLocaleString('pt-BR')}</span></td>
-        <td style="font-family:var(--mono);font-size:11px;color:var(--text3);">${porto.ddc?'USD '+porto.ddc:'—'}</td>
+        <td><span style="font-family:var(--mono);font-size:11px;color:var(--teal);">~USD ${lcl}/CBM</span></td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--warn);">R$ ${porto.fi.toLocaleString('pt-BR')}</td>
         <td style="font-size:11px;color:var(--text3);">${f.armadores}</td>
       </tr>`;}).join('')}
-    </tbody></table></div>`;
+    </tbody></table>
+  <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    <div style="padding:8px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;">
+      <div style="font-size:10px;font-weight:500;color:var(--accent);margin-bottom:3px;">Quando usar FCL 20'</div>
+      <div style="font-size:10px;color:var(--text2);">Carga acima de ~12 CBM ou 14t. Contêiner exclusivo mais seguro.</div>
+    </div>
+    <div style="padding:8px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;">
+      <div style="font-size:10px;font-weight:500;color:var(--accent);margin-bottom:3px;">Quando usar FCL 40'</div>
+      <div style="font-size:10px;color:var(--text2);">Carga acima de ~25 CBM ou 26t. Custo por CBM ~30% menor que 20'.</div>
+    </div>
+    <div style="padding:8px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;">
+      <div style="font-size:10px;font-weight:500;color:var(--teal);margin-bottom:3px;">Quando usar LCL</div>
+      <div style="font-size:10px;color:var(--text2);">Carga abaixo de ~12 CBM. Dividir contêiner com outros importadores.</div>
+    </div>
+  </div>
+  </div>`;
 }
 
 // ══════════════════════════════════════════
