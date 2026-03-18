@@ -11059,76 +11059,67 @@ const PORTO_FI={santos:1800,paranagua:2200,itajai:2600,rio:2400,suape:3800,vcp:1
 // ══════════════════════════
 // API SISCOMEX — NCMs completos
 // ══════════════════════════
-async function loadNcmDB(){
+function ativarBaseNCM(db, fonte) {
+  const count = db.length.toLocaleString('pt-BR');
+  ncmLoaded = true;
+  ncmDB = db;
+  window.ncmDB = db;
   const statusEl = document.getElementById('ncm-api-status');
   const loadingEl = document.getElementById('ncm-loading-msg');
   const searchEl = document.getElementById('ncm-search-section');
   const dbInfoEl = document.getElementById('ncm-db-info');
   const badgeEl = document.getElementById('ncm-count-badge');
   const hintEl = document.getElementById('ncm-total-hint');
+  const countEl = document.getElementById('ncm-result-count');
+  const pageEl = document.getElementById('ncm-page-info');
+  if(statusEl) statusEl.textContent = `✓ ${count} NCMs · ${fonte}`;
+  if(loadingEl) loadingEl.style.display = 'none';
+  if(searchEl) searchEl.style.display = 'block';
+  if(dbInfoEl) dbInfoEl.textContent = `${count} NCMs · ${fonte}`;
+  if(badgeEl) badgeEl.textContent = count;
+  if(hintEl) hintEl.textContent = `${count} produtos disponíveis`;
+  renderNcmPage(db);
+  if(countEl) countEl.textContent = `${count} NCMs disponíveis. Use a busca para filtrar.`;
+  if(pageEl) pageEl.textContent = `Pág. 1 de ${Math.ceil(db.length/50).toLocaleString('pt-BR')} · ${count} resultados`;
+}
 
-  if(statusEl) statusEl.textContent = 'conectando Siscomex...';
+async function loadNcmDB(){
+  // 1. Carregar base local IMEDIATAMENTE — 8.290 NCMs com alíquotas reais TEC
+  ativarBaseNCM(NCM_LOCAL, 'TEC 2015 · base local');
 
-  // Endpoints para tentar em ordem — proxy CORS contorna bloqueio do GitHub Pages
+  // 2. Tentar API Siscomex em background (silencioso, sem bloquear a UI)
+  // Se retornar mais NCMs ou mais recentes, atualiza automaticamente
   const endpoints = [
     'https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO',
     'https://corsproxy.io/?https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO',
     'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO'),
   ];
-
-  // Timeout manual — AbortSignal.timeout não funciona em todos os ambientes
-  const fetchComTimeout = (url, ms=8000) => Promise.race([
+  const fetchComTimeout = (url, ms=6000) => Promise.race([
     fetch(url),
     new Promise((_,reject) => setTimeout(()=>reject(new Error('timeout')), ms))
   ]);
 
   for (const url of endpoints) {
     try {
-      if(statusEl) statusEl.textContent = 'buscando NCMs...';
-      const res = await fetchComTimeout(url, 8000);
+      const res = await fetchComTimeout(url, 6000);
       if (!res.ok) continue;
       const data = await res.json();
       const noms = data.Nomenclaturas || data.nomenclaturas || data;
       if (!Array.isArray(noms) || noms.length < 100) continue;
-
-      ncmDB = noms.map(n => ({
+      const db = noms.map(n => ({
         code: (n.Codigo||n.codigo||'').replace(/[^0-9]/g,'').replace(/^(\d{4})(\d{2})(\d{2})$/,'$1.$2.$3'),
-        desc: n.Descricao||n.descricao||'',
+        desc: (n.Descricao||n.descricao||'').replace(/'/g,' '),
         codRaw: n.Codigo||n.codigo||''
       })).filter(n => n.code && n.code.length >= 4 && n.desc && n.desc.length > 2);
-
-      ncmLoaded = true;
-      window.ncmDB = ncmDB;
-      const count = ncmDB.length.toLocaleString('pt-BR');
-      if(statusEl) statusEl.textContent = `✓ ${count} NCMs · Siscomex`;
-      if(hintEl) hintEl.textContent = `${count} produtos disponíveis`;
-      if(badgeEl) badgeEl.textContent = count;
-      if(loadingEl) loadingEl.style.display = 'none';
-      if(searchEl) searchEl.style.display = 'block';
-      if(dbInfoEl) dbInfoEl.textContent = `${count} NCMs · Siscomex/Receita Federal`;
-      renderNcmPage(ncmDB);
-      document.getElementById('ncm-result-count').textContent = `${count} NCMs disponíveis. Use a busca para filtrar.`;
-      document.getElementById('ncm-page-info').textContent = `Pág. 1 de ${Math.ceil(ncmDB.length/50).toLocaleString('pt-BR')} · ${count} resultados`;
-      return; // sucesso
+      // Só atualiza se a API trouxer mais NCMs que a base local
+      if (db.length > NCM_LOCAL.length) {
+        ativarBaseNCM(db, 'Siscomex · atualizado');
+      }
+      return;
     } catch(e) {
-      console.warn('NCM endpoint falhou:', url, e.message);
+      // Silencioso — base local já está ativa
     }
   }
-
-  // Fallback final: base local
-  ncmLoaded = true;
-  ncmDB = NCM_LOCAL;
-  window.ncmDB = ncmDB;
-  const count = NCM_LOCAL.length.toLocaleString('pt-BR');
-  if(statusEl) statusEl.textContent = `base local · ${count} NCMs`;
-  if(loadingEl) loadingEl.style.display = 'none';
-  if(searchEl) searchEl.style.display = 'block';
-  if(dbInfoEl) dbInfoEl.textContent = `${count} NCMs · base local TEC (Siscomex indisponível)`;
-  if(badgeEl) badgeEl.textContent = count;
-  if(hintEl) hintEl.textContent = `${count} NCMs disponíveis`;
-  renderNcmPage(ncmDB);
-  document.getElementById('ncm-result-count').textContent = `${count} NCMs disponíveis. Use a busca para filtrar.`;
-  document.getElementById('ncm-page-info').textContent = `Pág. 1 de ${Math.ceil(NCM_LOCAL.length/50)} · ${count} resultados`;
 }
 
 // ══════════════════════════════════════════════════
