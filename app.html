@@ -1470,11 +1470,13 @@ iframe{border-radius:var(--r);}
             <div class="rl"><span class="rl-l">Seguro</span><span class="rl-v" id="r-sg">—</span></div>
             <div class="rl" style="padding-top:7px;border-top:1px solid var(--border2);margin-top:2px;"><span class="rl-l" style="color:var(--text);font-weight:500;">Valor CIF total</span><span class="rl-v" style="color:var(--text);font-weight:500;" id="r-cif">—</span></div>
             <div class="divider"></div>
+            <!-- Badges de benefícios ativos -->
+            <div id="r-benef-badges"></div>
             <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:7px;">Tributos</div>
             <div class="rl"><span class="rl-l">II <span class="rl-a" id="r-ii-a">—</span></span><span class="rl-v" id="r-ii">—</span></div>
             <div class="rl"><span class="rl-l">IPI <span class="rl-a" id="r-ipi-a">—</span></span><span class="rl-v" id="r-ipi">—</span></div>
-            <div class="rl"><span class="rl-l">PIS <span class="rl-a">2,10%</span></span><span class="rl-v" id="r-pis">—</span></div>
-            <div class="rl"><span class="rl-l">COFINS <span class="rl-a">9,65%</span></span><span class="rl-v" id="r-cofins">—</span></div>
+            <div class="rl"><span class="rl-l">PIS <span class="rl-a" id="r-pis-a">2,10%</span></span><span class="rl-v" id="r-pis">—</span></div>
+            <div class="rl"><span class="rl-l">COFINS <span class="rl-a" id="r-cofins-a">9,65%</span></span><span class="rl-v" id="r-cofins">—</span></div>
             <div class="rl" id="afrmm-line"><span class="rl-l">AFRMM <span class="rl-a">8%+R$20</span></span><span class="rl-v" id="r-afrmm">—</span></div>
             <div class="rl"><span class="rl-l">ICMS <span class="rl-a" id="r-icms-a">—</span><span style="font-size:9px;color:var(--text3);margin-left:3px;">por dentro</span></span><span class="rl-v" id="r-icms">—</span></div>
             <div class="divider"></div>
@@ -24845,17 +24847,21 @@ function fN(n,d=2){return n.toLocaleString('pt-BR',{minimumFractionDigits:d,maxi
 // ══════════════════════════
 // CÁLCULO
 // ══════════════════════════
-function calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,II_a,IPI_a,afrmm){
-  const cifUSD=fob+fr+sg;const cifBRL=cifUSD*cambio;
-  const fobBRL=fob*cambio,frBRL=fr*cambio,sgBRL=sg*cambio;
-  const II=cifBRL*II_a;const IPI=(cifBRL+II)*IPI_a;
-  const PIS=cifBRL*.021;const COFINS=cifBRL*.0965;
+function calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,II_a,IPI_a,afrmm,simples){
+  const cifUSD=fob+fr+sg; const cifBRL=cifUSD*cambio;
+  const fobBRL=fob*cambio, frBRL=fr*cambio, sgBRL=sg*cambio;
+  const II=cifBRL*II_a; const IPI=(cifBRL+II)*IPI_a;
+  // PIS/COFINS: regime não-cumulativo padrão ou cumulativo Simples
+  const pisPct   = simples ? 0.0065 : 0.021;
+  const cofinsPct= simples ? 0.030  : 0.0965;
+  const PIS=cifBRL*pisPct; const COFINS=cifBRL*cofinsPct;
   const AFRMM=afrmm?(frBRL*.08)+20:0;
   const baseIcms=cifBRL+II+IPI+PIS+COFINS+AFRMM+dep+cap+arm;
   const ICMS=(baseIcms*icms)/(1-icms);
   const trib=II+IPI+PIS+COFINS+AFRMM+ICMS;
   const dop=dep+cap+arm+fi;
-  return{fobBRL,frBRL,sgBRL,cifBRL,cifUSD,II,IPI,PIS,COFINS,AFRMM,ICMS,trib,dop,total:cifBRL+trib+dop,II_a,IPI_a,icms,cambio,afrmm};
+  return{fobBRL,frBRL,sgBRL,cifBRL,cifUSD,II,IPI,PIS,COFINS,AFRMM,ICMS,trib,dop,
+    total:cifBRL+trib+dop,II_a,IPI_a,icms,cambio,afrmm,pisPct,cofinsPct};
 }
 
 function autoEstimar(){
@@ -24973,18 +24979,49 @@ function calcular(){
   const fr=parseFloat(document.getElementById('frete').value)||0;
   const sg=parseFloat(document.getElementById('seguro').value)||0;
   const cambio=parseFloat(document.getElementById('cambio').value);
-  const icms=parseFloat(document.getElementById('estado').value);
   const dep=parseFloat(document.getElementById('desp').value)||0;
   const cap=parseFloat(document.getElementById('cap').value)||0;
   const arm=parseFloat(document.getElementById('arm').value)||0;
   const fi=parseFloat(document.getElementById('fi').value)||0;
   const qtd=parseFloat(document.getElementById('qtd').value)||0;
   const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
-  if(!fob||!cambio||!icms||!selNcm){document.getElementById('res-vazio').style.display='block';document.getElementById('res-corpo').style.display='none';document.getElementById('kpi-grid').style.display='none';return;}
-  document.getElementById('res-vazio').style.display='none';document.getElementById('res-corpo').style.display='block';document.getElementById('kpi-grid').style.display='grid';
-  // Mostrar atalhos para histórico e dashboard
+
+  // ── APLICAR BENEFÍCIOS DO PERFIL ──
+  const perfil = window.gtPerfil || {};
+  let icms = parseFloat(document.getElementById('estado').value);
+
+  // ICMS preferencial do perfil (ex: 5% por benefício fiscal estadual)
+  if(perfil.icmsPref && parseFloat(perfil.icmsPref) > 0){
+    const icmsPref = parseFloat(perfil.icmsPref) / 100;
+    if(icmsPref < icms){ // só aplica se for menor que o padrão do estado
+      icms = icmsPref;
+    }
+  }
+
+  // Alíquotas de II e IPI — ajustadas por regime
+  let II_a  = selNcm ? selNcm.II  : 0;
+  let IPI_a = selNcm ? selNcm.IPI : 0;
+
+  // Drawback: zera II, IPI, PIS, COFINS (suspensão total)
+  const useDrawback = perfil.drawback && !!selNcm;
+  // Simples Nacional: PIS+COFINS no regime cumulativo (0,65% + 3,0%)
+  const useSimples = perfil.simples && !!selNcm;
+
+  if(!fob||!cambio||!icms||!selNcm){
+    document.getElementById('res-vazio').style.display='block';
+    document.getElementById('res-corpo').style.display='none';
+    document.getElementById('kpi-grid').style.display='none';
+    return;
+  }
+  document.getElementById('res-vazio').style.display='none';
+  document.getElementById('res-corpo').style.display='block';
+  document.getElementById('kpi-grid').style.display='grid';
   const sc=document.getElementById('sim-shortcuts');if(sc)sc.style.display='flex';
-  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+
+  // calcT com possível override de II/IPI para Drawback
+  const r = useDrawback
+    ? calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,0,0,afrmm,useSimples)
+    : calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,II_a,IPI_a,afrmm,useSimples);
   const carga=r.cifBRL>0?(r.trib/r.cifBRL)*100:0;
   const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
   const transit=TRANSIT[origemSel]?.[modalAtual]||30;
@@ -25002,15 +25039,45 @@ function calcular(){
   if(dem>0){const rd=document.getElementById('r-dem');if(rd)rd.textContent=R(dem);}
   const totalComDem = r.total + dem;
   set('r-trib',R(r.trib));set('r-dop',R(r.dop+dem));set('r-total',R0(totalComDem));
-  set('r-cp',pct(carga));set('r-ii-a',(selNcm.II*100).toFixed(0)+'%');
-  set('r-ipi-a',(selNcm.IPI*100).toFixed(0)+'%');
-  set('r-icms-a',pct(icms*100));
+
+  // Alíquotas — mostrar se Drawback zerou o II/IPI
+  const iiLabel = useDrawback ? '0% ⚡Drawback' : (selNcm.II*100).toFixed(0)+'%';
+  const ipiLabel = useDrawback ? '0% ⚡Drawback' : (selNcm.IPI*100).toFixed(0)+'%';
+  const pisLabel = useSimples ? (r.pisPct*100).toFixed(2)+'% Simples' : '2,10%';
+  const cofinsLabel = useSimples ? (r.cofinsPct*100).toFixed(2)+'% Simples' : '9,65%';
+  set('r-ii-a', iiLabel);
+  set('r-ipi-a', ipiLabel);
+  // Atualizar labels PIS e COFINS se existirem
+  const rPisA=document.getElementById('r-pis-a'); if(rPisA) rPisA.textContent=pisLabel;
+  const rCofA=document.getElementById('r-cofins-a'); if(rCofA) rCofA.textContent=cofinsLabel;
+
+  // ICMS — mostrar se preferencial do perfil foi aplicado
+  const icmsOriginal=parseFloat(document.getElementById('estado').value);
+  const icmsLabel = (icms < icmsOriginal - 0.001)
+    ? (icms*100).toFixed(1)+'% ⚡Benefício'
+    : (icms*100).toFixed(1)+'%';
+  set('r-icms-a', icmsLabel);
+
+  // Badge de benefícios ativos no topo do resultado
+  const benefBadgeEl = document.getElementById('r-benef-badges');
+  if(benefBadgeEl){
+    const badges=[];
+    if(useDrawback) badges.push(`<span style="background:#065F46;color:#A7F3D0;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;">⚡ Drawback ativo</span>`);
+    if(useSimples)  badges.push(`<span style="background:#1e3a5f;color:#93C5FD;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;">⚡ Simples ativo</span>`);
+    if(icms < icmsOriginal - 0.001) badges.push(`<span style="background:#4c1d95;color:#C4B5FD;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;">⚡ ICMS ${(icms*100).toFixed(1)}% Benefício</span>`);
+    if(perfil.extec) badges.push(`<span style="background:#7c2d12;color:#FED7AA;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;">ℹ Ex-TEC — verifique alíquota</span>`);
+    benefBadgeEl.innerHTML = badges.length
+      ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">${badges.join('')}</div>`
+      : '';
+  }
+
   const aEl=document.getElementById('r-afrmm');if(aEl){aEl.textContent=afrmm?R(r.AFRMM):'—';aEl.className='rl-v'+(afrmm?'':' z');}
   document.getElementById('r-bar').style.width=Math.min(carga,100)+'%';
   document.getElementById('r-fr-est').textContent=modoAuto&&!freteManual?'estimado':'';
   document.getElementById('desp-est-lbl').textContent=modoAuto?'estimadas automaticamente':'';
   if(qtd>0){document.getElementById('r-unit-row').style.display='flex';set('r-unit',R(r.total/qtd));}
   else document.getElementById('r-unit-row').style.display='none';
+  set('r-cp',pct(carga));
   // Score
   const score=document.getElementById('score-area');
   let nivel,cor,msg;
