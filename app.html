@@ -26046,19 +26046,30 @@ async function renderDashboard(){
   const el = document.getElementById('dash-tabela');
   if(!el) return;
   if(!window.gtUser){
+    ['dash-total-sims','dash-total-fob','dash-total-custo','dash-media-carga'].forEach(id=>{
+      const e=document.getElementById(id); if(e) e.textContent='Login';
+    });
     el.innerHTML = '<div style="text-align:center;padding:30px;font-size:13px;color:var(--text3);">Faça login para ver seu dashboard.</div>';
     return;
   }
-  el.innerHTML = '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;justify-content:center;"><div class="spin"></div>Carregando...</div>';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:20px;justify-content:center;"><div class="spin"></div>Carregando simulações...</div>';
   try {
-    const {getDocs,query,collection,where,orderBy} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid), orderBy('ts','desc')));
+    // Usar getDocs já disponível no escopo global (inicializado no topo)
+    const snap = await getDocs(query(
+      collection(db,'simulacoes'),
+      where('uid','==',window.gtUser.uid)
+    ));
     const sims = snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Ordenar localmente — sem precisar de índice Firestore
+    sims.sort((a,b)=>{
+      const ta = a.ts?.toDate?.()?.getTime()||0;
+      const tb = b.ts?.toDate?.()?.getTime()||0;
+      return tb - ta;
+    });
     dashRenderComDados(sims);
   } catch(e){
-    // Fallback: usar histórico local
-    const local = window.salvarHistoricoLocal ? [] : [];
-    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:12px;">Erro ao carregar. Verifique a conexão.</div>';
+    console.warn('Dashboard erro:', e);
+    el.innerHTML = `<div style="font-size:12px;color:var(--danger);padding:12px;">Erro ao carregar: ${e.message}</div>`;
   }
 }
 
