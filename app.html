@@ -25155,28 +25155,6 @@ function _gerarExcel(){
   const nome=`GeoTrade_${selNcm.code.replace(/\./g,'')}_${dt.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb,nome);
 }
-  const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
-  const icms=parseFloat(document.getElementById('estado').value)||.18;
-  const fr=parseFloat(document.getElementById('frete').value)||0;
-  const sg=parseFloat(document.getElementById('seguro').value)||0;
-  const dep=parseFloat(document.getElementById('desp').value)||0;
-  const cap=parseFloat(document.getElementById('cap').value)||0;
-  const arm=parseFloat(document.getElementById('arm').value)||0;
-  const fi=parseFloat(document.getElementById('fi').value)||0;
-  const dem=window._demurrageVal||0;
-  const afrmm=document.getElementById('afrmm')?.checked&&modalAtual==='m';
-  const estEl=document.getElementById('estado');
-  const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
-  const portoEl=document.getElementById('porto');
-  const portoTxt=portoEl?portoEl.options[portoEl.selectedIndex]?.text||'':'';
-  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
-  const totalFinal=r.total+dem;
-  const dt=new Date().toLocaleDateString('pt-BR');
-  const modal=modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário';
-
-  const wb=XLSX.utils.book_new();
-
-
 
 function exportPDF(){
   const fob=parseFloat(document.getElementById('fob').value)||0;
