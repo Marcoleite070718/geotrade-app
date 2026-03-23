@@ -1354,7 +1354,7 @@ iframe{border-radius:var(--r);}
               </select>
             </div>
             <div><div class="fl">Porto / entrada</div>
-              <select id="porto" onchange="calcular()">
+              <select id="porto" onchange="onPortoChange()">
                 <option value="santos">Santos — SP</option>
                 <option value="paranagua">Paranaguá — PR</option>
                 <option value="itajai">Itajaí — SC</option>
@@ -25349,6 +25349,20 @@ function syncChips(activeId){['c90','c60','c30','choje','cpico'].forEach(id=>doc
 function setOrigem(o){origemSel=o;document.querySelectorAll('.op').forEach(el=>el.classList.remove('active'));document.getElementById('op-'+o)?.classList.add('active');freteManual=false;['frete'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.dataset.manual='';}});calcular();}
 function setModalSel(m){modalAtual=m;document.getElementById('afrmm-row').style.display=m==='m'?'block':'none';document.getElementById('afrmm-line').style.display=m==='m'?'flex':'none';document.getElementById('modal-lbl').textContent=m==='m'?'🚢 Marítimo':m==='a'?'✈️ Aéreo':'🚛 Rodoviário';freteManual=false;const el=document.getElementById('frete');if(el){el.value='';el.dataset.manual='';}calcular();}
 function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').classList.toggle('active',modoAuto);document.getElementById('mt-manual').classList.toggle('active',!modoAuto);document.getElementById('mode-icon').textContent=modoAuto?'🤖':'⚙️';document.getElementById('mode-title').textContent=modoAuto?'Modo Automático — estimativas inteligentes ativas':'Modo Manual — preencha todos os campos';calcular();}
+function onPortoChange(){
+  // Quando o porto muda, resetar frete interno para ser reestimado
+  const fi = document.getElementById('fi');
+  if(fi){ fi.value=''; fi.dataset.manual=''; }
+  // Também resetar despacho e capatazia pois dependem do porto indiretamente
+  const desp = document.getElementById('desp');
+  const cap  = document.getElementById('cap');
+  const arm  = document.getElementById('arm');
+  if(desp){ desp.value=''; desp.dataset.manual=''; }
+  if(cap){  cap.value='';  cap.dataset.manual=''; }
+  if(arm){  arm.value='';  arm.dataset.manual=''; }
+  calcular();
+}
+
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
