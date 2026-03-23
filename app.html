@@ -1441,7 +1441,7 @@ iframe{border-radius:var(--r);}
             </div>
           </div>
           <div class="field" style="margin-top:2px;"><div class="fl">Estado de destino</div>
-            <select id="estado" onchange="calcular()">
+            <select id="estado" onchange="onEstadoChange()">
               <option value="">— Selecione —</option>
               <option value="0.12">AC — 12%</option><option value="0.17">AL — 17%</option><option value="0.12">AP — 12%</option><option value="0.20">AM — 20%</option>
               <option value="0.195">BA — 19,5%</option><option value="0.17">CE — 17%</option><option value="0.20">DF — 20%</option><option value="0.17">ES — 17%</option>
@@ -25349,6 +25349,19 @@ function syncChips(activeId){['c90','c60','c30','choje','cpico'].forEach(id=>doc
 function setOrigem(o){origemSel=o;document.querySelectorAll('.op').forEach(el=>el.classList.remove('active'));document.getElementById('op-'+o)?.classList.add('active');freteManual=false;['frete'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.dataset.manual='';}});calcular();}
 function setModalSel(m){modalAtual=m;document.getElementById('afrmm-row').style.display=m==='m'?'block':'none';document.getElementById('afrmm-line').style.display=m==='m'?'flex':'none';document.getElementById('modal-lbl').textContent=m==='m'?'🚢 Marítimo':m==='a'?'✈️ Aéreo':'🚛 Rodoviário';freteManual=false;const el=document.getElementById('frete');if(el){el.value='';el.dataset.manual='';}calcular();}
 function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').classList.toggle('active',modoAuto);document.getElementById('mt-manual').classList.toggle('active',!modoAuto);document.getElementById('mode-icon').textContent=modoAuto?'🤖':'⚙️';document.getElementById('mode-title').textContent=modoAuto?'Modo Automático — estimativas inteligentes ativas':'Modo Manual — preencha todos os campos';calcular();}
+function onEstadoChange(){
+  // Estado afeta ICMS e frete interno — resetar campos estimados
+  const fi = document.getElementById('fi');
+  if(fi){ fi.value=''; fi.dataset.manual=''; }
+  const desp = document.getElementById('desp');
+  const cap  = document.getElementById('cap');
+  const arm  = document.getElementById('arm');
+  if(desp){ desp.value=''; desp.dataset.manual=''; }
+  if(cap){  cap.value='';  cap.dataset.manual=''; }
+  if(arm){  arm.value='';  arm.dataset.manual=''; }
+  calcular();
+}
+
 function onPortoChange(){
   // Quando o porto muda, resetar frete interno para ser reestimado
   const fi = document.getElementById('fi');
