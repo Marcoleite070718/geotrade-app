@@ -20133,17 +20133,18 @@ function autoEstimar(){
   const peso = parseFloat(document.getElementById('peso').value) || pesoEst;
   const porto = document.getElementById('porto')?.value || 'santos';
   // Bug #1/#2 FIX: valores reais de mercado (mar/2026)
-  // Despacho: fixo ~R$1.200 + leve proporcional ao peso (não linear)
-  // Capatazia/THC: ~R$800 fixo por 20' (não depende do valor da carga)
-  // Armazenagem: primeiros dias grátis, estimativa conservadora
+  // Despacho: R$1.200 base + 0,3% do valor CIF (tabela SINDASP), máx R$6.000
+  // Capatazia/THC: R$600–900 fixo por contêiner (não proporcional ao valor)
+  // Armazenagem: free time 7 dias, estimativa ~3 dias pagos
+  const cifEstBRL = fob * cambio * 1.015; // CIF estimado em BRL
   ['desp','cap','arm','fi'].forEach((id,i) => {
     const el = document.getElementById(id);
     if(el && !el.dataset.manual){
       const vs = [
-        Math.max(800,  800  + peso * 0.08),   // despacho: ~R$800–1.500
-        Math.max(600,  600  + peso * 0.04),   // capatazia: ~R$600–900
-        Math.max(200,  150  + peso * 0.05),   // armazenagem: ~R$200–400
-        PORTO_FI[porto] || 1800               // frete interno
+        Math.min(6000, Math.max(1200, 1200 + cifEstBRL * 0.003)), // despacho: tabela SINDASP
+        Math.max(600,  600  + peso * 0.02),                        // capatazia: ~R$600–900
+        Math.max(450,  300  + peso * 0.12),                        // armazenagem: ~R$450–1.500
+        PORTO_FI[porto] || 1800                                    // frete interno
       ];
       el.value = Math.round(vs[i] / 50) * 50;
     }
