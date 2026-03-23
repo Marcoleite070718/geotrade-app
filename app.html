@@ -436,6 +436,15 @@ window.salvarHistoricoLocal = window.salvarHistoricoLocal || function(dados) {
     renderHistoricoLocal();
   } catch(e){}
 };
+
+// Expor db e funções Firestore para scripts fora do módulo
+window.db = db;
+window._getDocs    = getDocs;
+window._collection = collection;
+window._where      = where;
+window._query      = query;
+window._orderBy    = orderBy;
+window._limit      = limit;
 </script>
 <style>
 :root{
@@ -1386,6 +1395,17 @@ iframe{border-radius:var(--r);}
               <div class="total-main"><div class="tlbl">Custo total<br>desembaraçado<br><span style="font-size:9px;font-weight:400;color:var(--text3);">tributos + despesas</span></div><div class="tval" id="r-total">—</div></div>
             </div>
             <div id="prazo-area" style="margin-top:10px;"></div>
+            <!-- Atalhos pós-simulação -->
+            <div id="sim-shortcuts" style="display:none;margin-top:10px;display:none;gap:6px;flex-wrap:wrap;">
+              <button onclick="showTab('historico')" style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;cursor:pointer;color:var(--text2);font-size:11px;display:flex;align-items:center;gap:5px;justify-content:center;">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1v6l3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/></svg>
+                Ver no Histórico
+              </button>
+              <button onclick="showTab('dashboard')" style="flex:1;min-width:120px;background:var(--a3);border:1px solid var(--a4);border-radius:7px;padding:7px 10px;cursor:pointer;color:var(--accent);font-size:11px;display:flex;align-items:center;gap:5px;justify-content:center;">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+                Ver no Dashboard
+              </button>
+            </div>
             <div class="mem-toggle" id="mem-tog" onclick="toggleMem()"><svg viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Entenda o cálculo — memória completa</div>
             <div class="mem-body" id="mem-body"></div>
           </div>
@@ -24700,6 +24720,8 @@ function calcular(){
   const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
   if(!fob||!cambio||!icms||!selNcm){document.getElementById('res-vazio').style.display='block';document.getElementById('res-corpo').style.display='none';document.getElementById('kpi-grid').style.display='none';return;}
   document.getElementById('res-vazio').style.display='none';document.getElementById('res-corpo').style.display='block';document.getElementById('kpi-grid').style.display='grid';
+  // Mostrar atalhos para histórico e dashboard
+  const sc=document.getElementById('sim-shortcuts');if(sc)sc.style.display='flex';
   const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
   const carga=r.cifBRL>0?(r.trib/r.cifBRL)*100:0;
   const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
@@ -26047,20 +26069,25 @@ async function renderDashboard(){
   if(!el) return;
   if(!window.gtUser){
     ['dash-total-sims','dash-total-fob','dash-total-custo','dash-media-carga'].forEach(id=>{
-      const e=document.getElementById(id); if(e) e.textContent='Login';
+      const e=document.getElementById(id); if(e) e.textContent='—';
     });
     el.innerHTML = '<div style="text-align:center;padding:30px;font-size:13px;color:var(--text3);">Faça login para ver seu dashboard.</div>';
     return;
   }
+  // Verificar se Firebase está disponível
+  if(!window.db || !window._getDocs){
+    el.innerHTML = '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3);">Aguardando Firebase... tente novamente em instantes.</div>';
+    setTimeout(()=>renderDashboard(), 1500);
+    return;
+  }
   el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:20px;justify-content:center;"><div class="spin"></div>Carregando simulações...</div>';
   try {
-    // Usar getDocs já disponível no escopo global (inicializado no topo)
-    const snap = await getDocs(query(
-      collection(db,'simulacoes'),
-      where('uid','==',window.gtUser.uid)
+    const snap = await window._getDocs(window._query(
+      window._collection(window.db,'simulacoes'),
+      window._where('uid','==',window.gtUser.uid)
     ));
     const sims = snap.docs.map(d=>({id:d.id,...d.data()}));
-    // Ordenar localmente — sem precisar de índice Firestore
+    // Ordenar localmente — sem índice Firestore
     sims.sort((a,b)=>{
       const ta = a.ts?.toDate?.()?.getTime()||0;
       const tb = b.ts?.toDate?.()?.getTime()||0;
