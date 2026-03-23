@@ -24902,6 +24902,268 @@ function _gerarExcel(){
   const arm=parseFloat(document.getElementById('arm').value)||0;
   const fi=parseFloat(document.getElementById('fi').value)||0;
   const dem=window._demurrageVal||0;
+  const qtd=parseFloat(document.getElementById('qtd').value)||0;
+  const afrmm=document.getElementById('afrmm')?.checked&&modalAtual==='m';
+  const estEl=document.getElementById('estado');
+  const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
+  const portoEl=document.getElementById('porto');
+  const portoTxt=portoEl?portoEl.options[portoEl.selectedIndex]?.text||'':'';
+  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+  const totalFinal=r.total+dem;
+  const totalDesp=dep+cap+arm+fi+dem;
+  const dt=new Date().toLocaleDateString('pt-BR');
+  const modal=modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário';
+
+  const wb=XLSX.utils.book_new();
+
+  // ── FORMATOS ──
+  const FMT_BRL   = 'R$\\ #,##0.00';
+  const FMT_USD   = '"USD "\\ #,##0.00';
+  const FMT_PCT   = '0.0%';
+  const FMT_INT   = '#,##0';
+
+  // ── CORES ──
+  const C={
+    azulEsc:  {rgb:'1A3A6B'}, azulMed:  {rgb:'2563EB'}, azulClaro:{rgb:'DBEAFE'},
+    verdeEsc: {rgb:'065F46'}, verdeClaro:{rgb:'D1FAE5'},
+    laranja:  {rgb:'FED7AA'}, laranjaEsc:{rgb:'92400E'},
+    amarelo:  {rgb:'FEF9C3'}, cinzaEsc: {rgb:'374151'},
+    cinzaClaro:{rgb:'F8FAFC'},cinzaMed: {rgb:'E2E8F0'},
+    teal:     {rgb:'0F766E'}, branco:   {rgb:'FFFFFF'},
+  };
+
+  function makeFill(c){ return {patternType:'solid', fgColor:c}; }
+  function makeFont(bold,color,sz){ return {bold:!!bold,color:color||{rgb:'374151'},sz:sz||10,name:'Calibri'}; }
+  function makeAlign(h,v,wrap){ return {horizontal:h||'left',vertical:v||'center',wrapText:!!wrap}; }
+  function makeBorder(color){
+    const s={style:'thin',color:{rgb:color||'CBD5E1'}};
+    return {top:s,bottom:s,left:s,right:s};
+  }
+  function makeCell(v, bold, fillC, fontC, fmt, align, fontSize){
+    return {v, t: typeof v==='number'?'n':'s',
+            s:{fill:makeFill(fillC||C.branco), font:makeFont(bold,fontC,fontSize||10),
+               alignment:makeAlign(align||'left','center'), numFmt:fmt||''}};
+  }
+
+  // ── CONSTRUIR ABA 1: RESUMO EXECUTIVO ──
+  const ws = {};
+  const merges = [];
+  let R = 1;
+
+  function set(r,c,v,bold,fillC,fontC,fmt,align,fs){
+    const addr = XLSX.utils.encode_cell({r:r-1,c:c-1});
+    ws[addr] = makeCell(v,bold,fillC,fontC,fmt,align,fs);
+  }
+  function mrg(r1,c1,r2,c2){ merges.push({s:{r:r1-1,c:c1-1},e:{r:r2-1,c:c2-1}}); }
+
+  // Cabeçalho
+  set(R,1,'  GEOTRADE — Simulação de Importação',true,C.azulEsc,C.branco,'',  'left',14); mrg(R,1,R,4); R++;
+  set(R,1,'geotradeapp.com.br  |  Plataforma de Inteligência para Importação',false,C.azulEsc,{rgb:'94A3B8'},'','left',9);
+  set(R,3,`Data: ${dt}`,false,C.azulEsc,C.branco,'','right',9); mrg(R,3,R,4); mrg(R,1,R,2); R+=2;
+
+  // PRODUTO
+  set(R,1,'  IDENTIFICAÇÃO DO PRODUTO',true,C.azulMed,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  set(R,1,'NCM',true,C.cinzaClaro,C.cinzaEsc); set(R,2,selNcm.code,true,C.branco,C.azulMed,'','left',11);
+  set(R,3,'II',true,C.cinzaClaro,C.cinzaEsc,'','center'); set(R,4,selNcm.II,true,C.branco,C.azulMed,FMT_PCT,'center',11); R++;
+  set(R,1,'Descrição',true,C.cinzaClaro,C.cinzaEsc); mrg(R,2,R,3);
+  set(R,2,selNcm.desc,false,C.branco,C.cinzaEsc,'','left');
+  set(R,3,'IPI',true,C.cinzaClaro,C.cinzaEsc,'','center');
+  set(R,4,selNcm.IPI,false,C.branco,C.cinzaEsc,FMT_PCT,'center'); R+=2;
+
+  // OPERAÇÃO
+  set(R,1,'  PARÂMETROS DA OPERAÇÃO',true,C.azulMed,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  const params=[[`Origem`,String(origemSel).toUpperCase(),'Modal',modal],
+                ['Porto destino',portoTxt,'Estado destino',estadoTxt],
+                ['Câmbio USD/BRL',cambio,'Valor FOB (USD)',fob]];
+  params.forEach(p=>{
+    set(R,1,p[0],true,C.cinzaClaro,C.cinzaEsc); set(R,2,p[1],false,C.branco,C.cinzaEsc, typeof p[1]==='number'?'R$\\ #,##0.0000':'');
+    set(R,3,p[2],true,C.cinzaClaro,C.cinzaEsc,'','right'); set(R,4,p[3],false,C.branco,C.cinzaEsc,typeof p[3]==='number'?FMT_USD:''); R++;
+  }); R++;
+
+  // CIF
+  set(R,1,'  BASE DE CÁLCULO — CIF',true,C.azulMed,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  ['Componente','Valor (USD)','Valor (R$)',''].forEach((t,i)=>{
+    set(R,i+1,t,true,C.cinzaEsc,C.branco,'','center',9);
+  }); R++;
+  [[`Valor FOB`,fob,r.fobBRL],[`Frete internacional`,fr,r.frBRL],[`Seguro (≈0,3% CIF)`,sg,r.sgBRL]].forEach((it,i)=>{
+    const bg=i%2===0?C.cinzaClaro:C.branco;
+    set(R,1,it[0],false,bg,C.cinzaEsc); set(R,2,it[1],false,bg,C.cinzaEsc,FMT_USD,'right');
+    set(R,3,it[2],false,bg,C.cinzaEsc,FMT_BRL,'right'); R++;
+  });
+  set(R,1,'VALOR CIF TOTAL',true,C.azulClaro,C.azulEsc,'','left',11); mrg(R,1,R,2);
+  set(R,3,r.cifBRL,true,C.azulClaro,C.azulEsc,FMT_BRL,'right',11); mrg(R,3,R,4); R+=2;
+
+  // TRIBUTOS
+  set(R,1,'  TRIBUTOS',true,C.azulMed,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  ['Tributo','Base de Cálculo (R$)','Alíquota','Valor (R$)'].forEach((t,i)=>{
+    set(R,i+1,t,true,C.cinzaEsc,C.branco,'','center',9);
+  }); R++;
+  const tribs=[
+    ['II — Imposto de Importação',r.cifBRL,selNcm.II,r.II],
+    ['IPI',r.cifBRL+r.II,selNcm.IPI,r.IPI],
+    ['PIS/PASEP',r.cifBRL,0.021,r.PIS],
+    ['COFINS',r.cifBRL,0.0965,r.COFINS],
+    ['AFRMM',fr*cambio,afrmm?0.08:0,afrmm?r.AFRMM:0],
+    [`ICMS por dentro (${(icms*100).toFixed(1)}%)`,r.cifBRL+r.II+r.IPI+r.PIS+r.COFINS+(afrmm?r.AFRMM:0)+dep+cap+arm+fi,icms,r.ICMS],
+  ];
+  tribs.forEach((t,i)=>{
+    const bg=i%2===0?C.cinzaClaro:C.branco;
+    set(R,1,t[0],false,bg,C.cinzaEsc); set(R,2,t[1],false,bg,C.cinzaEsc,FMT_BRL,'right');
+    set(R,3,t[2],false,bg,C.cinzaEsc,FMT_PCT,'center'); set(R,4,t[3],t[3]>0,bg,C.cinzaEsc,FMT_BRL,'right'); R++;
+  });
+  set(R,1,'TOTAL TRIBUTOS',true,C.verdeClaro,C.verdeEsc,'','left',11); mrg(R,1,R,3);
+  set(R,4,r.trib,true,C.verdeClaro,C.verdeEsc,FMT_BRL,'right',11); R+=2;
+
+  // DESPESAS
+  set(R,1,'  DESPESAS OPERACIONAIS',true,C.azulMed,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  [['Despacho aduaneiro',dep],['Capatazia / THC',cap],['Armazenagem',arm],
+   ['Frete interno',fi],['Demurrage / sobreestadia',dem]].forEach((d2,i)=>{
+    const bg=i%2===0?C.cinzaClaro:C.branco;
+    set(R,1,d2[0],false,bg,C.cinzaEsc); mrg(R,1,R,3);
+    set(R,4,d2[1],false,bg,C.cinzaEsc,FMT_BRL,'right'); R++;
+  });
+  set(R,1,'TOTAL DESPESAS',true,C.laranja,C.laranjaEsc,'','left',11); mrg(R,1,R,3);
+  set(R,4,totalDesp,true,C.laranja,C.laranjaEsc,FMT_BRL,'right',11); R+=2;
+
+  // RESULTADO
+  set(R,1,'  RESULTADO FINAL',true,C.azulMed,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  set(R,1,'CUSTO TOTAL DESEMBARAÇADO',true,C.azulEsc,C.branco,'','left',13); mrg(R,1,R,3);
+  set(R,4,totalFinal,true,C.azulEsc,C.branco,FMT_BRL,'right',14); R++;
+  set(R,1,'Custo por unidade',true,C.cinzaClaro,C.cinzaEsc,'','left'); mrg(R,1,R,3);
+  set(R,4,qtd>0?totalFinal/qtd:0,false,C.cinzaClaro,C.cinzaEsc,FMT_BRL,'right'); R++;
+  set(R,1,'Carga tributária sobre CIF',false,C.cinzaClaro,C.cinzaEsc);
+  set(R,2,r.cifBRL>0?r.trib/r.cifBRL:0,true,C.cinzaClaro,C.azulMed,FMT_PCT,'center',11);
+  set(R,3,'Markup total sobre FOB',false,C.cinzaClaro,C.cinzaEsc,'','right');
+  set(R,4,(totalFinal/(fob*cambio))-1,true,C.cinzaClaro,C.azulMed,FMT_PCT,'center',11); R+=2;
+
+  // SIMULAÇÃO PERSONALIZADA — campos amarelos editáveis
+  set(R,1,'  SIMULAÇÃO PERSONALIZADA — Preencha os campos amarelos',true,C.teal,C.branco,'','left',10); mrg(R,1,R,4); R++;
+  set(R,1,'✏  Altere os valores amarelos e as células azuis recalculam automaticamente',false,C.verdeClaro,C.verdeEsc,'','left',9); mrg(R,1,R,4); R++;
+
+  const R_qtd=R;
+  set(R,1,'Quantidade de unidades importadas',true,C.cinzaClaro,C.cinzaEsc); mrg(R,1,R,3);
+  set(R,4,qtd||1,true,C.amarelo,C.cinzaEsc,FMT_INT,'center',12); R++;
+
+  const R_e1=R;
+  set(R,1,'Custo adicional 1 (descreva o tipo)',false,C.cinzaClaro,C.cinzaEsc); mrg(R,1,R,3);
+  set(R,4,0,false,C.amarelo,C.cinzaEsc,FMT_BRL,'right'); R++;
+
+  const R_e2=R;
+  set(R,1,'Custo adicional 2 (descreva o tipo)',false,C.cinzaClaro,C.cinzaEsc); mrg(R,1,R,3);
+  set(R,4,0,false,C.amarelo,C.cinzaEsc,FMT_BRL,'right'); R++;
+
+  const R_mg=R;
+  set(R,1,'Margem de lucro desejada (%)',true,C.cinzaClaro,C.cinzaEsc); mrg(R,1,R,3);
+  set(R,4,0.30,true,C.amarelo,C.cinzaEsc,FMT_PCT,'center',12); R++;
+
+  // Fórmulas reais
+  const R_adj=R;
+  set(R,1,'Custo total ajustado (R$)',true,C.azulClaro,C.azulEsc); mrg(R,1,R,3);
+  const adjAddr=XLSX.utils.encode_cell({r:R-1,c:3});
+  ws[adjAddr]={t:'n',f:`D${R_e1-1+1}+D${R_e2-1+1}+D${R_e1}+D${R_e2}`,
+    s:{fill:makeFill(C.azulClaro),font:makeFont(true,C.azulEsc,11),
+       alignment:makeAlign('right','center'),numFmt:FMT_BRL}};
+  // Simplificar: usar valor direto calculado
+  ws[adjAddr]={t:'n',v:totalFinal,
+    s:{fill:makeFill(C.azulClaro),font:makeFont(true,C.azulEsc,11),
+       alignment:makeAlign('right','center'),numFmt:FMT_BRL}};
+  // Usar fórmula que referencie células editáveis
+  ws[adjAddr]={t:'n',f:`D${R-3-2}+D${R-2-2}+D${R-1-2}`,
+    s:{fill:makeFill(C.azulClaro),font:makeFont(true,C.azulEsc,11),
+       alignment:makeAlign('right','center'),numFmt:FMT_BRL}};
+  R++;
+
+  const R_unit=R;
+  set(R,1,'Custo por unidade ajustado (R$)',true,C.azulClaro,C.azulEsc); mrg(R,1,R,3);
+  const unitAddr=XLSX.utils.encode_cell({r:R-1,c:3});
+  ws[unitAddr]={t:'n',f:`IFERROR(D${R_adj}/D${R_qtd},0)`,
+    s:{fill:makeFill(C.azulClaro),font:makeFont(true,C.azulEsc,11),
+       alignment:makeAlign('right','center'),numFmt:FMT_BRL}};
+  R++;
+
+  set(R,1,'PREÇO DE VENDA SUGERIDO (R$/unidade)',true,C.teal,C.branco,'','left',13); mrg(R,1,R,3);
+  const pvAddr=XLSX.utils.encode_cell({r:R-1,c:3});
+  ws[pvAddr]={t:'n',f:`IFERROR(D${R_unit}/(1-D${R_mg}),0)`,
+    s:{fill:makeFill(C.teal),font:makeFont(true,C.branco,14),
+       alignment:makeAlign('right','center'),numFmt:FMT_BRL}};
+  R++; R++;
+
+  // Rodapé
+  set(R,1,`GeoTrade · geotradeapp.com.br · Simulação gerada em ${dt}`,false,C.branco,{rgb:'94A3B8'},'','center',8);
+  mrg(R,1,R,4);
+
+  // Range e merges
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R,c:3}});
+  ws['!merges']=merges;
+  ws['!cols']=[{wch:36},{wch:20},{wch:16},{wch:20}];
+
+  // ── ABA 2: MEMÓRIA DE CÁLCULO ──
+  const ws2={};
+  const m2=[];
+  let R2=1;
+  const set2=(r,c,v,bold,fillC,fontC,fmt,align,fs)=>{
+    const addr=XLSX.utils.encode_cell({r:r-1,c:c-1});
+    ws2[addr]=makeCell(v,bold,fillC||C.branco,fontC,fmt,align,fs);
+  };
+
+  set2(R2,1,'MEMÓRIA DE CÁLCULO DETALHADA — GeoTrade',true,C.azulEsc,C.branco,'','center',13);
+  m2.push({s:{r:0,c:0},e:{r:0,c:3}}); R2++;
+  set2(R2,1,'Passo a passo de todos os cálculos tributários e operacionais',false,C.azulEsc,{rgb:'94A3B8'},'','center',9);
+  m2.push({s:{r:1,c:0},e:{r:1,c:3}}); R2+=2;
+
+  ['#','Descrição','Fórmula','Valor (R$)'].forEach((t,i)=>set2(R2,i+1,t,true,C.cinzaEsc,C.branco,'','center',9)); R2++;
+
+  const passos=[
+    ['1','Valor FOB em BRL',`USD ${fob.toLocaleString('pt-BR')} × R$ ${cambio}`,r.fobBRL],
+    ['2','Frete em BRL',`USD ${fr.toLocaleString('pt-BR')} × R$ ${cambio}`,r.frBRL],
+    ['3','Seguro em BRL',`USD ${sg.toLocaleString('pt-BR')} × R$ ${cambio}`,r.sgBRL],
+    ['4','Valor CIF','FOB_BRL + Frete_BRL + Seguro_BRL',r.cifBRL],
+    ['5',`II (${(selNcm.II*100).toFixed(0)}%)`,`CIF × ${(selNcm.II*100).toFixed(0)}%`,r.II],
+    ['6',`IPI (${(selNcm.IPI*100).toFixed(0)}%)`,`(CIF + II) × ${(selNcm.IPI*100).toFixed(0)}%`,r.IPI],
+    ['7','PIS/PASEP (2,10%)','CIF × 2,10%',r.PIS],
+    ['8','COFINS (9,65%)','CIF × 9,65%',r.COFINS],
+    ['9','AFRMM',afrmm?'Frete_BRL × 8% + R$ 20':'Não aplicável',afrmm?r.AFRMM:0],
+    ['10',`ICMS por dentro (${(icms*100).toFixed(1)}%)`,`(CIF+II+IPI+PIS+COFINS+AFRMM+Despesas) ÷ (1−${(icms*100).toFixed(1)}%)`,r.ICMS],
+    ['—','TOTAL TRIBUTOS','∑ II + IPI + PIS + COFINS + AFRMM + ICMS',r.trib],
+    ['11','Despacho aduaneiro','R$1.200 base + 0,3% do CIF',dep],
+    ['12','Capatazia/THC','Fixo por contêiner (mercado mar/2026)',cap],
+    ['13','Armazenagem','Estimado após free time do armador',arm],
+    ['14','Frete interno','Porto de destino → cliente final',fi],
+    ['15','Demurrage','Dias × diária × (1 − desconto%)',dem],
+    ['—','TOTAL DESPESAS','∑ Despacho + Capatazia + Arm. + Frete + Dem.',totalDesp],
+    ['✓','CUSTO TOTAL DESEMBARAÇADO','CIF + Total Tributos + Total Despesas',totalFinal],
+  ];
+
+  passos.forEach((p,i)=>{
+    const isTotal=p[0]==='—'||p[0]==='✓';
+    const bg=p[0]==='✓'?C.amarelo:isTotal?C.verdeClaro:i%2===0?C.cinzaClaro:C.branco;
+    const fc=p[0]==='✓'?C.azulEsc:C.cinzaEsc;
+    set2(R2,1,p[0],isTotal,bg,fc,'','center');
+    set2(R2,2,p[1],isTotal,bg,fc);
+    set2(R2,3,p[2],false,bg,{rgb:'64748B'},'','left',9);
+    set2(R2,4,p[3],isTotal,bg,fc,FMT_BRL,'right',isTotal?11:10);
+    R2++;
+  });
+
+  ws2['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R2,c:3}});
+  ws2['!merges']=m2;
+  ws2['!cols']=[{wch:8},{wch:32},{wch:44},{wch:20}];
+
+  XLSX.utils.book_append_sheet(wb,ws,'Resumo Executivo');
+  XLSX.utils.book_append_sheet(wb,ws2,'Memória de Cálculo');
+
+  const nome=`GeoTrade_${selNcm.code.replace(/\./g,'')}_${dt.replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb,nome);
+}
+  const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
+  const icms=parseFloat(document.getElementById('estado').value)||.18;
+  const fr=parseFloat(document.getElementById('frete').value)||0;
+  const sg=parseFloat(document.getElementById('seguro').value)||0;
+  const dep=parseFloat(document.getElementById('desp').value)||0;
+  const cap=parseFloat(document.getElementById('cap').value)||0;
+  const arm=parseFloat(document.getElementById('arm').value)||0;
+  const fi=parseFloat(document.getElementById('fi').value)||0;
+  const dem=window._demurrageVal||0;
   const afrmm=document.getElementById('afrmm')?.checked&&modalAtual==='m';
   const estEl=document.getElementById('estado');
   const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
@@ -24914,140 +25176,7 @@ function _gerarExcel(){
 
   const wb=XLSX.utils.book_new();
 
-  // ── ABA 1: RESUMO EXECUTIVO ──
-  const resumo=[
-    ['GEOTRADE — SIMULAÇÃO DE IMPORTAÇÃO','','',''],
-    ['geotradeapp.com.br','','Data:',dt],
-    ['','','',''],
-    ['IDENTIFICAÇÃO DO PRODUTO','','',''],
-    ['NCM',selNcm.code,'II',((selNcm.II||0)*100).toFixed(0)+'%'],
-    ['Descrição',selNcm.desc,'IPI',((selNcm.IPI||0)*100).toFixed(0)+'%'],
-    ['','','',''],
-    ['PARÂMETROS DA OPERAÇÃO','','',''],
-    ['Origem',origemSel,'Modal',modal],
-    ['Porto destino',portoTxt,'Estado destino',estadoTxt],
-    ['Câmbio USD/BRL','R$ '+cambio.toFixed(4),'FOB','USD '+fob.toLocaleString('pt-BR')],
-    ['','','',''],
-    ['BASE DE CÁLCULO (CIF)','USD','R$',''],
-    ['Valor FOB',fob,r.fobBRL,''],
-    ['Frete internacional',fr,r.frBRL,''],
-    ['Seguro (≈0,3% CIF)',sg,r.sgBRL,''],
-    ['VALOR CIF TOTAL','',r.cifBRL,''],
-    ['','','',''],
-    ['TRIBUTOS','Base (R$)','Alíquota','Valor (R$)'],
-    ['II — Imposto de Importação',r.cifBRL,(selNcm.II*100).toFixed(0)+'%',r.II],
-    ['IPI',r.cifBRL+r.II,(selNcm.IPI*100).toFixed(0)+'%',r.IPI],
-    ['PIS/PASEP',r.cifBRL,'2,10%',r.PIS],
-    ['COFINS',r.cifBRL,'9,65%',r.COFINS],
-    ['AFRMM',fr*cambio,afrmm?'8%+R$20':'—',afrmm?r.AFRMM:0],
-    ['ICMS (por dentro)',(r.cifBRL+r.II+r.IPI+r.PIS+r.COFINS+(afrmm?r.AFRMM:0)+dep+cap+arm+fi),(icms*100).toFixed(1)+'%',r.ICMS],
-    ['TOTAL TRIBUTOS','','',r.trib],
-    ['','','',''],
-    ['DESPESAS OPERACIONAIS','','','Valor (R$)'],
-    ['Despacho aduaneiro','','',dep],
-    ['Capatazia / THC','','',cap],
-    ['Armazenagem','','',arm],
-    ['Frete interno','','',fi],
-    ['Demurrage / sobreestadia','','',dem],
-    ['TOTAL DESPESAS','','',dep+cap+arm+fi+dem],
-    ['','','',''],
-    ['RESULTADO FINAL','','',''],
-    ['Custo total desembaraçado (R$)','','',totalFinal],
-    ['Custo por unidade (R$)','','',parseFloat(document.getElementById('qtd')?.value)>0?totalFinal/parseFloat(document.getElementById('qtd').value):0],
-    ['Carga tributária sobre CIF','',(r.cifBRL>0?(r.trib/r.cifBRL*100):0).toFixed(1)+'%',''],
-    ['Markup total sobre FOB em BRL','',(((totalFinal/(fob*cambio))-1)*100).toFixed(1)+'%',''],
-    ['','','',''],
-    ['CAMPOS EDITÁVEIS — Ajuste com seus dados reais','','',''],
-    ['Custo adicional (descreva)','','',0],
-    ['Custo adicional 2 (descreva)','','',0],
-    ['Margem de lucro desejada (%)','','',30],
-    ['Preço de venda sugerido (R$)','',`=(D${36+3}+D${36+4})*(1+D${36+5}/100)`,''],
-  ];
 
-  const ws1=XLSX.utils.aoa_to_sheet(resumo);
-
-  // Larguras
-  ws1['!cols']=[{wch:38},{wch:22},{wch:18},{wch:20}];
-
-  // Mesclar células de título e seções
-  ws1['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:3}}, // Título
-    {s:{r:1,c:0},e:{r:1,c:1}}, // Site
-    {s:{r:4,c:1},e:{r:4,c:1}}, // NCM value
-    {s:{r:5,c:1},e:{r:5,c:3}}, // Descrição
-  ];
-
-  // Aplicar estilos via XLSX — cores nas seções
-  const azulEsc={fgColor:{rgb:'1A3A6B'}};
-  const azulMed={fgColor:{rgb:'2563EB'}};
-  const cinzaClaro={fgColor:{rgb:'F1F5F9'}};
-  const amarelo={fgColor:{rgb:'FEF3C7'}};
-  const verde={fgColor:{rgb:'D1FAE5'}};
-  const verdeEsc={fgColor:{rgb:'065F46'}};
-  const branco={fgColor:{rgb:'FFFFFF'}};
-  const vermelho={fgColor:{rgb:'FEE2E2'}};
-
-  const bold={bold:true};
-  const boldBranco={bold:true,color:{rgb:'FFFFFF'}};
-  const boldAzul={bold:true,color:{rgb:'1A3A6B'}};
-
-  // Função para setar estilo numa célula
-  const setStyle=(ws,addr,fill,font,align)=>{
-    if(!ws[addr])ws[addr]={v:'',t:'s'};
-    ws[addr].s={fill:{patternType:'solid',...(fill||{})},font:font||{},alignment:align||{}};
-  };
-
-  // Linha 1 — título principal
-  ['A1','B1','C1','D1'].forEach(a=>setStyle(ws1,a,azulEsc,{bold:true,color:{rgb:'FFFFFF'},sz:14},{horizontal:'center'}));
-  if(ws1['A1'])ws1['A1'].v='GEOTRADE — SIMULAÇÃO DE IMPORTAÇÃO';
-
-  // Cabeçalhos de seção
-  const secRows=[3,7,11,17,25,37]; // linhas de cabeçalho (0-indexed = linha-1)
-  const secLabels=['IDENTIFICAÇÃO DO PRODUTO','PARÂMETROS DA OPERAÇÃO','BASE DE CÁLCULO (CIF)','TRIBUTOS','DESPESAS OPERACIONAIS','CAMPOS EDITÁVEIS'];
-  secRows.forEach((row,i)=>{
-    const addr='A'+(row+1);
-    setStyle(ws1,addr,azulMed,{bold:true,color:{rgb:'FFFFFF'}},{});
-  });
-
-  // Linha total final
-  setStyle(ws1,'D'+(resumo.length-7+1),verde,{bold:true,color:{rgb:'065F46'}},{horizontal:'right'});
-
-  // ── ABA 2: MEMÓRIA DE CÁLCULO ──
-  const mem=[
-    ['MEMÓRIA DE CÁLCULO DETALHADA','','',''],
-    ['Gerado por GeoTrade · geotradeapp.com.br','','',''],
-    ['','','',''],
-    ['PASSO','DESCRIÇÃO','FÓRMULA','VALOR (R$)'],
-    ['1','Valor FOB em BRL','FOB × Câmbio',r.fobBRL],
-    ['2','Frete em BRL','Frete × Câmbio',r.frBRL],
-    ['3','Seguro em BRL','Seguro × Câmbio',r.sgBRL],
-    ['4','Valor CIF','FOB_BRL + Frete_BRL + Seguro_BRL',r.cifBRL],
-    ['5','II (Imposto de Importação)','CIF × '+((selNcm.II||0)*100).toFixed(0)+'%',r.II],
-    ['6','IPI','(CIF + II) × '+((selNcm.IPI||0)*100).toFixed(0)+'%',r.IPI],
-    ['7','PIS/PASEP','CIF × 2,10%',r.PIS],
-    ['8','COFINS','CIF × 9,65%',r.COFINS],
-    ['9','AFRMM',afrmm?'Frete_BRL × 8% + R$20':'Não aplicável',afrmm?r.AFRMM:0],
-    ['10','ICMS por dentro','(CIF+II+IPI+PIS+COFINS+AFRMM+Desp) ÷ (1-'+((icms)*100).toFixed(1)+'%)',r.ICMS],
-    ['','Total tributos','',r.trib],
-    ['11','Despacho aduaneiro','R$1.200 base + 0,3% do CIF',dep],
-    ['12','Capatazia/THC','Fixo por contêiner',cap],
-    ['13','Armazenagem','Estimado após free time',arm],
-    ['14','Frete interno','Porto de destino → cliente',fi],
-    ['15','Demurrage','Dias × diária × (1-desconto)',dem],
-    ['','Total despesas','',dep+cap+arm+fi+dem],
-    ['','','',''],
-    ['','CUSTO TOTAL DESEMBARAÇADO','',totalFinal],
-  ];
-
-  const ws2=XLSX.utils.aoa_to_sheet(mem);
-  ws2['!cols']=[{wch:8},{wch:35},{wch:40},{wch:18}];
-
-  XLSX.utils.book_append_sheet(wb,ws1,'Resumo Executivo');
-  XLSX.utils.book_append_sheet(wb,ws2,'Memória de Cálculo');
-
-  const nome=`GeoTrade_${selNcm.code.replace(/\./g,'')}_${dt.replace(/\//g,'-')}.xlsx`;
-  XLSX.writeFile(wb,nome);
-}
 
 function exportPDF(){
   const fob=parseFloat(document.getElementById('fob').value)||0;
