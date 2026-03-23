@@ -25093,8 +25093,107 @@ function calcular(){
   const dp=pico.total-r.total;
   if(cambio<5.5)rhtml+=`<div class="alert ao"><div class="alert-i">✓</div><div><div class="at">Câmbio favorável</div><div class="ab">Abaixo do pico R$ 6,28 (dez/25). Economia de <strong>${R0(dp)}</strong> vs. pior cenário.</div></div></div>`;
   else rhtml+=`<div class="alert aw"><div class="alert-i">⚠</div><div><div class="at">Câmbio elevado — considere hedge</div><div class="ab">Acima de R$ 5,50. Ver aba Câmbio & Frete para histórico.</div></div></div>`;
-  if(selNcm.code?.startsWith('845')||selNcm.code?.includes('8450')){const ant=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,.02,selNcm.IPI,afrmm);rhtml+=`<div class="alert ad"><div class="alert-i">🔴</div><div><div class="at">Ex-tarifário encerrado</div><div class="ab">Custo adicional vs. regime anterior (II 2%): <strong>${R0(r.total-ant.total)}</strong>. Próxima janela de pleito: 2º sem. 2026.</div></div></div>`;}
-  if(carga>65)rhtml+=`<div class="alert ap"><div class="alert-i">💡</div><div><div class="at">Verificar Drawback ou RECOF</div><div class="ab">Carga tributária acima de 65%. Se a empresa exporta, pode reduzir drasticamente este custo. <span style="color:var(--purple);cursor:pointer;" onclick="showTab('alertas')">Ver regimes →</span></div></div></div>`;
+
+  if(selNcm.code?.startsWith('845')||selNcm.code?.includes('8450')){
+    const ant=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,.02,selNcm.IPI,afrmm);
+    rhtml+=`<div class="alert ad"><div class="alert-i">🔴</div><div><div class="at">Ex-tarifário encerrado</div><div class="ab">Custo adicional vs. regime anterior (II 2%): <strong>${R0(r.total-ant.total)}</strong>. Próxima janela de pleito: 2º sem. 2026.</div></div></div>`;
+  }
+
+  // ── REFORMA TRIBUTÁRIA (CBS + IBS) ──
+  // Em vigor a partir de jan/2026 — fase de transição
+  // CBS substitui PIS/COFINS; IBS substitui ICMS nas importações
+  // Alíquotas 2026 (fase 1): CBS 0,90% + IBS 0,10% sobre operações de importação
+  // PIS/COFINS mantidos em paralelo durante transição (redução gradual até 2032)
+  {
+    const CBS_ALIQ = 0.009;  // 0,9% sobre CIF
+    const IBS_ALIQ = 0.001;  // 0,1% sobre CIF (fase inicial)
+    const cbsVal = r.cifBRL * CBS_ALIQ;
+    const ibsVal = r.cifBRL * IBS_ALIQ;
+    const totalReforma = r.total + cbsVal + ibsVal;
+    const impactoReforma = cbsVal + ibsVal;
+    rhtml+=`<div class="alert aw" style="border-left:3px solid var(--warn);">
+      <div class="alert-i">⚖️</div>
+      <div>
+        <div class="at">Reforma Tributária — CBS + IBS em vigor (jan/2026)</div>
+        <div class="ab">
+          Fase de transição: <strong>CBS 0,9%</strong> (substitui PIS/COFINS) + <strong>IBS 0,1%</strong> (substitui ICMS) incidem sobre importações a partir de jan/2026, em adição ao regime atual durante a transição.<br>
+          Impacto estimado nesta operação: <strong style="color:var(--warn);">+ ${R0(impactoReforma)}</strong>
+          (CBS ${R0(cbsVal)} + IBS ${R0(ibsVal)})<br>
+          <span style="font-size:10px;color:var(--text3);">Fonte: EC 132/2023 · LC 214/2025 · vigência jan/2026. Consulte seu despachante para adequação.</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── RECOF / EX-TEC AUTOMÁTICO ──
+  // Calcular economia potencial por regime especial
+  {
+    const cap2 = selNcm.code?.substring(0,2) || '';
+    const perfil = window.gtPerfil || {};
+
+    // Ex-TEC: bens de capital e de informática sem similar nacional
+    // Reduz II para 0% ou alíquota reduzida (média histórica: redução de ~10pp)
+    const temExTEC = perfil.extec || [
+      '84','85','86','87','88','89','90'  // capítulos elegíveis típicos
+    ].includes(cap2);
+
+    if(temExTEC && selNcm.II > 0.02){
+      // Simular com II zerado (suspensão total Ex-TEC)
+      const comExTec = calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,0,selNcm.IPI,afrmm);
+      const econExTec = r.total - comExTec.total;
+      rhtml+=`<div class="alert ai" style="border-left:3px solid var(--info);">
+        <div class="alert-i">💡</div>
+        <div>
+          <div class="at">Ex-TEC potencial — economia estimada de ${R0(econExTec)}</div>
+          <div class="ab">
+            NCM <strong>${selNcm.code}</strong> pode ser elegível ao Ex-Tarifário (redução/isenção do II de ${(selNcm.II*100).toFixed(0)}% para 0%).
+            Economia estimada com II zero: <strong style="color:var(--info);">${R0(econExTec)}</strong> nesta operação.<br>
+            <span style="font-size:10px;color:var(--text3);">Condição: sem similar nacional. Prazo para pleito: sem previsão no momento. Verifique Portarias SECEX vigentes.</span>
+            <span style="color:var(--accent);cursor:pointer;font-size:10px;" onclick="showTab('alertas')"> Ver regimes →</span>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // RECOF: suspende II, IPI, PIS, COFINS para industriais exportadores
+    const temRECOF = perfil.recof || parseInt(cap2) >= 10 && parseInt(cap2) <= 33;
+    if(temRECOF && !useDrawback && carga > 40){
+      const comRecof = calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,0,0,afrmm);
+      const econRecof = r.total - comRecof.total;
+      rhtml+=`<div class="alert ap" style="border-left:3px solid var(--purple);">
+        <div class="alert-i">🏭</div>
+        <div>
+          <div class="at">RECOF — suspensão de II + IPI + PIS + COFINS</div>
+          <div class="ab">
+            Empresa industrial com exportações pode habilitar o RECOF e suspender <strong>${R0(r.II + r.IPI + r.PIS + r.COFINS)}</strong> em tributos nesta operação.
+            Custo com RECOF: <strong style="color:var(--purple);">${R0(comRecof.total)}</strong> (economia de ${R0(econRecof)}).<br>
+            <span style="font-size:10px;color:var(--text3);">Exige habilitação prévia na RFB e compromisso de exportação de 70% da produção.</span>
+            <span style="color:var(--accent);cursor:pointer;font-size:10px;" onclick="showTab('alertas')"> Ver regimes →</span>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Drawback: disponível mas não ativo no perfil
+    const cnaeDiv = parseInt(cap2);
+    const temDrawback = perfil.drawback;
+    if(!temDrawback && !useDrawback && r.II > 0 && cnaeDiv >= 10 && cnaeDiv <= 33){
+      const comDb = calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,0,0,afrmm);
+      const econDb = r.total - comDb.total;
+      rhtml+=`<div class="alert ap">
+        <div class="alert-i">💡</div>
+        <div>
+          <div class="at">Verificar Drawback — economia potencial de ${R0(econDb)}</div>
+          <div class="ab">
+            Se sua empresa exporta produtos industrializados, o Drawback suspende II + IPI + PIS + COFINS na importação de insumos.
+            Economia estimada: <strong>${R0(econDb)}</strong>. Ative em Meu Perfil se já habilitado.
+            <span style="color:var(--accent);cursor:pointer;font-size:10px;" onclick="showTab('perfil')"> Configurar perfil →</span>
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+
   if(fr>3500&&modalAtual==='m')rhtml+=`<div class="alert aw"><div class="alert-i">📦</div><div><div class="at">Frete acima da média histórica</div><div class="ab">Alta de ~34% em 7 meses. Ver aba Câmbio & Frete.</div></div></div>`;
   document.getElementById('risk-area').innerHTML=rhtml;
   // Mem
