@@ -1209,6 +1209,11 @@ iframe{border-radius:var(--r);}
     <svg viewBox="0 0 14 14" fill="none"><path d="M2 11V5l5-3 5 3v6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="4.5" y="7" width="5" height="4" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
     Antecipação
   </div>
+  <div class="ni" onclick="showTab('drawback')">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>
+    Drawback
+    <span class="ni-dot" style="background:var(--success);"></span>
+  </div>
   <div class="ni" onclick="showTab('fretes')">
     <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="9" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 6h2l1 2v2h-3V6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="3.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/><circle cx="10.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/></svg>
     Fretes por Rota
@@ -1494,6 +1499,8 @@ iframe{border-radius:var(--r);}
               <div class="total-main"><div class="tlbl">Custo total<br>desembaraçado<br><span style="font-size:9px;font-weight:400;color:var(--text3);">tributos + despesas</span></div><div class="tval" id="r-total">—</div></div>
             </div>
             <div id="prazo-area" style="margin-top:10px;"></div>
+            <!-- Alertas e oportunidades — CBS/IBS, Ex-TEC, RECOF, Drawback -->
+            <div id="risk-area" style="margin-top:8px;"></div>
             <!-- Atalhos pós-simulação -->
             <div id="sim-shortcuts" style="display:none;margin-top:10px;display:none;gap:6px;flex-wrap:wrap;">
               <button onclick="showTab('historico')" style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;cursor:pointer;color:var(--text2);font-size:11px;display:flex;align-items:center;gap:5px;justify-content:center;">
@@ -1509,7 +1516,6 @@ iframe{border-radius:var(--r);}
             <div class="mem-body" id="mem-body"></div>
           </div>
         </div>
-        <div id="risk-area"></div>
         <div class="card"><div class="ct">Custo total — comparativo cambial</div><div class="cbars" id="comp-bars"><div style="color:var(--text3);font-size:11px;">Preencha o simulador para ver</div></div></div>
       </div>
     </div>
@@ -2785,6 +2791,66 @@ iframe{border-radius:var(--r);}
       </div>
       <div>
         <div id="ant-result"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha os dados para ver a análise.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SIMULADOR DRAWBACK ══ -->
+  <div class="section" id="sec-drawback">
+    <div style="padding:12px 16px;background:var(--s2);border:1px solid var(--s3);border-radius:var(--r2);margin-bottom:16px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--success);margin-bottom:4px;">Simulador de Drawback</div>
+      <div style="font-size:12px;color:var(--text2);">Compare Drawback Suspensão vs Isenção e calcule a economia real na sua importação. O regime mais vantajoso para indústrias exportadoras brasileiras.</div>
+    </div>
+
+    <!-- Banner usar simulação -->
+    <div id="db-sim-banner" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-size:12px;color:var(--accent);"><strong>Simulação disponível:</strong> <span id="db-sim-desc">—</span></div>
+      <button onclick="usarSimulacaoDrawback()" style="white-space:nowrap;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;">⚡ Usar dados do simulador</button>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">Parâmetros da operação</div>
+        <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="db-fob" placeholder="0,00" oninput="calcDrawback()" step="1000" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Câmbio (USD/BRL)</div><div class="iw"><span class="ip">R$</span><input type="number" id="db-cambio" placeholder="5,2800" oninput="calcDrawback()" step="0.01" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Alíquota II (%)</div><input type="number" id="db-ii" placeholder="14" value="14" oninput="calcDrawback()" step="1" min="0" max="35"></div>
+        <div class="field"><div class="fl">Alíquota IPI (%)</div><input type="number" id="db-ipi" placeholder="0" value="0" oninput="calcDrawback()" step="1" min="0" max="30"></div>
+        <div class="field"><div class="fl">Valor CIF em R$ <span class="fa">calculado</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="db-cif" placeholder="auto" oninput="calcDrawback()" step="1000" style="padding-left:34px;" title="Deixe em branco para calcular do FOB"></div></div>
+        <div class="field"><div class="fl">% exportado da produção</div><input type="number" id="db-export-pct" placeholder="100" value="100" oninput="calcDrawback()" step="5" min="0" max="100"></div>
+        <div class="field"><div class="fl">Prazo do ato concessório (meses)</div><input type="number" id="db-prazo-meses" placeholder="12" value="12" oninput="calcDrawback()" step="6" min="6" max="36"></div>
+        <div class="field"><div class="fl">Taxa SELIC mensal (%) <span class="fa">custo capital</span></div><input type="number" id="db-selic" placeholder="0.96" value="0.96" oninput="calcDrawback()" step="0.1"></div>
+      </div>
+
+      <div id="db-result">
+        <div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha os dados para ver a análise comparativa.</div>
+      </div>
+    </div>
+
+    <!-- Explicação dos regimes -->
+    <div class="card" style="margin-top:12px;">
+      <div class="ct">Entenda os regimes</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">
+        <div style="background:var(--s2);border:1px solid var(--s3);border-radius:var(--r);padding:12px;">
+          <div style="font-weight:600;color:var(--success);margin-bottom:6px;">Drawback Suspensão</div>
+          <div style="color:var(--text2);line-height:1.7;">
+            Suspende II, IPI, PIS, COFINS e AFRMM na importação. Empresa não desembolsa os tributos — fica com esse capital de giro durante todo o ato concessório.<br><br>
+            <strong>Vantagem:</strong> libera caixa imediatamente.<br>
+            <strong>Prazo:</strong> 1 ano (prorrogável até 3 anos).<br>
+            <strong>Condição:</strong> exportar produto industrializado equivalente.
+          </div>
+        </div>
+        <div style="background:var(--a3);border:1px solid var(--a4);border-radius:var(--r);padding:12px;">
+          <div style="font-weight:600;color:var(--accent);margin-bottom:6px;">Drawback Isenção</div>
+          <div style="color:var(--text2);line-height:1.7;">
+            Isenta II e IPI na reposição de estoque já exportado. Empresa paga os tributos na 1ª importação e recupera na reposição.<br><br>
+            <strong>Vantagem:</strong> mais simples administrativamente.<br>
+            <strong>Prazo:</strong> 1 ano.<br>
+            <strong>Condição:</strong> já ter exportado produto equivalente nos últimos 12 meses.
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:var(--r);font-size:11px;color:var(--text3);">
+        <strong>Nota:</strong> Drawback Integrado (suspensão + isenção em ato único) é o modelo mais usado atualmente. Habilitação pela Receita Federal — processo digital via SISCOMEX. O simulador usa suspensão total como base de cálculo.
       </div>
     </div>
   </div>
@@ -25286,7 +25352,7 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard','perfil'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard','perfil','drawback'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
@@ -25311,6 +25377,21 @@ function showTab(name){
   if(name==='monitor'){renderMonitorList();}
   if(name==='dashboard'){renderDashboard();}
   if(name==='perfil'){renderPerfil();}
+  if(name==='drawback'){
+    const dc=document.getElementById('db-cambio');
+    if(dc&&!dc.value&&taxas.USD) dc.value=taxas.USD.toFixed(4);
+    if(selNcm){
+      const di=document.getElementById('db-ii'); if(di&&!di.value) di.value=(selNcm.II*100).toFixed(0);
+      const dp=document.getElementById('db-ipi'); if(dp&&!dp.value) dp.value=(selNcm.IPI*100).toFixed(0);
+    }
+    const banner=document.getElementById('db-sim-banner');
+    const desc=document.getElementById('db-sim-desc');
+    if(banner&&window._lastSim){
+      desc.textContent=`${window._lastSim.ncmCode} · USD ${(window._lastSim.fob||0).toLocaleString('pt-BR')}`;
+      banner.style.display='flex';
+    }
+    calcDrawback();
+  }
   if(name==='antecip'){
     const c=document.getElementById('ant-cambio');
     if(c&&!c.value&&taxas.USD)c.value=taxas.USD.toFixed(4);
@@ -27030,6 +27111,110 @@ document.addEventListener('gtUserReady', ()=>{
   const nav = document.getElementById('nav-perfil');
   if(nav) nav.style.display = 'flex';
 });
+
+// ── SIMULADOR DRAWBACK ──
+function usarSimulacaoDrawback(){
+  const s = window._lastSim;
+  if(!s) return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  set('db-fob', s.fob);
+  set('db-cambio', s.cambio);
+  if(selNcm){ set('db-ii', (selNcm.II*100).toFixed(0)); set('db-ipi', (selNcm.IPI*100).toFixed(0)); }
+  calcDrawback();
+}
+
+function calcDrawback(){
+  const fob       = parseFloat(document.getElementById('db-fob')?.value)||0;
+  const cambio    = parseFloat(document.getElementById('db-cambio')?.value)||5.28;
+  const ii_pct    = parseFloat(document.getElementById('db-ii')?.value)||14;
+  const ipi_pct   = parseFloat(document.getElementById('db-ipi')?.value)||0;
+  const cifManual = parseFloat(document.getElementById('db-cif')?.value)||0;
+  const exportPct = parseFloat(document.getElementById('db-export-pct')?.value)||100;
+  const prazoMes  = parseFloat(document.getElementById('db-prazo-meses')?.value)||12;
+  const selicMes  = parseFloat(document.getElementById('db-selic')?.value)||0.96;
+  const el        = document.getElementById('db-result');
+
+  if(!fob && !cifManual){ el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha o FOB ou CIF para ver a análise.</div>'; return; }
+
+  // Base de cálculo
+  const cifBRL = cifManual > 0 ? cifManual : fob * cambio * 1.015;
+  const II_a   = ii_pct / 100;
+  const IPI_a  = ipi_pct / 100;
+
+  // ── SEM DRAWBACK (regime normal) ──
+  const II_val    = cifBRL * II_a;
+  const IPI_val   = (cifBRL + II_val) * IPI_a;
+  const PIS_val   = cifBRL * 0.021;
+  const COF_val   = cifBRL * 0.0965;
+  const AFRMM_val = cifBRL * 0.08 * 0.03; // estimativa ~3% do CIF
+  const tribNormal = II_val + IPI_val + PIS_val + COF_val + AFRMM_val;
+
+  // ── DRAWBACK SUSPENSÃO (todos os tributos suspensos) ──
+  // Economia = tributos que não precisam ser pagos
+  // Benefício adicional = rendimento desse capital durante o prazo
+  const fracExport  = Math.min(exportPct / 100, 1);
+  const tribSuspenso = tribNormal * fracExport;
+  const rendCapital = tribSuspenso * (Math.pow(1 + selicMes/100, prazoMes) - 1);
+  const benefSuspensao = tribSuspenso + rendCapital;
+
+  // ── DRAWBACK ISENÇÃO (só II + IPI na reposição) ──
+  // Isenta II e IPI na reimportação após exportação comprovada
+  const tribIsencao = (II_val + IPI_val) * fracExport;
+  const rendIsencao = tribIsencao * (Math.pow(1 + selicMes/100, prazoMes) - 1);
+  const benefIsencao = tribIsencao + rendIsencao;
+
+  // Qual é melhor?
+  const melhor = benefSuspensao >= benefIsencao ? 'Suspensão' : 'Isenção';
+  const corMelhor = 'var(--success)';
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:10px;border-color:var(--s3);">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px;">Base de cálculo</div>
+      <div class="rl"><span class="rl-l">CIF estimado</span><span class="rl-v">${R0(cifBRL)}</span></div>
+      <div class="rl"><span class="rl-l">II (${ii_pct}%)</span><span class="rl-v">${R0(II_val)}</span></div>
+      <div class="rl"><span class="rl-l">IPI (${ipi_pct}%)</span><span class="rl-v">${R0(IPI_val)}</span></div>
+      <div class="rl"><span class="rl-l">PIS 2,10% + COFINS 9,65%</span><span class="rl-v">${R0(PIS_val+COF_val)}</span></div>
+      <div class="rl" style="font-weight:500;"><span class="rl-l">Total tributos sem Drawback</span><span class="rl-v" style="color:var(--danger);">${R0(tribNormal)}</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="background:var(--s2);border:1px solid var(--s3);border-radius:var(--r);padding:12px;${melhor==='Suspensão'?'border-width:2px;':''}" >
+        <div style="font-size:10px;font-weight:700;color:var(--success);margin-bottom:8px;">
+          SUSPENSÃO ${melhor==='Suspensão'?'⭐ RECOMENDADO':''}
+        </div>
+        <div class="rl"><span class="rl-l" style="font-size:11px;">Tributos suspensos</span><span class="rl-v" style="color:var(--success);">${R0(tribSuspenso)}</span></div>
+        <div class="rl"><span class="rl-l" style="font-size:11px;">Rendimento capital (${prazoMes}m × SELIC)</span><span class="rl-v" style="color:var(--success);">${R0(rendCapital)}</span></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--s3);">
+          <div style="font-size:10px;color:var(--text3);">Benefício total</div>
+          <div style="font-size:20px;font-weight:700;color:var(--success);font-family:var(--mono);">${R0(benefSuspensao)}</div>
+        </div>
+      </div>
+      <div style="background:var(--a3);border:1px solid var(--a4);border-radius:var(--r);padding:12px;${melhor==='Isenção'?'border-width:2px;':''}" >
+        <div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:8px;">
+          ISENÇÃO ${melhor==='Isenção'?'⭐ RECOMENDADO':''}
+        </div>
+        <div class="rl"><span class="rl-l" style="font-size:11px;">II + IPI isentos</span><span class="rl-v" style="color:var(--accent);">${R0(tribIsencao)}</span></div>
+        <div class="rl"><span class="rl-l" style="font-size:11px;">Rendimento capital (${prazoMes}m × SELIC)</span><span class="rl-v" style="color:var(--accent);">${R0(rendIsencao)}</span></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--a4);">
+          <div style="font-size:10px;color:var(--text3);">Benefício total</div>
+          <div style="font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono);">${R0(benefIsencao)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert ao">
+      <div class="alert-i">✓</div>
+      <div>
+        <div class="at">Drawback ${melhor} recomendado — economia de ${R0(Math.max(benefSuspensao,benefIsencao))}</div>
+        <div class="ab">
+          Com ${exportPct}% da produção exportada e prazo de ${prazoMes} meses, o Drawback ${melhor} gera
+          <strong>${R0(Math.max(benefSuspensao,benefIsencao))}</strong> de benefício total
+          (tributos suspensos/isentos + rendimento do capital liberado à SELIC de ${selicMes}% a.m.).<br>
+          <span style="font-size:10px;color:var(--text3);">Habilitação: Receita Federal via e-CAC / SISCOMEX. Prazo médio de aprovação: 30–60 dias.</span>
+        </div>
+      </div>
+    </div>`;
+}
 
 // ── MOBILE MORE MENU ──
 function toggleMobileMore(){
