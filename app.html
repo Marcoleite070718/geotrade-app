@@ -14,7 +14,8 @@
 <!-- Firebase v11 -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
@@ -278,6 +279,9 @@ onAuthStateChanged(auth, async (user) => {
     window.gtIsAdmin = isAdmin;
     const adminNav = document.getElementById('nav-admin');
     if (adminNav) adminNav.style.display = isAdmin ? 'flex' : 'none';
+    const perfilNav = document.getElementById('nav-perfil');
+    if (perfilNav) perfilNav.style.display = 'flex';
+    document.dispatchEvent(new Event('gtUserReady'));
 
     renderAuthBar(user);
     renderHistoricoCloud();
@@ -445,6 +449,12 @@ window._where      = where;
 window._query      = query;
 window._orderBy    = orderBy;
 window._limit      = limit;
+
+// Expor funções Auth email/senha
+window._auth = auth;
+window._createUser  = createUserWithEmailAndPassword;
+window._signInEmail = signInWithEmailAndPassword;
+window._resetSenha  = sendPasswordResetEmail;
 </script>
 <style>
 :root{
@@ -1019,7 +1029,37 @@ iframe{border-radius:var(--r);}
           <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H9v3h4.26C12.54 13.07 11 14 9 14a5 5 0 110-10c1.28 0 2.43.49 3.31 1.28L14.9 2.72A8.5 8.5 0 009 .5 8.5 8.5 0 10.5 9H16.51z"/><path fill="#34A853" d="M2.13 5.45L5.05 7.6A4.99 4.99 0 019 4a4.99 4.99 0 013.31 1.28L14.9 2.72A8.5 8.5 0 009 .5a8.5 8.5 0 00-6.87 4.95z"/><path fill="#FBBC05" d="M9 17.5a8.48 8.48 0 005.89-2.37l-2.72-2.23A5 5 0 019 14a5 5 0 01-4.74-3.4L1.31 12.7A8.5 8.5 0 009 17.5z"/><path fill="#EA4335" d="M16.51 8H9v3h4.26c-.37 1.02-1.04 1.88-1.93 2.47l2.72 2.23A8.5 8.5 0 0017.5 9c0-.51-.05-1.01-.13-1.5z"/></svg>
           Entrar com Google
         </button>
-        <div class="ls-divider">ou continue sem conta</div>
+
+        <!-- Toggle email/senha -->
+        <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+          <div style="flex:1;height:1px;background:var(--border2);"></div>
+          <span style="font-size:11px;color:var(--text3);">ou entre com e-mail</span>
+          <div style="flex:1;height:1px;background:var(--border2);"></div>
+        </div>
+
+        <!-- Formulário email/senha -->
+        <div id="ls-email-form" style="display:flex;flex-direction:column;gap:8px;">
+          <input type="email" id="ls-email" placeholder="seu@email.com"
+            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;outline:none;"
+            oninput="document.getElementById('ls-email-err').textContent=''">
+          <input type="password" id="ls-senha" placeholder="Senha"
+            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter')loginEmail()">
+          <div id="ls-email-err" style="font-size:11px;color:var(--danger);min-height:14px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="loginEmail()" style="flex:1;padding:10px;border-radius:8px;background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+              Entrar
+            </button>
+            <button onclick="cadastrarEmail()" style="flex:1;padding:10px;border-radius:8px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;">
+              Criar conta
+            </button>
+          </div>
+          <div style="text-align:center;">
+            <span onclick="recuperarSenha()" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;">Esqueci minha senha</span>
+          </div>
+        </div>
+
+        <div class="ls-divider" style="margin-top:12px;">ou continue sem conta</div>
         <button class="ls-btn-google" onclick="skipLogin()" style="background:transparent;border-color:var(--border);color:var(--text2);font-weight:400;">
           Acessar como visitante <span style="font-size:10px;color:var(--text3);margin-left:4px;">(5 simulações/mês)</span>
         </button>
@@ -1041,33 +1081,80 @@ iframe{border-radius:var(--r);}
 
 <!-- MODAL PLANOS -->
 <div id="plan-modal">
-  <div class="pm-box">
-    <div class="pm-title">Limite do plano Free atingido</div>
-    <div class="pm-sub">O plano Free permite 5 simulações por mês. Faça upgrade para continuar simulando sem limites.</div>
-    <div class="pm-plans">
-      <div class="pm-plan featured">
+  <div class="pm-box" style="max-width:680px;width:100%;">
+    <div class="pm-title">Escolha seu plano GeoTrade</div>
+    <div class="pm-sub">Plataforma de inteligência para importadores brasileiros. Cancele quando quiser.</div>
+    <div class="pm-plans" style="grid-template-columns:repeat(4,1fr);gap:8px;">
+
+      <!-- FREE -->
+      <div class="pm-plan" style="opacity:.8;">
+        <div class="pm-plan-name" style="color:var(--text3);">Free</div>
+        <div class="pm-plan-price" style="color:var(--text3);">R$ 0</div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para conhecer</div>
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+          ✓ 5 simulações/mês<br>
+          ✓ 10.515 NCMs<br>
+          ✓ Câmbio ao vivo<br>
+          ✗ Histórico na nuvem<br>
+          ✗ Excel / PDF<br>
+          ✗ Dashboard<br>
+          ✗ WhatsApp
+        </div>
+      </div>
+
+      <!-- STARTER -->
+      <div class="pm-plan featured" style="border-color:var(--accent);">
+        <div style="font-size:9px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:8px;margin-bottom:6px;text-align:center;font-weight:700;">RECOMENDADO</div>
         <div class="pm-plan-name" style="color:var(--accent);">Starter</div>
-        <div class="pm-plan-price" style="color:var(--accent);">R$ 197<span style="font-size:11px;font-weight:400;color:var(--text2);">/mês</span></div>
-        <div class="pm-plan-feat">✓ Simulações ilimitadas<br>✓ Histórico na nuvem<br>✓ Side-by-side<br>✓ Suporte por email</div>
+        <div class="pm-plan-price" style="color:var(--accent);">R$ 197<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para importadores PME</div>
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+          ✓ Simulações ilimitadas<br>
+          ✓ Histórico na nuvem<br>
+          ✓ Export PDF + Excel<br>
+          ✓ Compartilhar WhatsApp<br>
+          ✓ Dashboard + relatórios<br>
+          ✓ Demurrage<br>
+          ✓ Suporte por e-mail
+        </div>
+        <button onclick="window.open('mailto:contato@geotradeapp.com.br?subject=Quero o Starter','_blank')" style="margin-top:10px;width:100%;background:var(--accent);border:none;border-radius:7px;padding:8px;cursor:pointer;color:#fff;font-size:11px;font-weight:700;">Assinar Starter</button>
       </div>
-      <div class="pm-plan">
+
+      <!-- PRO -->
+      <div class="pm-plan" style="border-color:var(--warn)44;">
         <div class="pm-plan-name" style="color:var(--warn);">Pro</div>
-        <div class="pm-plan-price" style="color:var(--warn);">R$ 497<span style="font-size:11px;font-weight:400;color:var(--text2);">/mês</span></div>
-        <div class="pm-plan-feat">✓ Tudo do Starter<br>✓ Monitor de NCMs<br>✓ Alertas por email<br>✓ API de câmbio</div>
+        <div class="pm-plan-price" style="color:var(--warn);">R$ 497<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para times e traders</div>
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+          ✓ Tudo do Starter<br>
+          ✓ Comparador de origens<br>
+          ✓ Side-by-side avançado<br>
+          ✓ Antecipação de estoque<br>
+          ✓ Monitor de NCMs<br>
+          ✓ Alertas cambiais<br>
+          ✓ Suporte prioritário
+        </div>
+        <button onclick="window.open('mailto:contato@geotradeapp.com.br?subject=Quero o Pro','_blank')" style="margin-top:10px;width:100%;background:var(--w2);border:1px solid var(--w3);border-radius:7px;padding:8px;cursor:pointer;color:var(--warn);font-size:11px;font-weight:700;">Assinar Pro</button>
       </div>
+
+      <!-- ENTERPRISE -->
       <div class="pm-plan">
-        <div class="pm-plan-name" style="color:var(--text2);">Free</div>
-        <div class="pm-plan-price" style="color:var(--text2);">R$ 0</div>
-        <div class="pm-plan-feat">✓ 5 simulações/mês<br>✗ Histórico limitado<br>✗ Side-by-side<br>✗ Alertas</div>
-      </div>
-      <div class="pm-plan">
-        <div class="pm-plan-name" style="color:var(--purple);">Enterprise</div>
-        <div class="pm-plan-price" style="color:var(--purple);">R$ 1.497<span style="font-size:11px;font-weight:400;color:var(--text2);">/mês</span></div>
-        <div class="pm-plan-feat">✓ Multi-usuários<br>✓ API dedicada<br>✓ SLA garantido<br>✓ Suporte direto</div>
+        <div class="pm-plan-name" style="color:var(--teal);">Enterprise</div>
+        <div class="pm-plan-price" style="color:var(--teal);">R$ 1.497<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para grandes operações</div>
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+          ✓ Tudo do Pro<br>
+          ✓ Multi-usuários (até 10)<br>
+          ✓ Perfis por importador<br>
+          ✓ Relatórios por CNPJ<br>
+          ✓ API de integração<br>
+          ✓ SLA 99,9%<br>
+          ✓ Suporte direto WhatsApp
+        </div>
+        <button onclick="window.open('mailto:contato@geotradeapp.com.br?subject=Quero o Enterprise','_blank')" style="margin-top:10px;width:100%;background:var(--teal2);border:1px solid rgba(6,182,212,.3);border-radius:7px;padding:8px;cursor:pointer;color:var(--teal);font-size:11px;font-weight:700;">Falar com time</button>
       </div>
     </div>
-    <button onclick="window.open('mailto:contato@geotrade.com.br?subject=Upgrade GeoTrade','_blank')" style="width:100%;background:var(--accent);border:none;border-radius:9px;padding:12px;cursor:pointer;color:#090d12;font-size:13px;font-weight:700;font-family:var(--head);letter-spacing:-.3px;">Fazer upgrade agora</button>
-    <div class="pm-close" onclick="closePlanModal()">Continuar no plano Free</div>
+    <div class="pm-close" onclick="closePlanModal()">Continuar no plano atual</div>
   </div>
 </div>
 
@@ -1134,6 +1221,10 @@ iframe{border-radius:var(--r);}
   <div id="nav-admin" onclick="showTab('admin')" class="ni" style="display:none;">
     <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="11" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
     Admin<span class="admin-badge">ADM</span>
+  </div>
+  <div class="ni" onclick="showTab('perfil')" id="nav-perfil" style="display:none;">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Meu Perfil
   </div>
   <div class="ni" onclick="showTab('dashboard')">
     <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7.5" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="7.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
@@ -1225,8 +1316,14 @@ iframe{border-radius:var(--r);}
           </div>
           <div id="ncm-empty" style="font-size:11px;color:var(--text3);padding:2px 0 8px;">Base Siscomex carregando... Selecione um NCM para ver alíquotas.</div>
           <div class="field" id="peso-field" style="display:none;">
-            <div class="fl">Peso estimado <span class="fa" id="peso-hint">por categoria</span></div>
-            <div class="iw"><span class="ip">kg</span><input type="number" id="peso" style="padding-left:34px;" oninput="this.dataset.manual='1';calcular()" step="10" title="Editável — substitua pelo peso real da carga"></div>
+            <div class="fl">Peso estimado <span class="fa" id="peso-hint">por categoria NCM</span>
+              <span style="font-size:9px;color:var(--text3);margin-left:4px;" title="Se souber o peso real, substitua o valor estimado">✏ editável</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="iw" style="flex:1;"><span class="ip">kg</span><input type="number" id="peso" style="padding-left:34px;" oninput="this.dataset.manual='1';calcular()" step="10" title="Substitua pelo peso real da carga"></div>
+              <div class="iw" style="flex:1;"><span class="ip">CBM</span><input type="number" id="cbm" style="padding-left:46px;" oninput="this.dataset.manual='1';calcular()" step="0.1" placeholder="auto" title="Volume em m³ — deixe em branco para estimar automaticamente"></div>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;" id="peso-info"></div>
           </div>
         </div>
 
@@ -1604,10 +1701,26 @@ iframe{border-radius:var(--r);}
       <div style="font-size:12px;color:var(--text2);">Acompanhe o volume, tributos e evolução das suas simulações.</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
-      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Total simulações</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--text);" id="dash-total-sims">—</div></div>
-      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Volume FOB (USD)</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--accent);" id="dash-total-fob">—</div></div>
-      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Custo total est.</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--warn);" id="dash-total-custo">—</div></div>
-      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Carga trib. média</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--danger);" id="dash-media-carga">—</div></div>
+      <div class="card" style="text-align:center;padding:16px 12px;">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Total simulações</div>
+        <div style="font-size:28px;font-weight:700;color:var(--text);font-family:var(--mono);line-height:1;" id="dash-total-sims">—</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">simulações salvas</div>
+      </div>
+      <div class="card" style="text-align:center;padding:16px 12px;">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Volume FOB</div>
+        <div style="font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono);line-height:1;" id="dash-total-fob">—</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">no período selecionado</div>
+      </div>
+      <div class="card" style="text-align:center;padding:16px 12px;">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Custo total desembaraçado</div>
+        <div style="font-size:20px;font-weight:700;color:var(--warn);font-family:var(--mono);line-height:1;" id="dash-total-custo">—</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">tributos + despesas</div>
+      </div>
+      <div class="card" style="text-align:center;padding:16px 12px;">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Carga tributária média</div>
+        <div style="font-size:28px;font-weight:700;color:var(--danger);font-family:var(--mono);line-height:1;" id="dash-media-carga">—</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">sobre o valor CIF</div>
+      </div>
     </div>
     <div class="card" style="margin-bottom:12px;">
       <div class="ct">Período
@@ -2643,17 +2756,30 @@ iframe{border-radius:var(--r);}
   <div class="section" id="sec-antecip">
     <div style="padding:12px 16px;background:var(--s2);border:1px solid var(--s3);border-radius:var(--r2);margin-bottom:14px;">
       <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--success);margin-bottom:4px;">Calculadora de Antecipação de Estoque</div>
-      <div style="font-size:12px;color:var(--text2);">Vale importar agora ou esperar 60–90 dias? Compara o custo do capital com o risco cambial e tendência de frete.</div>
+      <div style="font-size:12px;color:var(--text2);">Vale importar agora ou esperar? Compara o custo do capital com o risco cambial e tendência de frete.</div>
     </div>
+
+    <!-- Botão integração com simulador -->
+    <div id="ant-sim-banner" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-size:12px;color:var(--accent);">
+        <strong>Simulação disponível:</strong> <span id="ant-sim-desc">—</span>
+      </div>
+      <button onclick="usarSimulacaoAntecip()" style="white-space:nowrap;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;">
+        ⚡ Usar dados do simulador
+      </button>
+    </div>
+
     <div class="grid2">
       <div class="card">
         <div class="ct">Dados da operação</div>
         <div class="field"><div class="fl">Valor FOB (USD)</div><div class="iw"><span class="ip">USD</span><input type="number" id="ant-fob" placeholder="0,00" oninput="calcAntecip()" step="1000" style="padding-left:34px;"></div></div>
         <div class="field"><div class="fl">Câmbio hoje (USD/BRL)</div><div class="iw"><span class="ip">R$</span><input type="number" id="ant-cambio" placeholder="0,0000" oninput="calcAntecip()" step="0.01" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Custo total desembaraçado (R$) <span class="fa">do simulador</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="ant-custo-total" placeholder="opcional" oninput="calcAntecip()" step="1000" style="padding-left:34px;"></div></div>
         <div class="field"><div class="fl">Prazo para importar (dias)</div><input type="number" id="ant-prazo" placeholder="60" value="60" oninput="calcAntecip()" step="15"></div>
-        <div class="field"><div class="fl">Custo de capital (% a.m.)</div><input type="number" id="ant-cdi" placeholder="0,83" value="0.83" oninput="calcAntecip()" step="0.1"></div>
-        <div class="field"><div class="fl">Expectativa do câmbio em ${ant-prazo} dias</div><div class="iw"><span class="ip">R$</span><input type="number" id="ant-cambio-fut" placeholder="0,0000" oninput="calcAntecip()" step="0.01" style="padding-left:34px;"></div></div>
+        <div class="field"><div class="fl">Custo de capital (% a.m.) <span class="fa">CDI ~0,83%</span></div><input type="number" id="ant-cdi" placeholder="0,83" value="0.83" oninput="calcAntecip()" step="0.1"></div>
+        <div class="field"><div class="fl">Câmbio projetado (USD/BRL)</div><div class="iw"><span class="ip">R$</span><input type="number" id="ant-cambio-fut" placeholder="0,0000" oninput="calcAntecip()" step="0.01" style="padding-left:34px;"></div></div>
         <div class="field"><div class="fl">Variação esperada no frete (%)</div><input type="number" id="ant-frete-var" placeholder="0" value="0" oninput="calcAntecip()" step="5"></div>
+        <div class="field"><div class="fl">Quantidade de unidades</div><input type="number" id="ant-qtd" placeholder="0" value="0" oninput="calcAntecip()" step="100"></div>
       </div>
       <div>
         <div id="ant-result"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha os dados para ver a análise.</div></div>
@@ -2733,6 +2859,118 @@ iframe{border-radius:var(--r);}
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ══ PERFIL DA EMPRESA ══ -->
+  <div class="section" id="sec-perfil">
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:16px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent-bright);margin-bottom:4px;">Perfil da Empresa</div>
+      <div style="font-size:12px;color:var(--text2);">Dados cadastrais e configurações tributárias. O simulador usa essas informações para personalizar os cálculos.</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+      <!-- Dados cadastrais -->
+      <div class="card">
+        <div class="ct">Dados cadastrais</div>
+        <div class="field"><div class="fl">Razão Social / Nome</div><input type="text" id="pf-nome" placeholder="Ex: Importadora XYZ Ltda" oninput="perfilAlterado()"></div>
+        <div class="field"><div class="fl">CNPJ</div><input type="text" id="pf-cnpj" placeholder="00.000.000/0001-00" oninput="perfilAlterado();buscarCNPJ()" maxlength="18"></div>
+        <div class="field"><div class="fl">E-mail comercial</div><input type="email" id="pf-email" placeholder="contato@empresa.com.br" oninput="perfilAlterado()"></div>
+        <div class="field"><div class="fl">Telefone / WhatsApp</div><input type="text" id="pf-tel" placeholder="(11) 99999-9999" oninput="perfilAlterado()"></div>
+        <div class="field"><div class="fl">Setor de atuação</div>
+          <select id="pf-setor" onchange="perfilAlterado()">
+            <option value="">Selecione...</option>
+            <option value="industria">Indústria / Manufatura</option>
+            <option value="comercio">Comércio / Varejo</option>
+            <option value="distribuicao">Distribuição / Atacado</option>
+            <option value="servicos">Serviços</option>
+            <option value="agro">Agronegócio</option>
+            <option value="tech">Tecnologia</option>
+            <option value="saude">Saúde / Farmacêutico</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="field"><div class="fl">Estado (UF)</div>
+          <select id="pf-uf" onchange="perfilAlterado()">
+            <option value="">Selecione...</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+            <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+            <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+            <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+            <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+            <option selected>SP</option><option>SE</option><option>TO</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Configurações tributárias -->
+      <div class="card">
+        <div class="ct">Configurações tributárias</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">Informe os benefícios que sua empresa possui. O simulador ajustará os cálculos automaticamente.</div>
+
+        <div class="tog-row" style="margin-bottom:10px;">
+          <div><div class="tog-lbl">Regime Drawback</div><div style="font-size:10px;color:var(--text3);">Suspende II, IPI, PIS, COFINS em insumos p/ exportação</div></div>
+          <label class="sw"><input type="checkbox" id="pf-drawback" onchange="perfilAlterado()"><span class="sw-t"></span></label>
+        </div>
+        <div class="tog-row" style="margin-bottom:10px;">
+          <div><div class="tog-lbl">Ex-Tarifário (Ex-TEC)</div><div style="font-size:10px;color:var(--text3);">Redução do II para bens de capital sem similar nacional</div></div>
+          <label class="sw"><input type="checkbox" id="pf-extec" onchange="perfilAlterado()"><span class="sw-t"></span></label>
+        </div>
+        <div class="tog-row" style="margin-bottom:10px;">
+          <div><div class="tog-lbl">RECOF / RECOF-SPED</div><div style="font-size:10px;color:var(--text3);">Suspensão de tributos para indústria exportadora</div></div>
+          <label class="sw"><input type="checkbox" id="pf-recof" onchange="perfilAlterado()"><span class="sw-t"></span></label>
+        </div>
+        <div class="tog-row" style="margin-bottom:10px;">
+          <div><div class="tog-lbl">Simples Nacional</div><div style="font-size:10px;color:var(--text3);">Tratamento diferenciado PIS/COFINS</div></div>
+          <label class="sw"><input type="checkbox" id="pf-simples" onchange="perfilAlterado()"><span class="sw-t"></span></label>
+        </div>
+
+        <div class="field" style="margin-top:8px;"><div class="fl">Alíquota ICMS preferencial (%)</div>
+          <input type="number" id="pf-icms-pref" placeholder="Ex: 12 para importações incentivadas" oninput="perfilAlterado()" step="0.5" min="0" max="25">
+        </div>
+        <div class="field"><div class="fl">Observações / outros benefícios</div>
+          <textarea id="pf-obs" rows="2" placeholder="Ex: Protocolo ICMS 21/11, FUNDAP/ES..." style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;resize:vertical;" oninput="perfilAlterado()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plano atual -->
+    <div class="card" style="margin-top:14px;">
+      <div class="ct">Meu plano</div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;">
+        <div id="plano-card-free" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;">FREE</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 0</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;">5 simulações/mês</div>
+        </div>
+        <div id="plano-card-starter" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">STARTER</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 197</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;">/mês · ilimitado</div>
+        </div>
+        <div id="plano-card-pro" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;position:relative;">
+          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">MAIS POPULAR</div>
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">PRO</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 497</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;">/mês · multi-usuário</div>
+        </div>
+        <div id="plano-card-enterprise" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:6px;">ENTERPRISE</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 1.497</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;">/mês · API + suporte</div>
+        </div>
+      </div>
+      <div id="plano-status" style="margin-top:12px;font-size:12px;color:var(--text3);text-align:center;">Carregando plano...</div>
+    </div>
+
+    <!-- Botões -->
+    <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+      <button onclick="salvarPerfil()" style="background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;cursor:pointer;">
+        Salvar perfil
+      </button>
+    </div>
+    <div id="pf-msg" style="text-align:right;font-size:11px;margin-top:6px;min-height:16px;"></div>
   </div>
 
   <!-- ══ ADMIN ══ -->
@@ -24624,12 +24862,30 @@ function autoEstimar(){
   const pesoEst = fob * selNcm.kgPorUSD;
   const pesoEl = document.getElementById('peso');
   if(pesoEl && !pesoEl.dataset.manual) pesoEl.value = Math.round(pesoEst);
+  const pesoReal = parseFloat(pesoEl?.value) || pesoEst;
 
   // 2. Estimar frete com lógica real de contêiner
   if(!freteManual){
     const cap = selNcm.code?.substring(0,2) || '84';
-    const densidadeCBM = DENSIDADE_CBM[cap] || 200; // kg por CBM
-    const cbmEst = pesoEst / densidadeCBM;           // volume estimado em CBM
+    const densidadeCBM = DENSIDADE_CBM[cap] || 200;
+    const cbmEstimado = pesoReal / densidadeCBM;
+
+    // Usar CBM manual se preenchido
+    const cbmEl = document.getElementById('cbm');
+    const cbmManual = cbmEl && cbmEl.dataset.manual ? parseFloat(cbmEl.value)||0 : 0;
+    const cbmEst = cbmManual > 0 ? cbmManual : cbmEstimado;
+    if(cbmEl && !cbmEl.dataset.manual) cbmEl.value = cbmEst.toFixed(2);
+
+    // Mostrar info de densidade
+    const infoEl = document.getElementById('peso-info');
+    if(infoEl){
+      const densLabel = {
+        '84':'Máquinas ~200kg/m³','85':'Eletrônicos ~150kg/m³','87':'Veículos ~350kg/m³',
+        '61':'Vestuário ~100kg/m³','62':'Vestuário ~90kg/m³','64':'Calçados ~200kg/m³',
+        '72':'Aço ~500kg/m³','39':'Plásticos ~250kg/m³','94':'Móveis ~120kg/m³',
+      }[cap] || `Categoria ${cap} ~${densidadeCBM}kg/m³`;
+      infoEl.textContent = `Densidade estimada: ${densLabel} · Volume: ${cbmEst.toFixed(1)} CBM`;
+    }
 
     let frEst = 0;
 
@@ -24775,15 +25031,31 @@ function calcular(){
   // Salvar no histórico automaticamente
   const estEl=document.getElementById('estado');
   const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
+  const qtdVal=parseFloat(document.getElementById('qtd')?.value)||0;
+
+  // Guardar última simulação para uso nas outras abas
+  window._lastSim = {
+    fob, cambio, total:r.total, trib:r.trib, ncmCode:selNcm.code,
+    ncmDesc:selNcm.desc, estado:estadoTxt, qtd:qtdVal,
+    carga: r.cifBRL>0 ? r.trib/r.cifBRL : 0
+  };
+
+  // Mostrar banner na antecipação
+  const antBanner = document.getElementById('ant-sim-banner');
+  const antDesc   = document.getElementById('ant-sim-desc');
+  if(antBanner && antDesc){
+    antDesc.textContent = `${selNcm.code} · USD ${fob.toLocaleString('pt-BR')} · Total ${R0(r.total)}`;
+    antBanner.style.display = 'flex';
+  }
+
   // BUG #13 FIX: salvar histórico com debounce e deduplicação
-  // Só salva se a simulação for diferente da última (evita lançar a cada tecla)
   const simHash = `${selNcm.code}_${Math.round(fob/100)*100}_${Math.round(cambio*100)}_${estadoTxt}`;
   if(window._lastSimHash !== simHash){
     window._lastSimHash = simHash;
     clearTimeout(window._simSaveTimer);
     window._simSaveTimer = setTimeout(()=>{
       salvarHistorico({ncmCode:selNcm.code,ncmDesc:selNcm.desc,fob,cambio,frete:fr,desp:dep,moeda:moedaSel,estado:estadoTxt,total:r.total,carga:pct((r.trib/r.cifBRL)*100)});
-    }, 2000); // aguarda 2s sem alterações antes de salvar
+    }, 2000);
   }
 }
 
@@ -24842,7 +25114,7 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard','perfil'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
@@ -24866,6 +25138,7 @@ function showTab(name){
   if(name==='fretes'){renderFretesTable('todos');}
   if(name==='monitor'){renderMonitorList();}
   if(name==='dashboard'){renderDashboard();}
+  if(name==='perfil'){renderPerfil();}
   if(name==='antecip'){
     const c=document.getElementById('ant-cambio');
     if(c&&!c.value&&taxas.USD)c.value=taxas.USD.toFixed(4);
@@ -25782,44 +26055,100 @@ function calcSBS(){
 // ══════════════════════════════════════════
 // CALCULADORA DE ANTECIPAÇÃO DE ESTOQUE
 // ══════════════════════════════════════════
+// ── INTEGRAÇÃO SIMULADOR → ANTECIPAÇÃO ──
+function usarSimulacaoAntecip(){
+  const s = window._lastSim;
+  if(!s) return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  set('ant-fob', s.fob);
+  set('ant-cambio', s.cambio);
+  set('ant-custo-total', s.total ? Math.round(s.total) : '');
+  set('ant-qtd', s.qtd||'');
+  // Câmbio futuro: +3% como projeção padrão
+  set('ant-cambio-fut', (s.cambio*1.03).toFixed(4));
+  calcAntecip();
+}
+
 function calcAntecip(){
-  const fob=parseFloat(document.getElementById('ant-fob').value)||0;
-  const cambio=parseFloat(document.getElementById('ant-cambio').value)||0;
-  const prazo=parseInt(document.getElementById('ant-prazo').value)||60;
-  const cdiMes=parseFloat(document.getElementById('ant-cdi').value)||0.83;
-  const cambioFut=parseFloat(document.getElementById('ant-cambio-fut').value)||0;
-  const freteVar=parseFloat(document.getElementById('ant-frete-var').value)||0;
-  const el=document.getElementById('ant-result');
-  if(!fob||!cambio){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha os dados para ver a análise.</div>';return;}
-  // Custo de importar AGORA
-  const valorHoje=fob*cambio;
-  const meses=prazo/30;
-  const custCapital=valorHoje*(Math.pow(1+cdiMes/100,meses)-1);
-  const totalAntes=valorHoje+custCapital;
-  // Custo de importar DEPOIS
-  const cambioFutVal=cambioFut||cambio*1.03;
-  const valorDepois=fob*cambioFutVal*(1+freteVar/100);
-  const diff=valorDepois-totalAntes;
-  const vantagem=diff>0?'ANTECIPAR':'AGUARDAR';
-  const cor=diff>0?'var(--success)':'var(--warn)';
-  el.innerHTML=`
+  const fob         = parseFloat(document.getElementById('ant-fob').value)||0;
+  const cambio      = parseFloat(document.getElementById('ant-cambio').value)||0;
+  const custoTotal  = parseFloat(document.getElementById('ant-custo-total').value)||0;
+  const prazo       = parseInt(document.getElementById('ant-prazo').value)||60;
+  const cdiMes      = parseFloat(document.getElementById('ant-cdi').value)||0.83;
+  const cambioFut   = parseFloat(document.getElementById('ant-cambio-fut').value)||0;
+  const freteVar    = parseFloat(document.getElementById('ant-frete-var').value)||0;
+  const qtd         = parseFloat(document.getElementById('ant-qtd').value)||0;
+  const el          = document.getElementById('ant-result');
+
+  if(!fob||!cambio){
+    el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Preencha o FOB e o câmbio para ver a análise.</div>';
+    return;
+  }
+
+  const meses = prazo/30;
+
+  // ── CENÁRIO A: IMPORTAR AGORA ──
+  // Custo base = custo total desembaraçado (se informado) ou FOB × câmbio
+  const baseAgora = custoTotal > 0 ? custoTotal : fob * cambio;
+  // Capital imobilizado no estoque durante o prazo
+  const custCapital = baseAgora * (Math.pow(1 + cdiMes/100, meses) - 1);
+  const totalAgora  = baseAgora + custCapital;
+
+  // ── CENÁRIO B: IMPORTAR DEPOIS ──
+  const cambioFutVal  = cambioFut > 0 ? cambioFut : cambio * 1.03;
+  const variacaoCambio = (cambioFutVal - cambio) / cambio;
+  // Se tinha custo total: aplica variação cambial proporcionalmente
+  const basedepois = custoTotal > 0
+    ? custoTotal * (1 + variacaoCambio * 0.7) * (1 + freteVar/100) // 70% do custo é sensível ao câmbio
+    : fob * cambioFutVal * (1 + freteVar/100);
+  const totalDepois = basedepois;
+
+  const diff    = totalDepois - totalAgora;
+  const vantagem = diff > 0 ? 'ANTECIPAR' : 'AGUARDAR';
+  const cor      = diff > 0 ? 'var(--success)' : 'var(--warn)';
+
+  // Custo por unidade
+  const unitAgora  = qtd > 0 ? totalAgora/qtd  : 0;
+  const unitDepois = qtd > 0 ? totalDepois/qtd : 0;
+
+  el.innerHTML = `
     <div class="card" style="border-color:${cor}44;margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <div style="font-family:var(--head);font-size:20px;font-weight:800;color:${cor};">${vantagem}</div>
-        <div style="font-size:12px;color:var(--text2);">${diff>0?'Antecipar economiza':'Aguardar economiza'} <strong style="color:${cor};">${R0(Math.abs(diff))}</strong></div>
+        <div style="font-family:var(--head);font-size:22px;font-weight:800;color:${cor};">${vantagem}</div>
+        <div style="font-size:12px;color:var(--text2);">
+          ${diff>0?'Antecipar economiza':'Aguardar economiza'}
+          <strong style="color:${cor};">${R0(Math.abs(diff))}</strong>
+        </div>
       </div>
-      <div class="rl"><span class="rl-l">Valor FOB em BRL hoje</span><span class="rl-v">${R0(valorHoje)}</span></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="background:var(--a3);border:1px solid var(--a4);border-radius:var(--r);padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Importar AGORA</div>
+          <div style="font-size:18px;font-weight:700;color:var(--accent);font-family:var(--mono);">${R0(totalAgora)}</div>
+          ${qtd>0?`<div style="font-size:10px;color:var(--text3);margin-top:4px;">${R0(unitAgora)}/un</div>`:''}
+        </div>
+        <div style="background:var(--w2);border:1px solid var(--w3);border-radius:var(--r);padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Importar em ${prazo} dias</div>
+          <div style="font-size:18px;font-weight:700;color:var(--warn);font-family:var(--mono);">${R0(totalDepois)}</div>
+          ${qtd>0?`<div style="font-size:10px;color:var(--text3);margin-top:4px;">${R0(unitDepois)}/un</div>`:''}
+        </div>
+      </div>
+
+      <div class="rl"><span class="rl-l">Custo base hoje</span><span class="rl-v">${R0(baseAgora)}</span></div>
       <div class="rl"><span class="rl-l">Custo de capital (${meses.toFixed(1)} meses × ${cdiMes}% a.m.)</span><span class="rl-v" style="color:var(--danger);">+ ${R0(custCapital)}</span></div>
-      <div class="rl" style="font-weight:500;"><span class="rl-l">Total importando AGORA</span><span class="rl-v" style="color:var(--accent);">${R0(totalAntes)}</span></div>
-      <div class="divider"></div>
-      <div class="rl"><span class="rl-l">Câmbio projetado daqui ${prazo} dias</span><span class="rl-v">R$ ${fN(cambioFutVal,4)}</span></div>
-      <div class="rl"><span class="rl-l">Variação esperada no frete</span><span class="rl-v">${freteVar>=0?'+':''}${freteVar}%</span></div>
-      <div class="rl" style="font-weight:500;"><span class="rl-l">Total importando em ${prazo} dias</span><span class="rl-v" style="color:var(--warn);">${R0(valorDepois)}</span></div>
+      <div class="rl"><span class="rl-l">Câmbio projetado</span><span class="rl-v">R$ ${fN(cambioFutVal,4)} (${variacaoCambio>=0?'+':''}${(variacaoCambio*100).toFixed(1)}%)</span></div>
+      <div class="rl"><span class="rl-l">Variação de frete esperada</span><span class="rl-v">${freteVar>=0?'+':''}${freteVar}%</span></div>
     </div>
+
     <div class="alert ${diff>0?'ao':'aw'}">
       <div class="alert-i">${diff>0?'✓':'⚠'}</div>
-      <div><div class="at">${diff>0?'Antecipar é vantajoso':'Pode valer esperar'}</div>
-      <div class="ab">${diff>0?`Com câmbio projetado de R$ ${fN(cambioFutVal,4)} e variação de frete de ${freteVar}%, importar agora economiza ${R0(diff)} em relação a aguardar ${prazo} dias. O custo do capital de ${R0(custCapital)} é compensado pela alta cambial.`:`Com câmbio projetado de R$ ${fN(cambioFutVal,4)}, aguardar ${prazo} dias economiza ${R0(Math.abs(diff))}. Mas atenção: se o câmbio subir mais do que o esperado, a vantagem desaparece.`}</div></div>
+      <div>
+        <div class="at">${diff>0?'Antecipar é vantajoso':'Pode valer esperar'}</div>
+        <div class="ab">${diff>0
+          ?`Com câmbio projetado em R$ ${fN(cambioFutVal,4)} (+${(variacaoCambio*100).toFixed(1)}%) e frete ${freteVar>=0?'subindo':'caindo'} ${Math.abs(freteVar)}%, importar agora economiza ${R0(diff)} vs aguardar ${prazo} dias. O custo do capital de ${R0(custCapital)} é compensado pela alta cambial.`
+          :`Com câmbio projetado em R$ ${fN(cambioFutVal,4)}, aguardar ${prazo} dias pode economizar ${R0(Math.abs(diff))}. Atenção: se o câmbio subir além do projetado, a vantagem desaparece.`
+        }</div>
+      </div>
     </div>`;
 }
 
@@ -26130,7 +26459,13 @@ function dashRenderComDados(sims){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('dash-total-sims', filtradas.length.toLocaleString('pt-BR'));
   set('dash-total-fob', 'USD '+Math.round(totalFob).toLocaleString('pt-BR'));
-  set('dash-total-custo', 'R$ '+Math.round(totalCusto/1000)+'k');
+  // Custo total: mostrar em milhões se grande, em mil se médio
+  const custoFmt = totalCusto >= 1e6
+    ? 'R$ '+(totalCusto/1e6).toFixed(1).replace('.',',')+'M'
+    : totalCusto >= 1e3
+    ? 'R$ '+Math.round(totalCusto/1000).toLocaleString('pt-BR')+'k'
+    : 'R$ '+Math.round(totalCusto).toLocaleString('pt-BR');
+  set('dash-total-custo', custoFmt);
   set('dash-media-carga', mediaC.toFixed(1)+'%');
 
   // Gráfico de barras por mês
@@ -26273,6 +26608,179 @@ function checkPlanoFeature(feature){
   };
   return (features[plano]||features.free).includes(feature);
 }
+
+// ── LOGIN EMAIL/SENHA #9 ──
+function _lsErr(msg){ const el=document.getElementById('ls-email-err'); if(el) el.textContent=msg; }
+function _lsLoading(on){
+  document.getElementById('ls-loading').style.display = on?'flex':'none';
+  document.getElementById('ls-login-area').style.opacity = on?'0.5':'1';
+  document.getElementById('ls-login-area').style.pointerEvents = on?'none':'';
+}
+function _emailValido(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+async function loginEmail(){
+  const email = document.getElementById('ls-email')?.value?.trim();
+  const senha = document.getElementById('ls-senha')?.value;
+  if(!email||!_emailValido(email)){ _lsErr('Digite um e-mail válido.'); return; }
+  if(!senha||senha.length<6){ _lsErr('A senha deve ter ao menos 6 caracteres.'); return; }
+  if(!window._signInEmail){ _lsErr('Aguarde o carregamento e tente novamente.'); return; }
+  _lsErr(''); _lsLoading(true);
+  try {
+    await window._signInEmail(window._auth, email, senha);
+    // onAuthStateChanged cuida do resto
+  } catch(e){
+    _lsLoading(false);
+    const msgs = {
+      'auth/user-not-found':'E-mail não cadastrado. Clique em "Criar conta".',
+      'auth/wrong-password':'Senha incorreta.',
+      'auth/invalid-credential':'E-mail ou senha incorretos.',
+      'auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.',
+    };
+    _lsErr(msgs[e.code]||'Erro ao entrar: '+e.message);
+  }
+}
+
+async function cadastrarEmail(){
+  const email = document.getElementById('ls-email')?.value?.trim();
+  const senha = document.getElementById('ls-senha')?.value;
+  if(!email||!_emailValido(email)){ _lsErr('Digite um e-mail válido.'); return; }
+  if(!senha||senha.length<6){ _lsErr('A senha deve ter ao menos 6 caracteres.'); return; }
+  if(!window._createUser){ _lsErr('Aguarde o carregamento e tente novamente.'); return; }
+  _lsErr(''); _lsLoading(true);
+  try {
+    await window._createUser(window._auth, email, senha);
+    // onAuthStateChanged cuida do resto
+  } catch(e){
+    _lsLoading(false);
+    const msgs = {
+      'auth/email-already-in-use':'E-mail já cadastrado. Clique em "Entrar".',
+      'auth/weak-password':'Senha muito fraca. Use ao menos 6 caracteres.',
+      'auth/invalid-email':'E-mail inválido.',
+    };
+    _lsErr(msgs[e.code]||'Erro ao criar conta: '+e.message);
+  }
+}
+
+async function recuperarSenha(){
+  const email = document.getElementById('ls-email')?.value?.trim();
+  if(!email||!_emailValido(email)){ _lsErr('Digite seu e-mail acima para recuperar a senha.'); return; }
+  if(!window._resetSenha){ _lsErr('Aguarde o carregamento e tente novamente.'); return; }
+  try {
+    await window._resetSenha(window._auth, email);
+    _lsErr(''); 
+    const err = document.getElementById('ls-email-err');
+    if(err){ err.style.color='var(--success)'; err.textContent='E-mail de recuperação enviado! Verifique sua caixa de entrada.'; }
+  } catch(e){
+    _lsErr('Erro ao enviar e-mail: '+e.message);
+  }
+}
+
+// ── PERFIL DA EMPRESA ──
+const PERFIL_KEY = 'gt_perfil_v1';
+
+function perfilAlterado(){
+  const msg = document.getElementById('pf-msg');
+  if(msg){ msg.style.color='var(--text3)'; msg.textContent='Alterações não salvas'; }
+}
+
+function renderPerfil(){
+  // Mostrar nav perfil quando logado
+  const nav = document.getElementById('nav-perfil');
+  if(nav) nav.style.display = window.gtUser ? 'flex' : 'none';
+
+  // Carregar perfil salvo
+  const saved = localStorage.getItem(PERFIL_KEY);
+  if(saved){
+    try {
+      const p = JSON.parse(saved);
+      const set=(id,v)=>{ const el=document.getElementById(id); if(el&&v!==undefined) el.value=v; };
+      const setChk=(id,v)=>{ const el=document.getElementById(id); if(el) el.checked=!!v; };
+      set('pf-nome', p.nome); set('pf-cnpj', p.cnpj); set('pf-email', p.email);
+      set('pf-tel', p.tel); set('pf-setor', p.setor); set('pf-uf', p.uf);
+      set('pf-icms-pref', p.icmsPref); set('pf-obs', p.obs);
+      setChk('pf-drawback', p.drawback); setChk('pf-extec', p.extec);
+      setChk('pf-recof', p.recof); setChk('pf-simples', p.simples);
+    } catch(e){}
+  }
+
+  // Mostrar plano atual
+  const plano = window.gtPlan || 'free';
+  const status = document.getElementById('plano-status');
+  const labels = {free:'Você está no plano Free — 5 simulações/mês.',
+    starter:'✅ Plano Starter ativo — simulações ilimitadas.',
+    pro:'✅ Plano Pro ativo — todos os recursos desbloqueados.',
+    enterprise:'✅ Plano Enterprise ativo.'};
+  if(status) status.textContent = labels[plano] || '';
+
+  // Destacar plano ativo
+  ['free','starter','pro','enterprise'].forEach(p=>{
+    const card = document.getElementById(`plano-card-${p}`);
+    if(card){
+      card.style.borderColor = p===plano ? 'var(--accent)' : 'var(--border2)';
+      card.style.background  = p===plano ? 'var(--a3)'    : '';
+    }
+  });
+
+  const msg = document.getElementById('pf-msg');
+  if(msg) msg.textContent = '';
+}
+
+async function salvarPerfil(){
+  const get=(id)=>document.getElementById(id)?.value||'';
+  const getChk=(id)=>document.getElementById(id)?.checked||false;
+  const perfil = {
+    nome:get('pf-nome'), cnpj:get('pf-cnpj'), email:get('pf-email'),
+    tel:get('pf-tel'), setor:get('pf-setor'), uf:get('pf-uf'),
+    icmsPref:get('pf-icms-pref'), obs:get('pf-obs'),
+    drawback:getChk('pf-drawback'), extec:getChk('pf-extec'),
+    recof:getChk('pf-recof'), simples:getChk('pf-simples'),
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem(PERFIL_KEY, JSON.stringify(perfil));
+  window.gtPerfil = perfil;
+
+  // Salvar no Firestore se logado
+  if(window.gtUser && window.db && window._getDocs){
+    try {
+      const snap = await window._getDocs(window._query(
+        window._collection(window.db,'users'),
+        window._where('uid','==',window.gtUser.uid)
+      ));
+      if(!snap.empty){
+        const {doc:_doc,updateDoc:_upd}=await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js');
+        await _upd(_doc(window.db,'users',snap.docs[0].id),{perfil});
+      }
+    } catch(e){ console.warn('Perfil cloud:', e); }
+  }
+
+  const msg = document.getElementById('pf-msg');
+  if(msg){ msg.style.color='var(--success)'; msg.textContent='✅ Perfil salvo com sucesso!'; }
+}
+
+async function buscarCNPJ(){
+  const cnpj = document.getElementById('pf-cnpj')?.value?.replace(/\D/g,'');
+  if(cnpj?.length !== 14) return;
+  try {
+    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+    if(!res.ok) return;
+    const data = await res.json();
+    const nome = document.getElementById('pf-nome');
+    const email = document.getElementById('pf-email');
+    if(nome && !nome.value) nome.value = data.razao_social || '';
+    if(email && !email.value) email.value = data.email || '';
+    perfilAlterado();
+  } catch(e){}
+}
+
+function verPlanos(){
+  if(window.showPlanWarning) window.showPlanWarning();
+}
+
+// Mostrar nav perfil ao autenticar
+document.addEventListener('gtUserReady', ()=>{
+  const nav = document.getElementById('nav-perfil');
+  if(nav) nav.style.display = 'flex';
+});
 
 // ── MOBILE MORE MENU ──
 function toggleMobileMore(){
