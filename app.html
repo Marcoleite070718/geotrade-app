@@ -80,18 +80,21 @@ window.gtLogout = async () => {
 // ── SALVAR SIMULAÇÃO NA NUVEM ──
 window.salvarHistoricoCloud = async (dados) => {
   if (!window.gtUser) { salvarHistoricoLocal(dados); return; }
-  // Verificar limite do plano free
+  // Verificar limite do plano free — sem orderBy para não precisar de índice
   if (window.gtPlan === 'free') {
-    const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid), orderBy('ts','desc')));
-    const mes = new Date().getMonth();
-    const simulacoesMes = snap.docs.filter(d => {
-      const t = d.data().ts?.toDate?.();
-      return t && t.getMonth() === mes;
-    });
-    if (simulacoesMes.length >= 5) {
-      showPlanWarning();
-      return;
-    }
+    try {
+      const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid)));
+      const mes = new Date().getMonth();
+      const ano = new Date().getFullYear();
+      const simulacoesMes = snap.docs.filter(d => {
+        const t = d.data().ts?.toDate?.();
+        return t && t.getMonth() === mes && t.getFullYear() === ano;
+      });
+      if (simulacoesMes.length >= 5) {
+        showPlanWarning();
+        return;
+      }
+    } catch(e) { /* continua mesmo sem verificar */ }
   }
   try {
     await addDoc(collection(db,'simulacoes'), {
@@ -100,7 +103,10 @@ window.salvarHistoricoCloud = async (dados) => {
       ts: serverTimestamp()
     });
     renderHistoricoCloud();
-  } catch(e) { salvarHistoricoLocal(dados); }
+  } catch(e) {
+    console.warn('Erro ao salvar nuvem:', e);
+    salvarHistoricoLocal(dados);
+  }
 };
 
 // ── CARREGAR HISTÓRICO DA NUVEM ──
@@ -1211,7 +1217,7 @@ iframe{border-radius:var(--r);}
           <div id="ncm-empty" style="font-size:11px;color:var(--text3);padding:2px 0 8px;">Base Siscomex carregando... Selecione um NCM para ver alíquotas.</div>
           <div class="field" id="peso-field" style="display:none;">
             <div class="fl">Peso estimado <span class="fa" id="peso-hint">por categoria</span></div>
-            <div class="iw"><span class="ip">kg</span><input type="number" id="peso" style="padding-left:34px;" oninput="calcular()" step="10"></div>
+            <div class="iw"><span class="ip">kg</span><input type="number" id="peso" style="padding-left:34px;" oninput="this.dataset.manual='1';calcular()" step="10" title="Editável — substitua pelo peso real da carga"></div>
           </div>
         </div>
 
@@ -1250,7 +1256,7 @@ iframe{border-radius:var(--r);}
           </div>
           <div class="fr2" style="margin-top:8px;">
             <div class="field"><div class="fl">Frete internacional <span class="fa" id="frete-hint">estimado</span></div><div class="iw"><span class="ip" id="fr-cur">USD</span><input type="number" id="frete" placeholder="0,00" oninput="onFreteManual()" step="100" style="padding-left:34px;"></div></div>
-            <div class="field"><div class="fl">Seguro <span class="fa">≈ 0,3% CIF</span></div><div class="iw"><span class="ip" id="sg-cur">USD</span><input type="number" id="seguro" placeholder="0,00" oninput="calcular()" step="50" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Seguro <span class="fa">≈ 0,3% CIF</span></div><div class="iw"><span class="ip" id="sg-cur">USD</span><input type="number" id="seguro" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="50" style="padding-left:34px;" title="Editável"></div></div>
           </div>
           <div id="afrmm-row"><div class="tog-row"><div><div class="tog-lbl">AFRMM — 8% sobre frete marítimo + R$ 20</div></div><label class="sw"><input type="checkbox" id="afrmm" checked onchange="calcular()"><span class="sw-t"></span></label></div></div>
         </div>
@@ -1263,12 +1269,12 @@ iframe{border-radius:var(--r);}
             <div class="iw"><span class="ip" id="fob-cur">USD</span><input type="number" id="fob" placeholder="0,00" oninput="calcular()" step="100" style="padding-left:34px;"></div>
           </div>
           <div class="fr3">
-            <div class="field"><div class="fl">Despacho <span class="fa" id="desp-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="desp" placeholder="0,00" oninput="calcular()" step="200" style="padding-left:34px;"></div></div>
-            <div class="field"><div class="fl">Capatazia/THC <span class="fa" id="cap-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="cap" placeholder="0,00" oninput="calcular()" step="100" style="padding-left:34px;"></div></div>
-            <div class="field"><div class="fl">Armazenagem <span class="fa" id="arm-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="arm" placeholder="0,00" oninput="calcular()" step="100" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Despacho <span class="fa" id="desp-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="desp" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="200" style="padding-left:34px;" title="Editável — o valor estimado pode ser substituído pelo real"></div></div>
+            <div class="field"><div class="fl">Capatazia/THC <span class="fa" id="cap-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="cap" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="100" style="padding-left:34px;" title="Editável"></div></div>
+            <div class="field"><div class="fl">Armazenagem <span class="fa" id="arm-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="arm" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="100" style="padding-left:34px;" title="Editável"></div></div>
           </div>
           <div class="fr2">
-            <div class="field"><div class="fl">Frete interno <span class="fa" id="fi-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="fi" placeholder="0,00" oninput="calcular()" step="200" style="padding-left:34px;"></div></div>
+            <div class="field"><div class="fl">Frete interno <span class="fa" id="fi-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="fi" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="200" style="padding-left:34px;" title="Editável"></div></div>
             <div class="field"><div class="fl">Quantidade (opcional)</div><input type="number" id="qtd" placeholder="Unidades" oninput="calcular()" step="1"></div>
           </div>
           <!-- DEMURRAGE #3 -->
@@ -24897,80 +24903,148 @@ function _gerarExcel(){
   const fi=parseFloat(document.getElementById('fi').value)||0;
   const dem=window._demurrageVal||0;
   const afrmm=document.getElementById('afrmm')?.checked&&modalAtual==='m';
-  const porto=document.getElementById('porto')?.value||'santos';
   const estEl=document.getElementById('estado');
   const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
+  const portoEl=document.getElementById('porto');
+  const portoTxt=portoEl?portoEl.options[portoEl.selectedIndex]?.text||'':'';
   const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
   const totalFinal=r.total+dem;
   const dt=new Date().toLocaleDateString('pt-BR');
+  const modal=modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário';
 
-  // Dados da planilha
-  const rows=[
-    ['GEOTRADE — Simulação de Importação','','',''],
-    ['Gerado em: '+dt,'','',''],
+  const wb=XLSX.utils.book_new();
+
+  // ── ABA 1: RESUMO EXECUTIVO ──
+  const resumo=[
+    ['GEOTRADE — SIMULAÇÃO DE IMPORTAÇÃO','','',''],
+    ['geotradeapp.com.br','','Data:',dt],
     ['','','',''],
-    ['PRODUTO','','',''],
-    ['NCM',selNcm.code,'',''],
-    ['Descrição',selNcm.desc,'',''],
-    ['Alíquota II',(selNcm.II*100).toFixed(0)+'%','',''],
-    ['Alíquota IPI',(selNcm.IPI*100).toFixed(0)+'%','',''],
+    ['IDENTIFICAÇÃO DO PRODUTO','','',''],
+    ['NCM',selNcm.code,'II',((selNcm.II||0)*100).toFixed(0)+'%'],
+    ['Descrição',selNcm.desc,'IPI',((selNcm.IPI||0)*100).toFixed(0)+'%'],
     ['','','',''],
-    ['OPERAÇÃO','','',''],
-    ['Origem',origemSel,'',''],
-    ['Modal',modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário','',''],
-    ['Porto destino',porto,'',''],
-    ['Estado destino',estadoTxt,'',''],
-    ['Câmbio USD/BRL',cambio,'',''],
+    ['PARÂMETROS DA OPERAÇÃO','','',''],
+    ['Origem',origemSel,'Modal',modal],
+    ['Porto destino',portoTxt,'Estado destino',estadoTxt],
+    ['Câmbio USD/BRL','R$ '+cambio.toFixed(4),'FOB','USD '+fob.toLocaleString('pt-BR')],
     ['','','',''],
-    ['BASE CIF','Valor (USD)','Valor (R$)',''],
-    ['FOB',fob,r.fobBRL,''],
+    ['BASE DE CÁLCULO (CIF)','USD','R$',''],
+    ['Valor FOB',fob,r.fobBRL,''],
     ['Frete internacional',fr,r.frBRL,''],
-    ['Seguro',sg,r.sgBRL,''],
-    ['CIF Total','',r.cifBRL,''],
+    ['Seguro (≈0,3% CIF)',sg,r.sgBRL,''],
+    ['VALOR CIF TOTAL','',r.cifBRL,''],
     ['','','',''],
-    ['TRIBUTOS','Base','Alíquota','Valor (R$)'],
+    ['TRIBUTOS','Base (R$)','Alíquota','Valor (R$)'],
     ['II — Imposto de Importação',r.cifBRL,(selNcm.II*100).toFixed(0)+'%',r.II],
     ['IPI',r.cifBRL+r.II,(selNcm.IPI*100).toFixed(0)+'%',r.IPI],
-    ['PIS',r.cifBRL,'2,10%',r.PIS],
+    ['PIS/PASEP',r.cifBRL,'2,10%',r.PIS],
     ['COFINS',r.cifBRL,'9,65%',r.COFINS],
-    ['AFRMM',fr*cambio,afrmm?'8%':'—',afrmm?r.AFRMM:0],
-    ['ICMS (por dentro)',r.cifBRL,(icms*100).toFixed(1)+'%',r.ICMS],
+    ['AFRMM',fr*cambio,afrmm?'8%+R$20':'—',afrmm?r.AFRMM:0],
+    ['ICMS (por dentro)',(r.cifBRL+r.II+r.IPI+r.PIS+r.COFINS+(afrmm?r.AFRMM:0)+dep+cap+arm+fi),(icms*100).toFixed(1)+'%',r.ICMS],
     ['TOTAL TRIBUTOS','','',r.trib],
     ['','','',''],
     ['DESPESAS OPERACIONAIS','','','Valor (R$)'],
     ['Despacho aduaneiro','','',dep],
-    ['Capatazia/THC','','',cap],
+    ['Capatazia / THC','','',cap],
     ['Armazenagem','','',arm],
     ['Frete interno','','',fi],
-    ['Demurrage','','',dem],
+    ['Demurrage / sobreestadia','','',dem],
     ['TOTAL DESPESAS','','',dep+cap+arm+fi+dem],
     ['','','',''],
     ['RESULTADO FINAL','','',''],
-    ['CUSTO TOTAL DESEMBARAÇADO','','',totalFinal],
-    ['Carga tributária sobre CIF','',(r.trib/r.cifBRL*100).toFixed(1)+'%',''],
-    ['Markup total sobre FOB','',(((totalFinal/(fob*cambio))-1)*100).toFixed(0)+'%',''],
+    ['Custo total desembaraçado (R$)','','',totalFinal],
+    ['Custo por unidade (R$)','','',parseFloat(document.getElementById('qtd')?.value)>0?totalFinal/parseFloat(document.getElementById('qtd').value):0],
+    ['Carga tributária sobre CIF','',(r.cifBRL>0?(r.trib/r.cifBRL*100):0).toFixed(1)+'%',''],
+    ['Markup total sobre FOB em BRL','',(((totalFinal/(fob*cambio))-1)*100).toFixed(1)+'%',''],
     ['','','',''],
-    ['CAMPOS EDITÁVEIS — ajuste conforme sua operação real','','',''],
-    ['Custo adicional 1 (descreva aqui)','','',0],
-    ['Custo adicional 2 (descreva aqui)','','',0],
-    ['Margem desejada (%)','','',0],
-    ['Preço de venda sugerido','','','=SOMA(D41:D43)*(1+D44/100)'],
+    ['CAMPOS EDITÁVEIS — Ajuste com seus dados reais','','',''],
+    ['Custo adicional (descreva)','','',0],
+    ['Custo adicional 2 (descreva)','','',0],
+    ['Margem de lucro desejada (%)','','',30],
+    ['Preço de venda sugerido (R$)','',`=(D${36+3}+D${36+4})*(1+D${36+5}/100)`,''],
   ];
 
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const ws1=XLSX.utils.aoa_to_sheet(resumo);
 
-  // Larguras das colunas
-  ws['!cols']=[{wch:35},{wch:20},{wch:15},{wch:18}];
+  // Larguras
+  ws1['!cols']=[{wch:38},{wch:22},{wch:18},{wch:20}];
 
-  // Mesclar título
-  ws['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:3}},
-    {s:{r:1,c:0},e:{r:1,c:3}},
-    {s:{r:44,c:0},e:{r:44,c:3}},
+  // Mesclar células de título e seções
+  ws1['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:3}}, // Título
+    {s:{r:1,c:0},e:{r:1,c:1}}, // Site
+    {s:{r:4,c:1},e:{r:4,c:1}}, // NCM value
+    {s:{r:5,c:1},e:{r:5,c:3}}, // Descrição
   ];
 
-  XLSX.utils.book_append_sheet(wb,ws,'Simulação GeoTrade');
+  // Aplicar estilos via XLSX — cores nas seções
+  const azulEsc={fgColor:{rgb:'1A3A6B'}};
+  const azulMed={fgColor:{rgb:'2563EB'}};
+  const cinzaClaro={fgColor:{rgb:'F1F5F9'}};
+  const amarelo={fgColor:{rgb:'FEF3C7'}};
+  const verde={fgColor:{rgb:'D1FAE5'}};
+  const verdeEsc={fgColor:{rgb:'065F46'}};
+  const branco={fgColor:{rgb:'FFFFFF'}};
+  const vermelho={fgColor:{rgb:'FEE2E2'}};
+
+  const bold={bold:true};
+  const boldBranco={bold:true,color:{rgb:'FFFFFF'}};
+  const boldAzul={bold:true,color:{rgb:'1A3A6B'}};
+
+  // Função para setar estilo numa célula
+  const setStyle=(ws,addr,fill,font,align)=>{
+    if(!ws[addr])ws[addr]={v:'',t:'s'};
+    ws[addr].s={fill:{patternType:'solid',...(fill||{})},font:font||{},alignment:align||{}};
+  };
+
+  // Linha 1 — título principal
+  ['A1','B1','C1','D1'].forEach(a=>setStyle(ws1,a,azulEsc,{bold:true,color:{rgb:'FFFFFF'},sz:14},{horizontal:'center'}));
+  if(ws1['A1'])ws1['A1'].v='GEOTRADE — SIMULAÇÃO DE IMPORTAÇÃO';
+
+  // Cabeçalhos de seção
+  const secRows=[3,7,11,17,25,37]; // linhas de cabeçalho (0-indexed = linha-1)
+  const secLabels=['IDENTIFICAÇÃO DO PRODUTO','PARÂMETROS DA OPERAÇÃO','BASE DE CÁLCULO (CIF)','TRIBUTOS','DESPESAS OPERACIONAIS','CAMPOS EDITÁVEIS'];
+  secRows.forEach((row,i)=>{
+    const addr='A'+(row+1);
+    setStyle(ws1,addr,azulMed,{bold:true,color:{rgb:'FFFFFF'}},{});
+  });
+
+  // Linha total final
+  setStyle(ws1,'D'+(resumo.length-7+1),verde,{bold:true,color:{rgb:'065F46'}},{horizontal:'right'});
+
+  // ── ABA 2: MEMÓRIA DE CÁLCULO ──
+  const mem=[
+    ['MEMÓRIA DE CÁLCULO DETALHADA','','',''],
+    ['Gerado por GeoTrade · geotradeapp.com.br','','',''],
+    ['','','',''],
+    ['PASSO','DESCRIÇÃO','FÓRMULA','VALOR (R$)'],
+    ['1','Valor FOB em BRL','FOB × Câmbio',r.fobBRL],
+    ['2','Frete em BRL','Frete × Câmbio',r.frBRL],
+    ['3','Seguro em BRL','Seguro × Câmbio',r.sgBRL],
+    ['4','Valor CIF','FOB_BRL + Frete_BRL + Seguro_BRL',r.cifBRL],
+    ['5','II (Imposto de Importação)','CIF × '+((selNcm.II||0)*100).toFixed(0)+'%',r.II],
+    ['6','IPI','(CIF + II) × '+((selNcm.IPI||0)*100).toFixed(0)+'%',r.IPI],
+    ['7','PIS/PASEP','CIF × 2,10%',r.PIS],
+    ['8','COFINS','CIF × 9,65%',r.COFINS],
+    ['9','AFRMM',afrmm?'Frete_BRL × 8% + R$20':'Não aplicável',afrmm?r.AFRMM:0],
+    ['10','ICMS por dentro','(CIF+II+IPI+PIS+COFINS+AFRMM+Desp) ÷ (1-'+((icms)*100).toFixed(1)+'%)',r.ICMS],
+    ['','Total tributos','',r.trib],
+    ['11','Despacho aduaneiro','R$1.200 base + 0,3% do CIF',dep],
+    ['12','Capatazia/THC','Fixo por contêiner',cap],
+    ['13','Armazenagem','Estimado após free time',arm],
+    ['14','Frete interno','Porto de destino → cliente',fi],
+    ['15','Demurrage','Dias × diária × (1-desconto)',dem],
+    ['','Total despesas','',dep+cap+arm+fi+dem],
+    ['','','',''],
+    ['','CUSTO TOTAL DESEMBARAÇADO','',totalFinal],
+  ];
+
+  const ws2=XLSX.utils.aoa_to_sheet(mem);
+  ws2['!cols']=[{wch:8},{wch:35},{wch:40},{wch:18}];
+
+  XLSX.utils.book_append_sheet(wb,ws1,'Resumo Executivo');
+  XLSX.utils.book_append_sheet(wb,ws2,'Memória de Cálculo');
+
   const nome=`GeoTrade_${selNcm.code.replace(/\./g,'')}_${dt.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb,nome);
 }
