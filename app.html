@@ -1120,6 +1120,10 @@ iframe{border-radius:var(--r);}
     <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="11" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
     Admin<span class="admin-badge">ADM</span>
   </div>
+  <div class="ni" onclick="showTab('dashboard')">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7.5" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="7.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Dashboard
+  </div>
   <div class="ni" onclick="showTab('alertas')">
     <svg viewBox="0 0 14 14" fill="none"><path d="M7 1a3.5 3.5 0 013.5 3.5c0 2.5 1 3.5 1 3.5H2.5s1-1 1-3.5A3.5 3.5 0 017 1z" stroke="currentColor" stroke-width="1.2"/><path d="M6 12h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
     Regimes & Benefícios
@@ -1267,6 +1271,43 @@ iframe{border-radius:var(--r);}
             <div class="field"><div class="fl">Frete interno <span class="fa" id="fi-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="fi" placeholder="0,00" oninput="calcular()" step="200" style="padding-left:34px;"></div></div>
             <div class="field"><div class="fl">Quantidade (opcional)</div><input type="number" id="qtd" placeholder="Unidades" oninput="calcular()" step="1"></div>
           </div>
+          <!-- DEMURRAGE #3 -->
+          <div class="tog-row" style="margin-top:8px;">
+            <div><div class="tog-lbl">Demurrage (sobreestadia no porto)</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">Custo de alocação em armazém além do free time do armador</div></div>
+            <label class="sw"><input type="checkbox" id="demurrage-ativo" onchange="calcDemurrage()"><span class="sw-t"></span></label>
+          </div>
+          <div id="demurrage-box" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:12px;">
+            <div class="fr3">
+              <div class="field">
+                <div class="fl">Free time do armador (dias grátis)</div>
+                <select id="dem-freetime" onchange="calcDemurrage()">
+                  <option value="7">7 dias (padrão)</option>
+                  <option value="10">10 dias</option>
+                  <option value="14">14 dias</option>
+                  <option value="21">21 dias</option>
+                  <option value="0">Sem free time</option>
+                </select>
+              </div>
+              <div class="field">
+                <div class="fl">Dias de sobreestadia</div>
+                <input type="number" id="dem-dias" placeholder="0" min="0" oninput="calcDemurrage()" step="1">
+              </div>
+              <div class="field">
+                <div class="fl">Custo por dia (R$)</div>
+                <div class="iw"><span class="ip">R$</span><input type="number" id="dem-diaria" placeholder="500" value="500" oninput="calcDemurrage()" step="50" style="padding-left:34px;"></div>
+              </div>
+            </div>
+            <div class="fr2" style="margin-top:8px;">
+              <div class="field">
+                <div class="fl">Desconto negociado com armador (%)</div>
+                <input type="number" id="dem-desconto" placeholder="0" min="0" max="100" value="0" oninput="calcDemurrage()" step="5">
+              </div>
+              <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Custo demurrage estimado</div>
+                <div style="font-size:16px;font-weight:600;color:var(--warn);font-family:var(--mono);" id="dem-resultado">R$ 0</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- CÂMBIO -->
@@ -1307,7 +1348,7 @@ iframe{border-radius:var(--r);}
         </div>
 
         <div class="card">
-          <div class="ct">Resultado <div style="display:flex;gap:6px;"><span id="modal-lbl" style="font-size:10px;color:var(--text3);">🚢 Marítimo</span><div class="btn-pdf" onclick="exportPDF()"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v8H2z" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v3h3M4.5 8.5h5M4.5 10.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>PDF</div></div></div>
+          <div class="ct">Resultado <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span id="modal-lbl" style="font-size:10px;color:var(--text3);">🚢 Marítimo</span><div class="btn-pdf" onclick="exportPDF()"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2h7l3 3v8H2z" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v3h3M4.5 8.5h5M4.5 10.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>PDF</div><div class="btn-pdf" onclick="exportExcel()" style="background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.25);color:var(--success);" title="Exportar planilha editável"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2h10v10H2z" stroke="currentColor" stroke-width="1.2"/><path d="M5 2v10M2 5h10M2 8h10" stroke="currentColor" stroke-width="1.2"/></svg>Excel</div><div class="btn-pdf" onclick="compartilharWhatsApp()" style="background:rgba(37,211,102,.10);border-color:rgba(37,211,102,.25);color:#25d366;" title="Compartilhar via WhatsApp"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1a6 6 0 016 6 6 6 0 01-6 6 6 6 0 01-3.2-.93L1 13l.93-2.8A6 6 0 011 7a6 6 0 016-6z" stroke="currentColor" stroke-width="1.2"/></svg>Zap</div></div></div>
           <div id="res-vazio" style="padding:18px 0;text-align:center;color:var(--text3);font-size:12px;">← Selecione um NCM e informe o valor FOB</div>
           <div id="res-corpo" style="display:none;">
             <div id="score-area" style="margin-bottom:10px;"></div>
@@ -1330,6 +1371,7 @@ iframe{border-radius:var(--r);}
             <div class="rl"><span class="rl-l">Capatazia/THC</span><span class="rl-v" id="r-cap">—</span></div>
             <div class="rl"><span class="rl-l">Armazenagem</span><span class="rl-v" id="r-arm">—</span></div>
             <div class="rl"><span class="rl-l">Frete interno</span><span class="rl-v" id="r-fi">—</span></div>
+            <div class="rl" id="r-dem-row" style="display:none;"><span class="rl-l">Demurrage <span class="rl-a" style="color:var(--warn);">sobreestadia</span></span><span class="rl-v" id="r-dem" style="color:var(--warn);">—</span></div>
             <div class="total-card">
               <div class="tr2"><span>Total tributos</span><span class="v" id="r-trib">—</span></div>
               <div class="tr2"><span>Total despesas operacionais</span><span class="v" id="r-dop">—</span></div>
@@ -1526,6 +1568,51 @@ iframe{border-radius:var(--r);}
           <button onclick="ncmPageNext()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;cursor:pointer;color:var(--text2);font-size:11px;">Próxima →</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ DASHBOARD #10 ══ -->
+  <div class="section" id="sec-dashboard">
+    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:16px;">
+      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent-bright);margin-bottom:4px;">Dashboard de Importações</div>
+      <div style="font-size:12px;color:var(--text2);">Acompanhe o volume, tributos e evolução das suas simulações.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Total simulações</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--text);" id="dash-total-sims">—</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Volume FOB (USD)</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--accent);" id="dash-total-fob">—</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Custo total est.</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--warn);" id="dash-total-custo">—</div></div>
+      <div class="card" style="text-align:center;padding:14px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Carga trib. média</div><div style="font-size:24px;font-weight:700;font-family:var(--head);color:var(--danger);" id="dash-media-carga">—</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="ct">Período
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button onclick="dashFiltrar('30')" id="dpb-30" style="font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--a4);background:var(--a3);color:var(--accent);">30 dias</button>
+          <button onclick="dashFiltrar('90')" id="dpb-90" style="font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);">90 dias</button>
+          <button onclick="dashFiltrar('180')" id="dpb-180" style="font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);">6 meses</button>
+          <button onclick="dashFiltrar('365')" id="dpb-365" style="font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);">12 meses</button>
+          <button onclick="dashFiltrar('0')" id="dpb-0" style="font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);">Tudo</button>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Simulações por mês</div>
+        <div id="dash-chart-bars" style="display:flex;align-items:flex-end;gap:4px;height:80px;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Por origem</div>
+          <div id="dash-pizza-origens"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Top NCMs</div>
+          <div id="dash-top-ncms"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Histórico detalhado
+        <button onclick="dashExportarCSV()" style="font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--s3);background:var(--s2);color:var(--success);">⬇ CSV</button>
+      </div>
+      <div id="dash-tabela" style="overflow-x:auto;"></div>
     </div>
   </div>
 
@@ -24620,7 +24707,11 @@ function calcular(){
   set('r-fob',R(r.fobBRL));set('r-fr',R(r.frBRL));set('r-sg',R(r.sgBRL));set('r-cif',R(r.cifBRL));
   set('r-ii',R(r.II));set('r-ipi',R(r.IPI));set('r-pis',R(r.PIS));set('r-cofins',R(r.COFINS));set('r-icms',R(r.ICMS));
   set('r-desp',R(dep));set('r-cap',R(cap));set('r-arm',R(arm));set('r-fi',R(fi));
-  set('r-trib',R(r.trib));set('r-dop',R(r.dop));set('r-total',R0(r.total));
+  // Demurrage
+  const dem = window._demurrageVal||0;
+  if(dem>0){const rd=document.getElementById('r-dem');if(rd)rd.textContent=R(dem);}
+  const totalComDem = r.total + dem;
+  set('r-trib',R(r.trib));set('r-dop',R(r.dop+dem));set('r-total',R0(totalComDem));
   set('r-cp',pct(carga));set('r-ii-a',(selNcm.II*100).toFixed(0)+'%');
   set('r-ipi-a',(selNcm.IPI*100).toFixed(0)+'%');
   set('r-icms-a',pct(icms*100));
@@ -24723,7 +24814,7 @@ function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').class
 function onFreteManual(){freteManual=true;document.getElementById('frete-hint').textContent='manual';calcular();}
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard'];
   allTabs.forEach(s=>{document.getElementById('sec-'+s)?.classList.remove('active');document.getElementById('tab-'+s)?.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+name)?.classList.add('active');
@@ -24746,6 +24837,7 @@ function showTab(name){
   if(name==='admin'&&window.gtIsAdmin){loadAdminData();}
   if(name==='fretes'){renderFretesTable('todos');}
   if(name==='monitor'){renderMonitorList();}
+  if(name==='dashboard'){renderDashboard();}
   if(name==='antecip'){
     const c=document.getElementById('ant-cambio');
     if(c&&!c.value&&taxas.USD)c.value=taxas.USD.toFixed(4);
@@ -24775,6 +24867,112 @@ function showTab(name){
     }
     calcPV();
   }
+}
+
+// ── EXPORTAR EXCEL #5 ──
+function exportExcel(){
+  if(!selNcm||!parseFloat(document.getElementById('fob')?.value)){
+    alert('Preencha o simulador antes de exportar.');return;
+  }
+  // Carregar SheetJS dinamicamente
+  if(!window.XLSX){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>_gerarExcel();
+    document.head.appendChild(s);
+  } else {
+    _gerarExcel();
+  }
+}
+
+function _gerarExcel(){
+  const fob=parseFloat(document.getElementById('fob').value)||0;
+  const cambio=parseFloat(document.getElementById('cambio').value)||5.22;
+  const icms=parseFloat(document.getElementById('estado').value)||.18;
+  const fr=parseFloat(document.getElementById('frete').value)||0;
+  const sg=parseFloat(document.getElementById('seguro').value)||0;
+  const dep=parseFloat(document.getElementById('desp').value)||0;
+  const cap=parseFloat(document.getElementById('cap').value)||0;
+  const arm=parseFloat(document.getElementById('arm').value)||0;
+  const fi=parseFloat(document.getElementById('fi').value)||0;
+  const dem=window._demurrageVal||0;
+  const afrmm=document.getElementById('afrmm')?.checked&&modalAtual==='m';
+  const porto=document.getElementById('porto')?.value||'santos';
+  const estEl=document.getElementById('estado');
+  const estadoTxt=estEl?estEl.options[estEl.selectedIndex]?.text||'':'';
+  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm);
+  const totalFinal=r.total+dem;
+  const dt=new Date().toLocaleDateString('pt-BR');
+
+  // Dados da planilha
+  const rows=[
+    ['GEOTRADE — Simulação de Importação','','',''],
+    ['Gerado em: '+dt,'','',''],
+    ['','','',''],
+    ['PRODUTO','','',''],
+    ['NCM',selNcm.code,'',''],
+    ['Descrição',selNcm.desc,'',''],
+    ['Alíquota II',(selNcm.II*100).toFixed(0)+'%','',''],
+    ['Alíquota IPI',(selNcm.IPI*100).toFixed(0)+'%','',''],
+    ['','','',''],
+    ['OPERAÇÃO','','',''],
+    ['Origem',origemSel,'',''],
+    ['Modal',modalAtual==='m'?'Marítimo':modalAtual==='a'?'Aéreo':'Rodoviário','',''],
+    ['Porto destino',porto,'',''],
+    ['Estado destino',estadoTxt,'',''],
+    ['Câmbio USD/BRL',cambio,'',''],
+    ['','','',''],
+    ['BASE CIF','Valor (USD)','Valor (R$)',''],
+    ['FOB',fob,r.fobBRL,''],
+    ['Frete internacional',fr,r.frBRL,''],
+    ['Seguro',sg,r.sgBRL,''],
+    ['CIF Total','',r.cifBRL,''],
+    ['','','',''],
+    ['TRIBUTOS','Base','Alíquota','Valor (R$)'],
+    ['II — Imposto de Importação',r.cifBRL,(selNcm.II*100).toFixed(0)+'%',r.II],
+    ['IPI',r.cifBRL+r.II,(selNcm.IPI*100).toFixed(0)+'%',r.IPI],
+    ['PIS',r.cifBRL,'2,10%',r.PIS],
+    ['COFINS',r.cifBRL,'9,65%',r.COFINS],
+    ['AFRMM',fr*cambio,afrmm?'8%':'—',afrmm?r.AFRMM:0],
+    ['ICMS (por dentro)',r.cifBRL,(icms*100).toFixed(1)+'%',r.ICMS],
+    ['TOTAL TRIBUTOS','','',r.trib],
+    ['','','',''],
+    ['DESPESAS OPERACIONAIS','','','Valor (R$)'],
+    ['Despacho aduaneiro','','',dep],
+    ['Capatazia/THC','','',cap],
+    ['Armazenagem','','',arm],
+    ['Frete interno','','',fi],
+    ['Demurrage','','',dem],
+    ['TOTAL DESPESAS','','',dep+cap+arm+fi+dem],
+    ['','','',''],
+    ['RESULTADO FINAL','','',''],
+    ['CUSTO TOTAL DESEMBARAÇADO','','',totalFinal],
+    ['Carga tributária sobre CIF','',(r.trib/r.cifBRL*100).toFixed(1)+'%',''],
+    ['Markup total sobre FOB','',(((totalFinal/(fob*cambio))-1)*100).toFixed(0)+'%',''],
+    ['','','',''],
+    ['CAMPOS EDITÁVEIS — ajuste conforme sua operação real','','',''],
+    ['Custo adicional 1 (descreva aqui)','','',0],
+    ['Custo adicional 2 (descreva aqui)','','',0],
+    ['Margem desejada (%)','','',0],
+    ['Preço de venda sugerido','','','=SOMA(D41:D43)*(1+D44/100)'],
+  ];
+
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+
+  // Larguras das colunas
+  ws['!cols']=[{wch:35},{wch:20},{wch:15},{wch:18}];
+
+  // Mesclar título
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:3}},
+    {s:{r:1,c:0},e:{r:1,c:3}},
+    {s:{r:44,c:0},e:{r:44,c:3}},
+  ];
+
+  XLSX.utils.book_append_sheet(wb,ws,'Simulação GeoTrade');
+  const nome=`GeoTrade_${selNcm.code.replace(/\./g,'')}_${dt.replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb,nome);
 }
 
 function exportPDF(){
@@ -25635,6 +25833,227 @@ function toggleTheme() {
   const preferLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
   applyTheme(saved || (preferLight ? 'light' : 'dark'));
 })();
+
+// ── DEMURRAGE #3 ──
+function calcDemurrage(){
+  const ativo = document.getElementById('demurrage-ativo')?.checked;
+  const box = document.getElementById('demurrage-box');
+  if(box) box.style.display = ativo ? 'block' : 'none';
+  if(!ativo){
+    window._demurrageVal = 0;
+    const row = document.getElementById('r-dem-row');
+    if(row) row.style.display = 'none';
+    calcular();
+    return;
+  }
+  const dias = parseFloat(document.getElementById('dem-dias')?.value)||0;
+  const diaria = parseFloat(document.getElementById('dem-diaria')?.value)||500;
+  const desconto = parseFloat(document.getElementById('dem-desconto')?.value)||0;
+  const total = dias * diaria * (1 - desconto/100);
+  const resEl = document.getElementById('dem-resultado');
+  if(resEl) resEl.textContent = 'R$ ' + Math.round(total).toLocaleString('pt-BR');
+  window._demurrageVal = total;
+  const row = document.getElementById('r-dem-row');
+  if(row) row.style.display = total > 0 ? 'flex' : 'none';
+  calcular();
+}
+
+// ── DASHBOARD #10 ──
+let dashPeriodo = 30;
+
+async function renderDashboard(){
+  const el = document.getElementById('dash-tabela');
+  if(!el) return;
+  if(!window.gtUser){
+    el.innerHTML = '<div style="text-align:center;padding:30px;font-size:13px;color:var(--text3);">Faça login para ver seu dashboard.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;justify-content:center;"><div class="spin"></div>Carregando...</div>';
+  try {
+    const {getDocs,query,collection,where,orderBy} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const snap = await getDocs(query(collection(db,'simulacoes'), where('uid','==',window.gtUser.uid), orderBy('ts','desc')));
+    const sims = snap.docs.map(d=>({id:d.id,...d.data()}));
+    dashRenderComDados(sims);
+  } catch(e){
+    // Fallback: usar histórico local
+    const local = window.salvarHistoricoLocal ? [] : [];
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:12px;">Erro ao carregar. Verifique a conexão.</div>';
+  }
+}
+
+function dashFiltrar(dias){
+  dashPeriodo = parseInt(dias);
+  ['30','90','180','365','0'].forEach(d=>{
+    const btn = document.getElementById('dpb-'+d);
+    if(!btn) return;
+    const ativo = d === String(dias);
+    btn.style.background = ativo ? 'var(--a3)' : 'var(--bg3)';
+    btn.style.borderColor = ativo ? 'var(--a4)' : 'var(--border2)';
+    btn.style.color = ativo ? 'var(--accent)' : 'var(--text2)';
+  });
+  renderDashboard();
+}
+
+function dashRenderComDados(sims){
+  // Filtrar por período
+  const agora = Date.now();
+  const filtradas = dashPeriodo === 0 ? sims : sims.filter(s=>{
+    const ts = s.ts?.toDate?.()?.getTime() || 0;
+    return (agora - ts) <= dashPeriodo * 86400000;
+  });
+
+  // KPIs
+  const totalFob = filtradas.reduce((s,h)=>s+(parseFloat(h.fob)||0),0);
+  const totalCusto = filtradas.reduce((s,h)=>s+(parseFloat(h.total)||0),0);
+  const cargas = filtradas.map(h=>parseFloat(h.carga)||0).filter(v=>v>0);
+  const mediaC = cargas.length ? cargas.reduce((a,b)=>a+b,0)/cargas.length : 0;
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('dash-total-sims', filtradas.length.toLocaleString('pt-BR'));
+  set('dash-total-fob', 'USD '+Math.round(totalFob).toLocaleString('pt-BR'));
+  set('dash-total-custo', 'R$ '+Math.round(totalCusto/1000)+'k');
+  set('dash-media-carga', mediaC.toFixed(1)+'%');
+
+  // Gráfico de barras por mês
+  const porMes = {};
+  filtradas.forEach(s=>{
+    const d = s.ts?.toDate?.() || new Date();
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    porMes[key] = (porMes[key]||0)+1;
+  });
+  const meses = Object.keys(porMes).sort().slice(-6);
+  const maxVal = Math.max(...meses.map(m=>porMes[m]),1);
+  const barsEl = document.getElementById('dash-chart-bars');
+  if(barsEl){
+    barsEl.innerHTML = meses.map(m=>{
+      const v = porMes[m];
+      const h = Math.max(8, Math.round((v/maxVal)*72));
+      const [ano,mes] = m.split('-');
+      const label = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mes)-1];
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;">
+        <div style="font-size:9px;color:var(--accent);">${v}</div>
+        <div style="width:100%;height:${h}px;background:var(--accent);border-radius:3px 3px 0 0;opacity:.8;"></div>
+        <div style="font-size:9px;color:var(--text3);">${label}</div>
+      </div>`;
+    }).join('');
+    if(!meses.length) barsEl.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:10px;">Nenhuma simulação no período.</div>';
+  }
+
+  // Por origem
+  const porOrigem = {};
+  filtradas.forEach(s=>{ const o=s.moeda||'—'; porOrigem[o]=(porOrigem[o]||0)+1; });
+  const origEl = document.getElementById('dash-pizza-origens');
+  if(origEl){
+    const total = filtradas.length||1;
+    origEl.innerHTML = Object.entries(porOrigem).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>{
+      const pct = Math.round(v/total*100);
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+        <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
+        </div>
+        <span style="font-size:10px;color:var(--text2);min-width:60px;">${k} (${pct}%)</span>
+      </div>`;
+    }).join('') || '<div style="font-size:11px;color:var(--text3);">Sem dados.</div>';
+  }
+
+  // Top NCMs
+  const porNcm = {};
+  filtradas.forEach(s=>{ if(s.ncmCode){ const k=s.ncmCode; porNcm[k]=(porNcm[k]||0)+1; }});
+  const ncmEl = document.getElementById('dash-top-ncms');
+  if(ncmEl){
+    ncmEl.innerHTML = Object.entries(porNcm).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;">
+        <span style="color:var(--accent);font-family:var(--mono);">${k}</span>
+        <span style="color:var(--text3);">${v}x</span>
+      </div>`).join('') || '<div style="font-size:11px;color:var(--text3);">Sem dados.</div>';
+  }
+
+  // Tabela
+  const tblEl = document.getElementById('dash-tabela');
+  if(tblEl){
+    if(!filtradas.length){
+      tblEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:16px;text-align:center;">Nenhuma simulação no período selecionado.</div>';
+      return;
+    }
+    tblEl.innerHTML = `<table class="nt" style="width:100%;font-size:11px;">
+      <thead><tr><th>Data</th><th>NCM</th><th>FOB (USD)</th><th>Total (R$)</th><th>Carga trib.</th><th>Estado</th></tr></thead>
+      <tbody>${filtradas.slice(0,50).map(s=>{
+        const dt = s.ts?.toDate?.()?.toLocaleDateString('pt-BR')||'—';
+        return `<tr>
+          <td style="color:var(--text3);">${dt}</td>
+          <td style="font-family:var(--mono);color:var(--accent);">${s.ncmCode||'—'}</td>
+          <td style="font-family:var(--mono);">USD ${Math.round(s.fob||0).toLocaleString('pt-BR')}</td>
+          <td style="font-family:var(--mono);font-weight:500;">R$ ${Math.round(s.total||0).toLocaleString('pt-BR')}</td>
+          <td>${s.carga||'—'}</td>
+          <td style="color:var(--text3);">${s.estado||'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+}
+
+function dashExportarCSV(){
+  const tabela = document.getElementById('dash-tabela');
+  if(!tabela) return;
+  const rows = [['Data','NCM','Descrição','FOB USD','Total R$','Carga Tributária','Estado']];
+  tabela.querySelectorAll('tbody tr').forEach(tr=>{
+    const tds = tr.querySelectorAll('td');
+    rows.push(Array.from(tds).map(td=>'"'+td.textContent.trim()+'"'));
+  });
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download = 'GeoTrade_Dashboard_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.csv';
+  a.click();
+}
+
+// ── WHATSAPP #6 ──
+function compartilharWhatsApp(){
+  if(!selNcm||!parseFloat(document.getElementById('fob')?.value)){
+    alert('Faça uma simulação antes de compartilhar.');return;
+  }
+  const fob = parseFloat(document.getElementById('fob').value)||0;
+  const cambio = parseFloat(document.getElementById('cambio').value)||5.22;
+  const totalEl = document.getElementById('r-total');
+  const total = totalEl?.textContent||'—';
+  const carga = document.getElementById('r-cp')?.textContent||'—';
+  const estEl = document.getElementById('estado');
+  const estado = estEl?.options[estEl.selectedIndex]?.text||'';
+  const dt = new Date().toLocaleDateString('pt-BR');
+  const msg = `🌍 *GeoTrade — Simulação de Importação*
+📅 ${dt}
+
+📦 *Produto:* ${selNcm.code} — ${selNcm.desc.substring(0,50)}
+💰 *FOB:* USD ${fob.toLocaleString('pt-BR')}
+💱 *Câmbio:* R$ ${cambio}
+🏛️ *Estado:* ${estado}
+
+💵 *Custo total desembaraçado:* ${total}
+📊 *Carga tributária:* ${carga}
+
+_Simulado via GeoTrade · geotradeapp.com.br_`;
+
+  const url = 'https://wa.me/?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+}
+
+// ── PLANOS REVISADOS #12 ──
+// Diferenciais por plano:
+// Free: 5 sim/mês, sem histórico nuvem, sem Excel, sem WhatsApp
+// Starter (R$197): ilimitado, histórico nuvem, Excel, WhatsApp, Dashboard
+// Pro (R$497): + side-by-side avançado, + comparador origens, + relatórios
+// Enterprise (R$1.497): multi-usuário, API, suporte prioritário
+
+function checkPlanoFeature(feature){
+  const plano = window.gtPlan || 'free';
+  const features = {
+    free:       ['sim_basico'],
+    starter:    ['sim_basico','historico','excel','whatsapp','dashboard'],
+    pro:        ['sim_basico','historico','excel','whatsapp','dashboard','sbs','origens','antecip','relatorios'],
+    enterprise: ['sim_basico','historico','excel','whatsapp','dashboard','sbs','origens','antecip','relatorios','api','multi_user'],
+  };
+  return (features[plano]||features.free).includes(feature);
+}
 
 // ── MOBILE MORE MENU ──
 function toggleMobileMore(){
