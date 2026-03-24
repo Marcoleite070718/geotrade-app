@@ -1346,23 +1346,14 @@ iframe{border-radius:var(--r);}
             </div>
           </div>
           <div id="ncm-empty" style="font-size:11px;color:var(--text3);padding:2px 0 8px;">Base Siscomex carregando... Selecione um NCM para ver alíquotas.</div>
-          <!-- MULTI-NCM: itens adicionais na simulação -->
+          <!-- MULTI-NCM: itens adicionais somam ao FOB -->
           <div id="multi-ncm-area" style="display:none;margin-top:10px;border-top:1px solid var(--border2);padding-top:10px;">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Produtos adicionais nesta importação</div>
-            <!-- Cabeçalho das colunas -->
-            <div style="display:grid;grid-template-columns:1fr 100px 70px 28px;gap:6px;padding:0 0 4px;margin-bottom:4px;border-bottom:1px solid var(--border);">
-              <div style="font-size:10px;color:var(--text3);">NCM / Produto</div>
-              <div style="font-size:10px;color:var(--text3);">FOB unit. (USD)</div>
-              <div style="font-size:10px;color:var(--text3);">Qtd</div>
-              <div></div>
-            </div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Produtos adicionais nesta importação</div>
             <div id="multi-ncm-list"></div>
           </div>
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;" id="multi-ncm-add-area">
-            <button id="btn-add-ncm" onclick="addMultiNCM()" style="display:none;background:var(--teal2);border:1px solid rgba(6,182,212,.3);border-radius:7px;padding:5px 12px;color:var(--teal);cursor:pointer;font-size:11px;font-family:var(--body);">+ Adicionar outro NCM</button>
-          </div>
-          <!-- Resultado consolidado multi-NCM (aparece na própria aba) -->
-          <div id="multi-ncm-result" style="display:none;margin-top:12px;"></div><div class="field" id="peso-field" style="display:none;">
+          <div style="margin-top:8px;" id="multi-ncm-add-area">
+            <button id="btn-add-ncm" onclick="addMultiNCM()" style="display:none;background:var(--teal2);border:1px solid rgba(6,182,212,.3);border-radius:7px;padding:5px 14px;color:var(--teal);cursor:pointer;font-size:11px;font-family:var(--body);">+ Adicionar outro NCM</button>
+          </div><div class="field" id="peso-field" style="display:none;">
             <div class="fl">Peso estimado <span class="fa" id="peso-hint">por categoria NCM</span>
               <span style="font-size:9px;color:var(--text3);margin-left:4px;" title="Se souber o peso real, substitua o valor estimado">✏ editável</span>
             </div>
@@ -1421,6 +1412,7 @@ iframe{border-radius:var(--r);}
             <div class="fl">Valor FOB <span class="fh" id="fob-cur-lbl">em USD</span></div>
             <div class="iw"><span class="ip" id="fob-cur">USD</span><input type="number" id="fob" placeholder="0.00" oninput="calcular()" step="100" style="padding-left:34px;"></div>
           </div>
+          <div id="multi-ncm-fob-badge" style="display:none;font-size:10px;color:var(--teal);font-family:var(--mono);margin-top:3px;padding:3px 8px;background:var(--teal2);border-radius:5px;"></div>
           <div class="fr3">
             <div class="field"><div class="fl">Despacho <span class="fa" id="desp-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="desp" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="200" style="padding-left:34px;" title="Editável — o valor estimado pode ser substituído pelo real"></div></div>
             <div class="field"><div class="fl">Capatazia/THC <span class="fa" id="cap-hint">est.</span></div><div class="iw"><span class="ip">R$</span><input type="number" id="cap" placeholder="0,00" oninput="this.dataset.manual='1';calcular()" step="100" style="padding-left:34px;" title="Editável"></div></div>
@@ -2540,7 +2532,8 @@ iframe{border-radius:var(--r);}
       </button>
     </div>
     <div id="pf-msg" style="text-align:right;font-size:11px;margin-top:6px;min-height:16px;"></div>
-  </div>
+  
+
 
     <!-- ══ SKUs DA EMPRESA ══ -->
     <div class="card" style="margin-top:12px;">
@@ -2598,6 +2591,7 @@ iframe{border-radius:var(--r);}
         <button onclick="exportarPackingListPDF()" style="flex:1;padding:10px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:500;">📄 Exportar PDF</button>
       </div>
     </div>
+  </div>
 
   <!-- ══ ADMIN ══ -->
   <div class="section" id="sec-admin" style="display:none">
@@ -24693,7 +24687,10 @@ function autoEstimar(){
 
 function calcular(){
   if(modoAuto)autoEstimar();
-  const fob=parseFloat(document.getElementById('fob').value);
+  // FOB = campo principal + NCMs adicionais (multi-NCM)
+  const fobCampo=parseFloat(document.getElementById('fob').value)||0;
+  const fobExtras=window._fobExtras||0;
+  const fob=fobCampo+fobExtras;
   const fr=parseFloat(document.getElementById('frete').value)||0;
   const sg=parseFloat(document.getElementById('seguro').value)||0;
   const cambio=parseFloat(document.getElementById('cambio').value);
@@ -27465,18 +27462,19 @@ function toggleAliqEdit(){
 }
 
 // ── MULTI-NCM INLINE no simulador ──
+// Fluxo: NCMs adicionais somam ao FOB principal → simulação roda normalmente
 var multiNcmItens = [];
 var multiNcmNextId = 1;
 var mnTimers = {};
 
 function mostrarBtnAddNCM(){
   var btn = document.getElementById('btn-add-ncm');
-  if(btn) btn.style.display = 'inline-flex';
+  if(btn) btn.style.display = 'inline-block';
 }
 
 function addMultiNCM(){
   var id = multiNcmNextId++;
-  multiNcmItens.push({id:id, ncm:'', desc:'', fob:0, qtd:1, II:0.14, IPI:0});
+  multiNcmItens.push({id:id, ncm:'', desc:'', fobUnit:0, qtd:1, II:0.14, IPI:0});
   renderMultiNCM();
   setTimeout(function(){
     var inp = document.getElementById('mn-inp-'+id);
@@ -27487,12 +27485,14 @@ function addMultiNCM(){
 function removeMultiNCM(id){
   multiNcmItens = multiNcmItens.filter(function(x){ return x.id !== id; });
   renderMultiNCM();
+  recalcularFOBTotal();
 }
 
 function updateMultiNCM(id, field, val){
   var item = multiNcmItens.find(function(x){ return x.id === id; });
-  if(item) item[field] = parseFloat(val) || 0;
-  calcMultiNCMResult();
+  if(!item) return;
+  item[field] = field === 'desc' ? val : (parseFloat(val) || 0);
+  recalcularFOBTotal();
 }
 
 function buscarNCMInline(id, query){
@@ -27508,7 +27508,8 @@ function buscarNCMInline(id, query){
       return n.code.replace(/\./g,'').startsWith(q) ||
              (n.desc||'').toLowerCase().includes(query.toLowerCase()) ||
              (n.tags||'').toLowerCase().includes(query.toLowerCase());
-    }).slice(0,5);
+    }).slice(0,1);
+
     var info = document.getElementById('mn-info-'+id);
     if(results.length > 0){
       var found = results[0];
@@ -27518,50 +27519,113 @@ function buscarNCMInline(id, query){
       item.IPI  = getIPI(found.code);
       var inp = document.getElementById('mn-inp-'+id);
       if(inp) inp.value = found.desc.substring(0,40);
-      if(info) info.textContent = found.code + ' · II ' + (item.II*100).toFixed(0) + '% · IPI ' + (item.IPI*100).toFixed(0) + '%';
+      if(info){
+        var aliqEdit = document.getElementById('mn-aliq-'+id);
+        info.textContent = found.code + ' · II ' + (item.II*100).toFixed(0) + '% · IPI ' + (item.IPI*100).toFixed(0) + '%';
+        info.style.color = 'var(--teal)';
+        // Preencher campos de alíquota
+        var iiEl = document.getElementById('mn-ii-'+id);
+        var ipiEl = document.getElementById('mn-ipi-'+id);
+        if(iiEl) iiEl.value = (item.II*100).toFixed(1);
+        if(ipiEl) ipiEl.value = (item.IPI*100).toFixed(1);
+      }
       // Busca alíquota real async
       fetchAliqTEC(found.code).then(function(res){
         if(res && item.ncm === found.code){
           item.II = res.ii; item.IPI = res.ipi;
-          if(info) info.textContent = found.code + ' · II ' + (res.ii*100).toFixed(0) + '% · IPI ' + (res.ipi*100).toFixed(0) + '% · ' + (res.fonte||'RF');
-          calcMultiNCMResult();
+          if(info) info.textContent = found.code + ' · II ' + (res.ii*100).toFixed(0) + '% · IPI ' + (res.ipi*100).toFixed(0) + '%';
+          var iiEl2 = document.getElementById('mn-ii-'+id);
+          var ipiEl2 = document.getElementById('mn-ipi-'+id);
+          if(iiEl2 && !iiEl2.dataset.manual) iiEl2.value = (res.ii*100).toFixed(1);
+          if(ipiEl2 && !ipiEl2.dataset.manual) ipiEl2.value = (res.ipi*100).toFixed(1);
         }
       });
-      // Verificar SKUs vinculados a esse NCM
+      // Verificar SKUs vinculados
       verificarSKUsNCM(id, found.code);
-      calcMultiNCMResult();
     } else {
-      if(info) info.textContent = 'NCM não encontrado — tente o código numérico';
+      if(info){ info.textContent = 'NCM não encontrado — tente o código numérico'; info.style.color='var(--danger)'; }
     }
   }, 350);
 }
 
+function toggleAliqInline(id){
+  var el = document.getElementById('mn-aliq-'+id);
+  if(!el) return;
+  el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+}
+
+function aplicarAliqInline(id){
+  var item = multiNcmItens.find(function(x){ return x.id === id; });
+  if(!item) return;
+  var iiEl  = document.getElementById('mn-ii-'+id);
+  var ipiEl = document.getElementById('mn-ipi-'+id);
+  var ii    = parseFloat(iiEl && iiEl.value) || 0;
+  var ipi   = parseFloat(ipiEl && ipiEl.value) || 0;
+  item.II  = ii/100;
+  item.IPI = ipi/100;
+  if(iiEl)  iiEl.dataset.manual = '1';
+  if(ipiEl) ipiEl.dataset.manual = '1';
+  var info = document.getElementById('mn-info-'+id);
+  if(info) info.textContent = item.ncm + ' · II ' + ii.toFixed(0) + '% · IPI ' + ipi.toFixed(0) + '% · editado';
+  // Crowdsource
+  if(item.ncm) salvarAliqCrowdsource(item.ncm, ii, ipi);
+  recalcularFOBTotal();
+}
+
 function verificarSKUsNCM(itemId, ncmCode){
-  var skus = carregarSKUs().filter(function(s){ return s.ncm === ncmCode; });
   var skuArea = document.getElementById('mn-sku-'+itemId);
   if(!skuArea) return;
+  var skus = carregarSKUs().filter(function(s){ return s.ncm === ncmCode; });
   if(skus.length === 0){ skuArea.style.display='none'; return; }
   skuArea.style.display = 'block';
-  skuArea.innerHTML = '<div style="font-size:9px;color:var(--text3);margin-bottom:4px;font-family:var(--mono);">SKUs DESTE NCM NO SEU CATÁLOGO</div>'
+  skuArea.innerHTML = '<div style="font-size:9px;color:var(--text3);margin-bottom:4px;font-family:var(--mono);">SKUS DESTE NCM — clique para usar FOB</div>'
     + skus.map(function(s){ return '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:3px;cursor:pointer;">'
-      + '<input type="checkbox" onchange="aplicarSKUAoItem('+itemId+','+s.id+',this.checked)" style="cursor:pointer;">'
+      + '<input type="radio" name="mn-sku-sel-'+itemId+'" onchange="aplicarSKUAoItem('+itemId+','+s.id+')">'
       + '<span>' + s.nome + '</span>'
-      + '<span style="font-family:var(--mono);color:var(--text3);font-size:10px;">FOB: USD ' + fN(s.fob,2) + ' · ' + s.peso + 'kg · ' + s.cbm + 'm³</span>'
+      + '<span style="font-family:var(--mono);color:var(--text3);font-size:10px;">'
+      + 'USD ' + fN(s.fob,2) + ' · ' + s.peso + 'kg</span>'
       + '</label>'; }).join('');
 }
 
-function aplicarSKUAoItem(itemId, skuId, checked){
+function aplicarSKUAoItem(itemId, skuId){
   var item = multiNcmItens.find(function(x){ return x.id === itemId; });
   var sku  = carregarSKUs().find(function(s){ return s.id === skuId; });
   if(!item || !sku) return;
-  if(checked){
-    item.fob  = sku.fob;
-    item.desc = sku.nome;
-    // Atualizar campo FOB na tela
-    var fobEl = document.getElementById('mn-fob-'+itemId);
-    if(fobEl) fobEl.value = sku.fob;
-    calcMultiNCMResult();
+  item.fobUnit = sku.fob;
+  item.desc    = sku.nome;
+  var fobEl = document.getElementById('mn-fob-'+itemId);
+  if(fobEl) fobEl.value = sku.fob;
+  recalcularFOBTotal();
+}
+
+// Soma todos os NCMs adicionais ao FOB principal e recalcula
+function recalcularFOBTotal(){
+  if(!selNcm) return;
+  var fobEl = document.getElementById('fob');
+  if(!fobEl) return;
+
+  // FOB dos extras: fobUnit × qtd de cada item com NCM preenchido
+  var fobExtras = multiNcmItens.reduce(function(s, item){
+    return s + (item.ncm && item.fobUnit > 0 ? item.fobUnit * item.qtd : 0);
+  }, 0);
+
+  // Armazenar FOB extras para referência no resultado
+  window._fobExtras = fobExtras;
+  window._multiNcmItens = multiNcmItens;
+
+  // Atualizar badge de soma
+  var badge = document.getElementById('multi-ncm-fob-badge');
+  if(badge){
+    if(fobExtras > 0){
+      badge.style.display = 'block';
+      badge.textContent = '+ USD ' + fN(fobExtras, 2) + ' de ' + multiNcmItens.filter(function(x){return x.ncm&&x.fobUnit>0;}).length + ' NCM(s) adicional(is) — incluído no FOB total';
+    } else {
+      badge.style.display = 'none';
+    }
   }
+
+  // Recalcular o simulador (ele pega o FOB do campo + extras internamente)
+  calcular();
 }
 
 function renderMultiNCM(){
@@ -27570,33 +27634,43 @@ function renderMultiNCM(){
   if(!list) return;
   if(multiNcmItens.length === 0){
     if(area) area.style.display = 'none';
-    calcMultiNCMResult();
+    window._fobExtras = 0;
     return;
   }
   if(area) area.style.display = 'block';
 
   list.innerHTML = multiNcmItens.map(function(item){
     return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">'
-      // Linha 1: NCM + botão remover
-      + '<div style="display:grid;grid-template-columns:1fr 26px;gap:6px;align-items:start;margin-bottom:8px;">'
+      // Linha 1: busca NCM + remover
+      + '<div style="display:grid;grid-template-columns:1fr 26px;gap:6px;align-items:start;">'
       + '<div>'
-      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">NCM / Produto</div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">NCM / Produto adicional</div>'
       + '<input type="text" id="mn-inp-'+item.id+'" placeholder="Digite o nome ou código NCM..." value="'+(item.desc||'')+'"'
       + ' style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;"'
       + ' oninput="buscarNCMInline('+item.id+',this.value)">'
-      + '<div style="font-size:9px;color:var(--teal);font-family:var(--mono);margin-top:3px;min-height:14px;" id="mn-info-'+item.id+'">'
-      + (item.ncm ? item.ncm + ' · II ' + (item.II*100).toFixed(0) + '% · IPI ' + (item.IPI*100).toFixed(0) + '%' : '')
+      + '<div style="font-size:9px;font-family:var(--mono);margin-top:3px;min-height:14px;" id="mn-info-'+item.id+'">'
+      + (item.ncm ? '<span style="color:var(--teal)">'+item.ncm+' · II '+(item.II*100).toFixed(0)+'% · IPI '+(item.IPI*100).toFixed(0)+'%</span>' : '<span style="color:var(--text3)">selecione um NCM para ver alíquotas</span>')
+      + ' <span style="cursor:pointer;color:var(--accent);font-size:9px;" onclick="toggleAliqInline('+item.id+')" title="Ajustar alíquotas">✏</span>'
       + '</div>'
       + '</div>'
       + '<button onclick="removeMultiNCM('+item.id+')" style="background:var(--d2);border:none;border-radius:5px;width:26px;height:26px;color:var(--danger);cursor:pointer;font-size:14px;margin-top:18px;">&times;</button>'
       + '</div>'
+      // Painel alíquotas (oculto por padrão)
+      + '<div id="mn-aliq-'+item.id+'" style="display:none;margin-top:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      + '<label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px;">II (%) <input type="number" id="mn-ii-'+item.id+'" value="'+(item.II*100).toFixed(1)+'" step="0.5" min="0" max="35" style="width:60px;padding:3px 6px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:11px;" oninput="this.dataset.manual=1;aplicarAliqInline('+item.id+')"></label>'
+      + '<label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px;">IPI (%) <input type="number" id="mn-ipi-'+item.id+'" value="'+(item.IPI*100).toFixed(1)+'" step="0.5" min="0" max="50" style="width:60px;padding:3px 6px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:11px;" oninput="this.dataset.manual=1;aplicarAliqInline('+item.id+')"></label>'
+      + '<span style="font-size:10px;color:var(--text3);">alíquotas salvas automaticamente</span>'
+      + '</div>'
       // Linha 2: FOB + Qtd
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">'
       + '<div>'
-      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">FOB por unidade (USD)</div>'
-      + '<input type="number" id="mn-fob-'+item.id+'" value="'+(item.fob||'')+'" placeholder="0.00" step="0.01" min="0"'
-      + ' style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;"'
-      + ' oninput="updateMultiNCM('+item.id+',\'fob\',this.value)">'
+      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">Valor unitário (USD)</div>'
+      + '<div style="display:flex;align-items:center;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;overflow:hidden;">'
+      + '<span style="padding:0 8px;font-size:11px;color:var(--text3);border-right:1px solid var(--border2);white-space:nowrap;">USD</span>'
+      + '<input type="number" id="mn-fob-'+item.id+'" value="'+(item.fobUnit||'')+'" placeholder="0.00" step="0.01" min="0"'
+      + ' style="flex:1;padding:6px 8px;border:none;background:transparent;color:var(--text);font-size:12px;"'
+      + ' oninput="updateMultiNCM('+item.id+',\'fobUnit\',this.value)">'
+      + '</div>'
       + '</div>'
       + '<div>'
       + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">Quantidade</div>'
@@ -27605,148 +27679,19 @@ function renderMultiNCM(){
       + ' oninput="updateMultiNCM('+item.id+',\'qtd\',this.value)">'
       + '</div>'
       + '</div>'
-      // SKUs vinculados (oculto por padrão, aparece se NCM tiver SKUs)
+      // SKUs vinculados
       + '<div id="mn-sku-'+item.id+'" style="display:none;margin-top:8px;padding:8px;background:var(--a3);border:1px solid var(--a4);border-radius:6px;"></div>'
       + '</div>';
   }).join('');
-
-  calcMultiNCMResult();
 }
 
-function calcMultiNCMResult(){
-  var resultEl = document.getElementById('multi-ncm-result');
-  if(!resultEl) return;
-  if(!selNcm || multiNcmItens.length === 0){ resultEl.style.display='none'; return; }
+function atualizarBtnConteiner(){ /* resultado agora é inline no simulador */ }
 
-  var cambio   = parseFloat((document.getElementById('cambio')||{}).value) || 5.28;
-  var icms     = parseFloat((document.getElementById('estado')||{}).value) || 0.18;
-  var fobP     = parseFloat((document.getElementById('fob')||{}).value)    || 0;
-  var qtdP     = parseFloat((document.getElementById('qtd')||{}).value)    || 1;
-  var freteBase= parseFloat((document.getElementById('frete')||{}).value)  || 0;
-  var despBase = parseFloat((document.getElementById('desp')||{}).value)   || 0;
-  var capBase  = parseFloat((document.getElementById('cap')||{}).value)    || 0;
-  var armBase  = parseFloat((document.getElementById('arm')||{}).value)    || 0;
-  var fiBase   = parseFloat((document.getElementById('fi')||{}).value)     || 0;
-
-  var itensTodos = [
-    {ncm:selNcm.code, desc:selNcm.desc.substring(0,30), fob:fobP, qtd:qtdP, II:selNcm.II, IPI:selNcm.IPI||0, principal:true}
-  ];
-  multiNcmItens.filter(function(x){ return x.ncm && x.fob > 0; }).forEach(function(x){
-    itensTodos.push({ncm:x.ncm, desc:x.desc, fob:x.fob, qtd:x.qtd, II:x.II, IPI:x.IPI||0, principal:false});
-  });
-
-  if(itensTodos.length < 2){ resultEl.style.display='none'; return; }
-
-  var fobTotal = itensTodos.reduce(function(s,x){ return s + (x.fob * x.qtd); }, 0);
-
-  var rows = itensTodos.map(function(item){
-    var fobItem = item.fob * item.qtd;
-    var prop    = fobTotal > 0 ? fobItem / fobTotal : 1 / itensTodos.length;
-    var fr = freteBase * prop;
-    var sg = (fobItem + fr) * 0.003;
-    var r  = calcT(cambio, icms, fobItem, fr, sg,
-               despBase*prop, capBase*prop, armBase*prop, fiBase*prop,
-               item.II, item.IPI, false);
-    return {
-      ncm:item.ncm, desc:item.desc, qtd:item.qtd,
-      fobItem:fobItem, II:item.II, IPI:item.IPI,
-      principal:item.principal,
-      total:r.total, trib:r.trib,
-      custUn: r.total / Math.max(item.qtd,1)
-    };
-  });
-
-  var grandTotal = rows.reduce(function(s,x){ return s + x.total; }, 0);
-  var tribTotal  = rows.reduce(function(s,x){ return s + x.trib;  }, 0);
-  var fobUSD     = rows.reduce(function(s,x){ return s + x.fobItem; }, 0);
-
-  var html = '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
-    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);">Resumo consolidado — ' + itensTodos.length + ' NCMs</div>'
-    + '<div style="display:flex;gap:8px;">'
-    + '<div style="text-align:center;padding:6px 12px;background:var(--bg2);border-radius:6px;">'
-    + '<div style="font-size:9px;color:var(--text3);">FOB TOTAL</div>'
-    + '<div style="font-family:var(--mono);font-size:13px;color:var(--text);">USD ' + fN(fobUSD/cambio,0) + '</div>'
-    + '</div>'
-    + '<div style="text-align:center;padding:6px 12px;background:var(--d2);border-radius:6px;">'
-    + '<div style="font-size:9px;color:var(--text3);">TRIBUTOS</div>'
-    + '<div style="font-family:var(--mono);font-size:13px;color:var(--danger);">' + R0(tribTotal) + '</div>'
-    + '</div>'
-    + '<div style="text-align:center;padding:6px 12px;background:var(--a3);border:1px solid var(--a4);border-radius:6px;">'
-    + '<div style="font-size:9px;color:var(--text3);">CUSTO TOTAL</div>'
-    + '<div style="font-family:var(--head);font-size:15px;font-weight:700;color:var(--accent);">' + R0(grandTotal) + '</div>'
-    + '</div>'
-    + '</div></div>'
-    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">'
-    + '<thead><tr style="background:var(--bg2);">'
-    + '<th style="padding:6px 8px;text-align:left;color:var(--text3);font-weight:500;">Produto</th>'
-    + '<th style="padding:6px 8px;text-align:center;color:var(--text3);font-weight:500;">NCM</th>'
-    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">Qtd</th>'
-    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">FOB R$</th>'
-    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">II%</th>'
-    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">Tributos</th>'
-    + '<th style="padding:6px 8px;text-align:right;color:var(--accent);font-weight:500;">Total</th>'
-    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">R$/un</th>'
-    + '</tr></thead><tbody>'
-    + rows.map(function(x,i){ return '<tr style="background:'+(i%2===0?'var(--bg)':'var(--bg3)')+(x.principal?';border-left:3px solid var(--teal)':'')+'">'
-      + '<td style="padding:5px 8px;color:var(--text);">' + x.desc + (x.principal ? ' <span style="font-size:9px;color:var(--teal);">●</span>':'') + '</td>'
-      + '<td style="padding:5px 8px;text-align:center;font-family:var(--mono);color:var(--text3);font-size:10px;">' + x.ncm + '</td>'
-      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + x.qtd + '</td>'
-      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + R0(x.fobItem) + '</td>'
-      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + (x.II*100).toFixed(0) + '%</td>'
-      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);color:var(--danger);">' + R0(x.trib) + '</td>'
-      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);font-weight:600;color:var(--accent);">' + R0(x.total) + '</td>'
-      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + R(x.custUn) + '</td>'
-      + '</tr>'; }).join('')
-    + '</tbody><tfoot><tr style="background:var(--bg2);font-weight:600;">'
-    + '<td colspan="5" style="padding:7px 8px;color:var(--text);">TOTAL</td>'
-    + '<td style="padding:7px 8px;text-align:right;color:var(--danger);font-family:var(--mono);">' + R0(tribTotal) + '</td>'
-    + '<td style="padding:7px 8px;text-align:right;color:var(--accent);font-family:var(--mono);font-size:14px;">' + R0(grandTotal) + '</td>'
-    + '<td></td></tr></tfoot></table></div>'
-    + '<button onclick="exportarMultiNCMExcel()" style="width:100%;margin-top:10px;padding:8px;background:var(--success);border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:12px;font-weight:500;">&#128202; Exportar Excel desta simulação</button>'
-    + '</div>';
-
-  resultEl.innerHTML = html;
-  resultEl.style.display = 'block';
-}
-
-function exportarMultiNCMExcel(){
-  if(!selNcm) return;
-  var cambio = parseFloat((document.getElementById('cambio')||{}).value)||5.28;
-  var icms   = parseFloat((document.getElementById('estado')||{}).value)||0.18;
-  var fobP   = parseFloat((document.getElementById('fob')||{}).value)||0;
-  var qtdP   = parseFloat((document.getElementById('qtd')||{}).value)||1;
-  var itens  = [{ncm:selNcm.code,desc:selNcm.desc.substring(0,40),fob:fobP,qtd:qtdP,II:selNcm.II,IPI:selNcm.IPI||0}];
-  multiNcmItens.filter(function(x){return x.ncm&&x.fob>0;}).forEach(function(x){
-    itens.push({ncm:x.ncm,desc:x.desc,fob:x.fob,qtd:x.qtd,II:x.II,IPI:x.IPI||0});
-  });
-  var fobTotal = itens.reduce(function(s,x){return s+(x.fob*x.qtd);},0);
-  var brl = function(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
-  var fr0  = parseFloat((document.getElementById('frete')||{}).value)||0;
-  var rows = itens.map(function(item){
-    var fi=item.fob*item.qtd; var prop=fobTotal>0?fi/fobTotal:1/itens.length;
-    var fr=fr0*prop; var sg=(fi+fr)*0.003;
-    var r=calcT(cambio,icms,fi,fr,sg,
-      (parseFloat((document.getElementById('desp')||{}).value)||0)*prop,
-      (parseFloat((document.getElementById('cap')||{}).value)||0)*prop,
-      (parseFloat((document.getElementById('arm')||{}).value)||0)*prop,
-      (parseFloat((document.getElementById('fi')||{}).value)||0)*prop,
-      item.II,item.IPI,false);
-    return [item.desc,item.ncm,item.qtd,fi,(item.II*100).toFixed(0)+'%',r.trib,r.total,r.total/Math.max(item.qtd,1)];
-  });
-  var grandTotal=rows.reduce(function(s,r){return s+r[6];},0);
-  var dt=new Date().toLocaleDateString('pt-BR');
-  var html='<html><head><meta charset="UTF-8"></head><body>'
-    +'<table border="1" style="border-collapse:collapse;font-family:Calibri;font-size:11pt;">'
-    +'<tr><td colspan="8" style="background:#1e293b;color:#f1f5f9;font-size:14pt;font-weight:bold;padding:10px;">GeoTrade — Simulação Multi-NCM · '+dt+'</td></tr>'
-    +'<tr style="background:#1e40af;color:#fff;"><th>Produto</th><th>NCM</th><th>Qtd</th><th>FOB (USD)</th><th>II%</th><th>Tributos</th><th>Total</th><th>R$/un</th></tr>'
-    +rows.map(function(r,i){ return '<tr style="background:'+(i%2?'#f8fafc':'#fff')+';">'
-      +r.map(function(v,j){ return '<td style="padding:5px 8px;">'+(j>=5?brl(v):j===3?'USD '+fN(v,0):v)+'</td>'; }).join('')+'</tr>'; }).join('')
-    +'<tr style="background:#1e293b;color:#fff;font-weight:bold;"><td colspan="6">TOTAL</td><td style="padding:5px 8px;">'+brl(grandTotal)+'</td><td></td></tr>'
-    +'</table></body></html>';
-  var blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='GeoTrade_MultiNCM_'+dt.replace(/\//g,'-')+'.xls'; a.click();
+// Chamada para obter FOB total (principal + extras) para o calcular()
+function getFOBComExtras(){
+  var fobPrincipal = parseFloat((document.getElementById('fob')||{}).value) || 0;
+  var fobExtras = (window._fobExtras || 0);
+  return fobPrincipal + fobExtras;
 }
 
 
