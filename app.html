@@ -1410,7 +1410,7 @@ iframe{border-radius:var(--r);}
           <div class="ct">Valores da operação</div>
           <div class="field">
             <div class="fl">Valor FOB <span class="fh" id="fob-cur-lbl">em USD</span></div>
-            <div class="iw"><span class="ip" id="fob-cur">USD</span><input type="number" id="fob" placeholder="0.00" oninput="calcular()" step="100" style="padding-left:34px;"></div>
+            <div class="iw"><span class="ip" id="fob-cur">USD</span><input type="number" id="fob" placeholder="0.00" oninput="calcular()" step="0.01" style="padding-left:34px;"></div>
           </div>
           <div id="multi-ncm-fob-badge" style="display:none;font-size:10px;color:var(--teal);font-family:var(--mono);margin-top:3px;padding:3px 8px;background:var(--teal2);border-radius:5px;"></div>
           <div class="fr3">
@@ -24132,6 +24132,15 @@ function selectNcm(code){
   // aliq-edit fica oculto — usuário abre clicando no ✏ badge
   document.getElementById('aliq-edit').style.display='none';
   mostrarBtnAddNCM();
+  // Resetar NCMs extras ao trocar o NCM principal
+  if(multiNcmItens.length > 0){
+    multiNcmItens = [];
+    multiNcmNextId = 1;
+    window._fobExtras = 0;
+    renderMultiNCM();
+    var badge = document.getElementById('multi-ncm-fob-badge');
+    if(badge) badge.style.display='none';
+  }
   document.getElementById('peso-field').style.display='block';
   document.getElementById('ncm-search').value='';
   document.getElementById('ndd').classList.remove('open');
@@ -27656,7 +27665,7 @@ function renderMultiNCM(){
       + '<button onclick="removeMultiNCM('+item.id+')" style="background:var(--d2);border:none;border-radius:5px;width:26px;height:26px;color:var(--danger);cursor:pointer;font-size:14px;margin-top:18px;">&times;</button>'
       + '</div>'
       // Painel alíquotas (oculto por padrão)
-      + '<div id="mn-aliq-'+item.id+'" style="display:none;margin-top:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      + '<div id="mn-aliq-'+item.id+'" style="display:none;margin-top:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;">'
       + '<label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px;">II (%) <input type="number" id="mn-ii-'+item.id+'" value="'+(item.II*100).toFixed(1)+'" step="0.5" min="0" max="35" style="width:60px;padding:3px 6px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:11px;" oninput="this.dataset.manual=1;aplicarAliqInline('+item.id+')"></label>'
       + '<label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px;">IPI (%) <input type="number" id="mn-ipi-'+item.id+'" value="'+(item.IPI*100).toFixed(1)+'" step="0.5" min="0" max="50" style="width:60px;padding:3px 6px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:11px;" oninput="this.dataset.manual=1;aplicarAliqInline('+item.id+')"></label>'
       + '<span style="font-size:10px;color:var(--text3);">alíquotas salvas automaticamente</span>'
