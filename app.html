@@ -903,19 +903,34 @@ iframe{border-radius:var(--r);}
 .leaflet-control-attribution a{color:var(--accent-bright) !important;}
 /* ── SPLASH SCREEN ── */
 #splash{position:fixed;inset:0;z-index:20000;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;}
-#splash.hide{animation:splashOut .6s ease forwards;}
-@keyframes splashOut{to{opacity:0;transform:scale(1.04);pointer-events:none;}}
-.splash-logo-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:96px;height:96px;}
-.splash-ring{position:absolute;inset:0;border-radius:50%;border:1.5px solid transparent;border-top-color:var(--accent);border-right-color:var(--teal);animation:spinRing 1.2s linear infinite;}
+#splash.hide{animation:splashOut .75s cubic-bezier(.4,0,1,1) forwards;}
+@keyframes splashOut{0%{opacity:1;filter:blur(0);}100%{opacity:0;filter:blur(10px);pointer-events:none;}}
+.splash-logo-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:104px;height:104px;}
+/* Ring externo */
+.splash-ring{position:absolute;inset:0;border-radius:50%;border:1px solid transparent;border-top-color:var(--accent);border-right-color:var(--teal);animation:spinRing 1.4s linear infinite;}
+/* Ring interno reverso */
+.splash-ring2{position:absolute;inset:14px;border-radius:50%;border:1px solid transparent;border-bottom-color:rgba(59,130,246,.3);border-left-color:rgba(6,182,212,.3);animation:spinRing 2.2s linear infinite reverse;}
 @keyframes spinRing{to{transform:rotate(360deg);}}
-.splash-icon{animation:splashIconIn .7s cubic-bezier(.22,1,.36,1) forwards;opacity:0;transform:scale(.5);}
-@keyframes splashIconIn{to{opacity:1;transform:scale(1);}}
-.splash-text{animation:splashTextIn .6s cubic-bezier(.22,1,.36,1) .4s forwards;opacity:0;transform:translateY(12px);}
+/* Ícone — entra com spring e leve rotação */
+.splash-icon{animation:splashIconIn .85s cubic-bezier(.22,1,.36,1) .15s forwards;opacity:0;transform:scale(.35) rotate(-30deg);}
+@keyframes splashIconIn{to{opacity:1;transform:scale(1) rotate(0deg);}}
+/* Pontos do diamante entram em sequência */
+.splash-dot{animation:dotPop .35s cubic-bezier(.22,1,.36,1) forwards;opacity:0;transform:scale(0);}
+.splash-dot-t{animation-delay:.55s;}
+.splash-dot-r{animation-delay:.7s;}
+.splash-dot-b{animation-delay:.85s;}
+.splash-dot-l{animation-delay:1s;}
+@keyframes dotPop{to{opacity:1;transform:scale(1);}}
+/* Texto */
+.splash-text{animation:splashTextIn .7s cubic-bezier(.22,1,.36,1) .5s forwards;opacity:0;transform:translateY(18px);}
 @keyframes splashTextIn{to{opacity:1;transform:translateY(0);}}
-.splash-tagline{animation:splashTextIn .6s cubic-bezier(.22,1,.36,1) .65s forwards;opacity:0;transform:translateY(8px);}
-.splash-bar-wrap{width:160px;height:2px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:32px;overflow:hidden;animation:splashTextIn .4s ease .8s forwards;opacity:0;}
-.splash-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--teal));border-radius:2px;animation:splashProgress 1.6s cubic-bezier(.4,0,.2,1) .9s forwards;}
-@keyframes splashProgress{to{width:100%;}}
+/* Tagline com letter-spacing progressivo */
+.splash-tagline{animation:splashTagIn .65s cubic-bezier(.22,1,.36,1) .75s forwards;opacity:0;}
+@keyframes splashTagIn{from{opacity:0;letter-spacing:.35em;}to{opacity:1;letter-spacing:.2em;}}
+/* Barra */
+.splash-bar-wrap{width:140px;height:1.5px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:28px;overflow:hidden;animation:splashTextIn .4s ease .95s forwards;opacity:0;}
+.splash-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--teal));border-radius:2px;animation:splashProgress 2s cubic-bezier(.4,0,.2,1) 1.05s forwards;}
+@keyframes splashProgress{0%{width:0%}50%{width:65%}80%{width:88%}100%{width:100%}}
 
 /* ── TELA DE LOGIN ── */
 #login-screen{display:none;position:fixed;inset:0;z-index:10000;background:var(--bg);overflow-y:auto;align-items:center;justify-content:center;}
@@ -970,30 +985,21 @@ iframe{border-radius:var(--r);}
 <div id="splash" style="display:flex;">
   <div class="splash-logo-wrap">
     <div class="splash-ring"></div>
-    <svg class="splash-icon" width="56" height="56" viewBox="0 0 48 48" fill="none">
-      <defs>
-        <linearGradient id="sl1" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#3b82f6"/>
-          <stop offset="100%" stop-color="#06b6d4"/>
-        </linearGradient>
-      </defs>
-      <polygon points="24,4 44,24 24,44 4,24" fill="url(#sl1)" opacity="0.18" stroke="url(#sl1)" stroke-width="1.5"/>
-      <line x1="24" y1="4" x2="24" y2="44" stroke="url(#sl1)" stroke-width="1" opacity="0.6"/>
-      <line x1="4" y1="24" x2="44" y2="24" stroke="url(#sl1)" stroke-width="1" opacity="0.6"/>
-      <circle cx="24" cy="24" r="6" fill="url(#sl1)"/>
-      <circle cx="24" cy="24" r="3" fill="#fff" opacity="0.95"/>
-      <circle cx="24" cy="4" r="2.5" fill="#06b6d4" opacity="0.9"/>
-      <circle cx="44" cy="24" r="2.5" fill="#3b82f6" opacity="0.9"/>
-      <circle cx="24" cy="44" r="2.5" fill="#3b82f6" opacity="0.7"/>
-      <circle cx="4" cy="24" r="2.5" fill="#06b6d4" opacity="0.7"/>
-    </svg>
+    <div class="splash-ring2"></div>
+    <!-- Logo idêntica ao nav: quadrado com gradiente + diamante branco -->
+    <div class="splash-icon" style="width:64px;height:64px;background:linear-gradient(135deg,#3b82f6,#06b6d4);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(59,130,246,.4);">
+      <svg width="32" height="32" viewBox="0 0 12 12" fill="none">
+        <path d="M6 1L11 6L6 11L1 6Z" fill="rgba(255,255,255,.95)"/>
+        <circle cx="6" cy="6" r="1.8" fill="rgba(255,255,255,.5)"/>
+      </svg>
+    </div>
   </div>
-  <div class="splash-text" style="margin-top:20px;text-align:center;">
-    <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:-1.5px;line-height:1;">
+  <div class="splash-text" style="margin-top:22px;text-align:center;">
+    <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;letter-spacing:-1.5px;line-height:1;">
       Geo<span style="background:linear-gradient(135deg,#60a5fa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Trade</span>
     </div>
   </div>
-  <div class="splash-tagline" style="margin-top:8px;font-size:11px;letter-spacing:.2em;color:#3a5070;text-transform:uppercase;font-family:'DM Sans',sans-serif;">
+  <div class="splash-tagline" style="margin-top:8px;font-size:11px;color:#3a5070;text-transform:uppercase;font-family:'DM Sans',sans-serif;">
     Inteligência de Importação
   </div>
   <div class="splash-bar-wrap">
@@ -25350,15 +25356,8 @@ function setOrigem(o){origemSel=o;document.querySelectorAll('.op').forEach(el=>e
 function setModalSel(m){modalAtual=m;document.getElementById('afrmm-row').style.display=m==='m'?'block':'none';document.getElementById('afrmm-line').style.display=m==='m'?'flex':'none';document.getElementById('modal-lbl').textContent=m==='m'?'🚢 Marítimo':m==='a'?'✈️ Aéreo':'🚛 Rodoviário';freteManual=false;const el=document.getElementById('frete');if(el){el.value='';el.dataset.manual='';}calcular();}
 function setModo(m){modoAuto=m==='auto';document.getElementById('mt-auto').classList.toggle('active',modoAuto);document.getElementById('mt-manual').classList.toggle('active',!modoAuto);document.getElementById('mode-icon').textContent=modoAuto?'🤖':'⚙️';document.getElementById('mode-title').textContent=modoAuto?'Modo Automático — estimativas inteligentes ativas':'Modo Manual — preencha todos os campos';calcular();}
 function onEstadoChange(){
-  // Estado afeta ICMS e frete interno — resetar campos estimados
-  const fi = document.getElementById('fi');
-  if(fi){ fi.value=''; fi.dataset.manual=''; }
-  const desp = document.getElementById('desp');
-  const cap  = document.getElementById('cap');
-  const arm  = document.getElementById('arm');
-  if(desp){ desp.value=''; desp.dataset.manual=''; }
-  if(cap){  cap.value='';  cap.dataset.manual=''; }
-  if(arm){  arm.value='';  arm.dataset.manual=''; }
+  // Estado de destino afeta APENAS o ICMS — não muda frete interno nem despesas
+  // Só recalcula sem resetar nenhum campo estimado
   calcular();
 }
 
