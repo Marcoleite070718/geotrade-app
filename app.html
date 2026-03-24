@@ -1219,15 +1219,7 @@ iframe{border-radius:var(--r);}
     Drawback
     <span class="ni-dot" style="background:var(--success);"></span>
   </div>
-  <div class="ni" onclick="showTab('conteiner')">
-    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="12" height="7" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 4V3a2 2 0 014 0v1" stroke="currentColor" stroke-width="1.2"/><line x1="5" y1="7.5" x2="9" y2="7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-    Contêiner
-    <span class="ni-dot" style="background:var(--teal);"></span>
-  </div>
-  <div class="ni" onclick="showTab('skus')">
-    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 4h6M4 7h6M4 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-    SKUs
-  </div>
+
   <div class="ni" onclick="showTab('fretes')">
     <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="9" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 6h2l1 2v2h-3V6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="3.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/><circle cx="10.5" cy="11" r="1" stroke="currentColor" stroke-width="1.2"/></svg>
     Fretes por Rota
@@ -1331,13 +1323,13 @@ iframe{border-radius:var(--r);}
           <div class="nbadge" id="ncm-badge" style="display:none;">
             <span class="nb-c" id="nc">—</span>
             <span class="nb-d" id="nd">—</span>
-            <span class="nb-a" id="na">—</span>
+            <span class="nb-a" id="na" style="cursor:pointer;" onclick="toggleAliqEdit()" title="Clique para ajustar alíquotas manualmente">—  ✏</span>
           </div>
-          <!-- Campos editáveis II e IPI -->
+          <!-- Campos editáveis II e IPI — colapsados por padrão -->
           <div id="aliq-edit" style="display:none;margin-top:6px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;">
             <div style="font-size:10px;color:var(--text3);margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono);">
-              Alíquotas — <span id="aliq-fonte" style="color:var(--accent);">carregando...</span>
-              <span style="float:right;cursor:pointer;color:var(--accent);" onclick="atualizarAliq()" title="Buscar na Receita Federal">↻ atualizar</span>
+              Ajuste manual de alíquotas — <span id="aliq-fonte" style="color:var(--accent);">—</span>
+              <span style="float:right;cursor:pointer;color:var(--accent);" onclick="atualizarAliq()" title="Buscar na Receita Federal">↻ atualizar RF</span>
             </div>
             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
@@ -1354,7 +1346,23 @@ iframe{border-radius:var(--r);}
             </div>
           </div>
           <div id="ncm-empty" style="font-size:11px;color:var(--text3);padding:2px 0 8px;">Base Siscomex carregando... Selecione um NCM para ver alíquotas.</div>
-          <div class="field" id="peso-field" style="display:none;">
+          <!-- MULTI-NCM: itens adicionais na simulação -->
+          <div id="multi-ncm-area" style="display:none;margin-top:10px;border-top:1px solid var(--border2);padding-top:10px;">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Produtos adicionais nesta importação</div>
+            <!-- Cabeçalho das colunas -->
+            <div style="display:grid;grid-template-columns:1fr 100px 70px 28px;gap:6px;padding:0 0 4px;margin-bottom:4px;border-bottom:1px solid var(--border);">
+              <div style="font-size:10px;color:var(--text3);">NCM / Produto</div>
+              <div style="font-size:10px;color:var(--text3);">FOB unit. (USD)</div>
+              <div style="font-size:10px;color:var(--text3);">Qtd</div>
+              <div></div>
+            </div>
+            <div id="multi-ncm-list"></div>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;" id="multi-ncm-add-area">
+            <button id="btn-add-ncm" onclick="addMultiNCM()" style="display:none;background:var(--teal2);border:1px solid rgba(6,182,212,.3);border-radius:7px;padding:5px 12px;color:var(--teal);cursor:pointer;font-size:11px;font-family:var(--body);">+ Adicionar outro NCM</button>
+          </div>
+          <!-- Resultado consolidado multi-NCM (aparece na própria aba) -->
+          <div id="multi-ncm-result" style="display:none;margin-top:12px;"></div><div class="field" id="peso-field" style="display:none;">
             <div class="fl">Peso estimado <span class="fa" id="peso-hint">por categoria NCM</span>
               <span style="font-size:9px;color:var(--text3);margin-left:4px;" title="Se souber o peso real, substitua o valor estimado">✏ editável</span>
             </div>
@@ -2333,87 +2341,6 @@ iframe{border-radius:var(--r);}
   </div>
 
   <!-- ══ SKUs E PACKING LIST ══ -->
-  <div class="section" id="sec-skus" style="display:none">
-    <div style="padding:12px 16px;background:var(--a3);border:1px solid var(--a4);border-radius:var(--r2);margin-bottom:16px;">
-      <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--accent);margin-bottom:4px;">Cadastro de SKUs e Packing List</div>
-      <div style="font-size:12px;color:var(--text2);">Cadastre os produtos da sua empresa com NCM, peso e CBM. A partir daí simule rapidamente e gere o Packing List para cada operação.</div>
-    </div>
-
-    <div class="grid2">
-      <!-- Upload de SKUs -->
-      <div class="card">
-        <div class="ct">Importar SKUs via Excel</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7;">
-          Baixe o modelo, preencha com seus produtos e faça o upload. O sistema mapeia automaticamente os campos.
-        </div>
-        <button onclick="downloadModeloSKU()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);cursor:pointer;font-size:13px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Baixar modelo Excel (SKUs)
-        </button>
-        <label style="display:block;width:100%;padding:10px;background:var(--a3);border:1px solid var(--a4);border-radius:8px;color:var(--accent);cursor:pointer;font-size:13px;text-align:center;">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:middle;margin-right:6px;"><path d="M7 9V1M4 4l3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Upload planilha SKUs (.xlsx / .csv)
-          <input type="file" id="sku-upload" accept=".xlsx,.xls,.csv" onchange="processarUploadSKU(this)" style="display:none;">
-        </label>
-        <div id="sku-upload-status" style="margin-top:8px;font-size:11px;color:var(--text3);"></div>
-      </div>
-
-      <!-- Adicionar SKU manual -->
-      <div class="card">
-        <div class="ct">Adicionar SKU manualmente</div>
-        <div class="field"><div class="fl">Nome do produto / SKU</div><input type="text" id="sku-nome" placeholder="Ex: Fone Bluetooth XYZ-100"></div>
-        <div class="fr2">
-          <div class="field"><div class="fl">Código NCM</div><input type="text" id="sku-ncm" placeholder="0000.00.00" maxlength="10" oninput="this.value=this.value.replace(/[^0-9.]/g,'')"></div>
-          <div class="field"><div class="fl">Unidade</div>
-            <select id="sku-unidade"><option>un</option><option>par</option><option>kg</option><option>cx</option><option>pç</option><option>m</option><option>m²</option><option>L</option></select>
-          </div>
-        </div>
-        <div class="fr3">
-          <div class="field"><div class="fl">Peso (kg/un)</div><input type="number" id="sku-peso" placeholder="0.000" step="0.001" min="0"></div>
-          <div class="field"><div class="fl">CBM (m³/un)</div><input type="number" id="sku-cbm" placeholder="0.000" step="0.001" min="0"></div>
-          <div class="field"><div class="fl">FOB unit. (USD)</div><input type="number" id="sku-fob" placeholder="0.00" step="0.01" min="0"></div>
-        </div>
-        <div class="field"><div class="fl">Descrição / referência</div><input type="text" id="sku-desc" placeholder="Descrição opcional para controle interno"></div>
-        <button onclick="adicionarSKU()" style="width:100%;padding:10px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:500;margin-top:4px;">Salvar SKU</button>
-      </div>
-    </div>
-
-    <!-- Lista de SKUs cadastrados -->
-    <div class="card" style="margin-top:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-        <div class="ct" style="margin:0;">SKUs cadastrados (<span id="sku-count">0</span>)</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <input type="text" id="sku-busca" placeholder="Buscar SKU..." oninput="renderSKUs()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;width:180px;">
-          <button onclick="gerarPackingList()" style="background:var(--success);border:none;border-radius:7px;padding:6px 14px;color:#fff;cursor:pointer;font-size:12px;font-weight:500;">📦 Gerar Packing List</button>
-          <button onclick="usarSKUsNoConteiner()" style="background:var(--teal2);border:1px solid rgba(6,182,212,.25);border-radius:7px;padding:6px 14px;color:var(--teal);cursor:pointer;font-size:12px;">→ Usar no Contêiner</button>
-        </div>
-      </div>
-      <div id="sku-lista"><div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhum SKU cadastrado. Adicione manualmente ou faça upload de planilha.</div></div>
-    </div>
-
-    <!-- Gerador de Packing List -->
-    <div class="card" id="packing-list-section" style="margin-top:12px;display:none;">
-      <div class="ct">Gerar Packing List</div>
-      <div class="fr2">
-        <div class="field"><div class="fl">Fornecedor (Shipper)</div><input type="text" id="pl-fornecedor" placeholder="Nome da empresa fornecedora"></div>
-        <div class="field"><div class="fl">Comprador (Consignee)</div><input type="text" id="pl-comprador" placeholder="Nome da sua empresa"></div>
-      </div>
-      <div class="fr2">
-        <div class="field"><div class="fl">Nº do Pedido / PO</div><input type="text" id="pl-po" placeholder="PO-2026-001"></div>
-        <div class="field"><div class="fl">Data de embarque</div><input type="date" id="pl-data"></div>
-      </div>
-      <div style="font-size:12px;color:var(--text2);margin:10px 0 8px;">Selecione os SKUs e informe as quantidades:</div>
-      <div id="pl-itens-list" style="margin-bottom:12px;"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button onclick="exportarPackingListExcel()" style="flex:1;padding:10px;background:var(--success);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:500;">
-          📊 Exportar Excel
-        </button>
-        <button onclick="exportarPackingListPDF()" style="flex:1;padding:10px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:500;">
-          📄 Exportar PDF
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- ══ FRETES POR ROTA ══ -->
   <div class="section" id="sec-fretes" style="display:none">
@@ -2614,6 +2541,63 @@ iframe{border-radius:var(--r);}
     </div>
     <div id="pf-msg" style="text-align:right;font-size:11px;margin-top:6px;min-height:16px;"></div>
   </div>
+
+    <!-- ══ SKUs DA EMPRESA ══ -->
+    <div class="card" style="margin-top:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div class="ct" style="margin:0;">Catálogo de SKUs da empresa</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="downloadModeloSKU()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 12px;color:var(--text2);cursor:pointer;font-size:11px;">⬇ Modelo Excel</button>
+          <label style="background:var(--a3);border:1px solid var(--a4);border-radius:7px;padding:5px 12px;color:var(--accent);cursor:pointer;font-size:11px;">
+            ⬆ Upload SKUs
+            <input type="file" id="sku-upload" accept=".xlsx,.xls,.csv" onchange="processarUploadSKU(this)" style="display:none;">
+          </label>
+        </div>
+      </div>
+
+      <!-- Adicionar SKU manual -->
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Adicionar SKU</div>
+        <div class="fr3">
+          <div class="field"><div class="fl">Nome / SKU</div><input type="text" id="sku-nome" placeholder="Ex: Fone Bluetooth XYZ-100"></div>
+          <div class="field"><div class="fl">NCM</div><input type="text" id="sku-ncm" placeholder="0000.00.00" maxlength="10" oninput="this.value=this.value.replace(/[^0-9.]/g,'')"></div>
+          <div class="field"><div class="fl">Unidade</div><select id="sku-unidade"><option>un</option><option>par</option><option>kg</option><option>cx</option><option>pç</option><option>m</option></select></div>
+        </div>
+        <div class="fr3">
+          <div class="field"><div class="fl">Peso (kg/un)</div><input type="number" id="sku-peso" placeholder="0.000" step="0.001" min="0"></div>
+          <div class="field"><div class="fl">CBM (m³/un)</div><input type="number" id="sku-cbm" placeholder="0.000" step="0.001" min="0"></div>
+          <div class="field"><div class="fl">FOB unit. (USD)</div><input type="number" id="sku-fob" placeholder="0.00" step="0.01" min="0"></div>
+        </div>
+        <button onclick="adicionarSKU()" style="margin-top:6px;padding:7px 18px;background:var(--accent);border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:12px;font-weight:500;">Salvar SKU</button>
+        <div id="sku-upload-status" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
+      </div>
+
+      <!-- Lista de SKUs -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+        <div style="font-size:11px;color:var(--text3);">SKUs cadastrados: <strong id="sku-count" style="color:var(--text);">0</strong></div>
+        <input type="text" id="sku-busca" placeholder="Buscar..." oninput="renderSKUs()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:11px;width:160px;">
+      </div>
+      <div id="sku-lista"><div style="color:var(--text3);font-size:12px;padding:12px;text-align:center;">Nenhum SKU cadastrado ainda.</div></div>
+    </div>
+
+    <!-- ══ PACKING LIST ══ -->
+    <div class="card" id="packing-list-section" style="margin-top:12px;display:none;">
+      <div class="ct">Gerar Packing List</div>
+      <div class="fr2">
+        <div class="field"><div class="fl">Fornecedor (Shipper)</div><input type="text" id="pl-fornecedor" placeholder="Nome da empresa fornecedora"></div>
+        <div class="field"><div class="fl">Comprador (Consignee)</div><input type="text" id="pl-comprador" placeholder="Nome da sua empresa"></div>
+      </div>
+      <div class="fr2">
+        <div class="field"><div class="fl">Nº do Pedido / PO</div><input type="text" id="pl-po" placeholder="PO-2026-001"></div>
+        <div class="field"><div class="fl">Data de embarque</div><input type="date" id="pl-data"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin:10px 0 8px;">Selecione os SKUs e informe as quantidades:</div>
+      <div id="pl-itens-list" style="margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="exportarPackingListExcel()" style="flex:1;padding:10px;background:var(--success);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:500;">📊 Exportar Excel</button>
+        <button onclick="exportarPackingListPDF()" style="flex:1;padding:10px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:500;">📄 Exportar PDF</button>
+      </div>
+    </div>
 
   <!-- ══ ADMIN ══ -->
   <div class="section" id="sec-admin" style="display:none">
@@ -24148,18 +24132,12 @@ function selectNcm(code){
   document.getElementById('nc').textContent=n.code;
   document.getElementById('nd').textContent=n.desc.substring(0,45)+(n.desc.length>45?'...':'');
   document.getElementById('na').textContent=`II ${(iiLocal*100).toFixed(0)}% · IPI ${(ipiLocal*100).toFixed(0)}% · ${fonteLocal}`;
+  // Mostrar badge e botão add NCM
   document.getElementById('ncm-badge').style.display='flex';
   document.getElementById('ncm-empty').style.display='none';
-
-  // Mostrar campos editáveis
-  const aliqEdit = document.getElementById('aliq-edit');
-  if(aliqEdit){
-    aliqEdit.style.display='block';
-    document.getElementById('aliq-ii').value  = (iiLocal*100).toFixed(1);
-    document.getElementById('aliq-ipi').value = (ipiLocal*100).toFixed(1);
-    document.getElementById('aliq-fonte').textContent = fonteLocal;
-    document.getElementById('aliq-status').textContent = '⏳ buscando na Receita...';
-  }
+  // aliq-edit fica oculto — usuário abre clicando no ✏ badge
+  document.getElementById('aliq-edit').style.display='none';
+  mostrarBtnAddNCM();
   document.getElementById('peso-field').style.display='block';
   document.getElementById('ncm-search').value='';
   document.getElementById('ndd').classList.remove('open');
@@ -24181,6 +24159,7 @@ function selectNcm(code){
     const ipiEl=document.getElementById('aliq-ipi');
     const fonteEl=document.getElementById('aliq-fonte');
     const statusEl=document.getElementById('aliq-status');
+    // Atualizar campos editáveis (ocultos — usuário abre clicando ✏)
     if(iiEl && !iiEl.dataset.manual){ iiEl.value=(res.ii*100).toFixed(1); }
     if(ipiEl && !ipiEl.dataset.manual){ ipiEl.value=(res.ipi*100).toFixed(1); }
     if(fonteEl) fonteEl.textContent = res.fonte||'SISCOMEX';
@@ -25095,7 +25074,7 @@ function onFreteManual(){freteManual=true;document.getElementById('frete-hint').
 
 
 function showTab(name){
-  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard','perfil','drawback','conteiner','skus'];
+  const allTabs=['sim','precif','origens','incoterms','historico','sidebyside','rastreio','mercado','ncm','alertas','noticias','admin','antecip','fretes','monitor','dashboard','perfil','drawback','conteiner'];
   // Esconder todas as seções via style inline (garante sobre qualquer CSS)
   allTabs.forEach(s=>{
     const el=document.getElementById('sec-'+s);
@@ -25127,7 +25106,7 @@ function showTab(name){
   if(name==='fretes'){renderFretesTable('todos');}
   if(name==='monitor'){renderMonitorList();}
   if(name==='dashboard'){renderDashboard();}
-  if(name==='perfil'){renderPerfil();}
+  if(name==='perfil'){renderPerfil(); renderSKUs(); renderPLItens();}
 
 
   if(name==='drawback'){
@@ -25146,7 +25125,7 @@ function showTab(name){
     calcDrawback();
   }
   if(name==='conteiner'){ iniciarConteiner(); }
-  if(name==='skus'){ carregarSKUs(); }
+
   if(name==='antecip'){
     const c=document.getElementById('ant-cambio');
     if(c&&!c.value&&taxas.USD)c.value=taxas.USD.toFixed(4);
@@ -26644,10 +26623,35 @@ function aplicarAliqManual(){
   const fonteEl = document.getElementById('aliq-fonte');
   if(fonteEl) fonteEl.textContent = 'editado manualmente';
   const statusEl = document.getElementById('aliq-status');
-  if(statusEl) statusEl.textContent = '✏ valores editados pelo usuário';
+  if(statusEl) statusEl.textContent = '✏ salvo · obrigado pela contribuição!';
   const badge = document.getElementById('na');
-  if(badge) badge.textContent=`II ${(selNcm.II*100).toFixed(0)}% · IPI ${(selNcm.IPI*100).toFixed(0)}% · manual`;
+  if(badge) badge.textContent = 'II '+(selNcm.II*100).toFixed(0)+'% · IPI '+(selNcm.IPI*100).toFixed(0)+'% · manual';
   calcular();
+  // Salvar no Firebase para crowdsourcing de alíquotas reais
+  salvarAliqCrowdsource(selNcm.code, ii, ipi);
+}
+
+async function salvarAliqCrowdsource(ncmCode, ii, ipi){
+  if(!window.db) return;
+  if(isNaN(ii) || ii < 0 || ii > 35) return; // validação básica
+  try {
+    const clean = ncmCode.replace(/\./g,'');
+    // Salvar em coleção 'aliq_crowdsource' — um doc por NCM, com array de contribuições
+    const col = collection(db, 'aliq_crowdsource');
+    await addDoc(col, {
+      ncm: ncmCode,
+      ncmClean: clean,
+      ii: parseFloat(ii),
+      ipi: parseFloat(ipi)||0,
+      uid: window.gtUser ? window.gtUser.uid : 'anonymous',
+      ts: serverTimestamp(),
+      versao: 'v2026'
+    });
+    console.log('GeoTrade: alíquota contribuída para NCM '+ncmCode);
+  } catch(e){
+    // Silencioso — não bloquear o usuário
+    console.warn('GeoTrade: não foi possível salvar contribuição:', e.message);
+  }
 }
 
 function atualizarAliq(){
@@ -27443,6 +27447,310 @@ function exportarPackingListPDF(){
   exportarPackingListExcel();
 }
 
+function toggleAliqEdit(){
+  const el = document.getElementById('aliq-edit');
+  if(!el) return;
+  if(el.style.display === 'none' || el.style.display === ''){
+    el.style.display = 'block';
+    // Popular campos se ainda não estiverem preenchidos
+    const iiEl = document.getElementById('aliq-ii');
+    const ipiEl = document.getElementById('aliq-ipi');
+    if(iiEl && !iiEl.value && selNcm) iiEl.value = (selNcm.II*100).toFixed(1);
+    if(ipiEl && !ipiEl.value && selNcm) ipiEl.value = (selNcm.IPI*100).toFixed(1);
+    const fonteEl = document.getElementById('aliq-fonte');
+    if(fonteEl && selNcm) fonteEl.textContent = selNcm.aliqFonte || 'base local';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── MULTI-NCM INLINE no simulador ──
+var multiNcmItens = [];
+var multiNcmNextId = 1;
+var mnTimers = {};
+
+function mostrarBtnAddNCM(){
+  var btn = document.getElementById('btn-add-ncm');
+  if(btn) btn.style.display = 'inline-flex';
+}
+
+function addMultiNCM(){
+  var id = multiNcmNextId++;
+  multiNcmItens.push({id:id, ncm:'', desc:'', fob:0, qtd:1, II:0.14, IPI:0});
+  renderMultiNCM();
+  setTimeout(function(){
+    var inp = document.getElementById('mn-inp-'+id);
+    if(inp) inp.focus();
+  }, 80);
+}
+
+function removeMultiNCM(id){
+  multiNcmItens = multiNcmItens.filter(function(x){ return x.id !== id; });
+  renderMultiNCM();
+}
+
+function updateMultiNCM(id, field, val){
+  var item = multiNcmItens.find(function(x){ return x.id === id; });
+  if(item) item[field] = parseFloat(val) || 0;
+  calcMultiNCMResult();
+}
+
+function buscarNCMInline(id, query){
+  var item = multiNcmItens.find(function(x){ return x.id === id; });
+  if(!item) return;
+  item.desc = query;
+  clearTimeout(mnTimers[id]);
+  if(!query || query.length < 2) return;
+  mnTimers[id] = setTimeout(function(){
+    var pool = (ncmLoaded && ncmDB && ncmDB.length > 0) ? ncmDB : NCM_LOCAL;
+    var q = query.toLowerCase().replace(/\./g,'');
+    var results = pool.filter(function(n){
+      return n.code.replace(/\./g,'').startsWith(q) ||
+             (n.desc||'').toLowerCase().includes(query.toLowerCase()) ||
+             (n.tags||'').toLowerCase().includes(query.toLowerCase());
+    }).slice(0,5);
+    var info = document.getElementById('mn-info-'+id);
+    if(results.length > 0){
+      var found = results[0];
+      item.ncm  = found.code;
+      item.desc = found.desc.substring(0,40);
+      item.II   = getII(found.code);
+      item.IPI  = getIPI(found.code);
+      var inp = document.getElementById('mn-inp-'+id);
+      if(inp) inp.value = found.desc.substring(0,40);
+      if(info) info.textContent = found.code + ' · II ' + (item.II*100).toFixed(0) + '% · IPI ' + (item.IPI*100).toFixed(0) + '%';
+      // Busca alíquota real async
+      fetchAliqTEC(found.code).then(function(res){
+        if(res && item.ncm === found.code){
+          item.II = res.ii; item.IPI = res.ipi;
+          if(info) info.textContent = found.code + ' · II ' + (res.ii*100).toFixed(0) + '% · IPI ' + (res.ipi*100).toFixed(0) + '% · ' + (res.fonte||'RF');
+          calcMultiNCMResult();
+        }
+      });
+      // Verificar SKUs vinculados a esse NCM
+      verificarSKUsNCM(id, found.code);
+      calcMultiNCMResult();
+    } else {
+      if(info) info.textContent = 'NCM não encontrado — tente o código numérico';
+    }
+  }, 350);
+}
+
+function verificarSKUsNCM(itemId, ncmCode){
+  var skus = carregarSKUs().filter(function(s){ return s.ncm === ncmCode; });
+  var skuArea = document.getElementById('mn-sku-'+itemId);
+  if(!skuArea) return;
+  if(skus.length === 0){ skuArea.style.display='none'; return; }
+  skuArea.style.display = 'block';
+  skuArea.innerHTML = '<div style="font-size:9px;color:var(--text3);margin-bottom:4px;font-family:var(--mono);">SKUs DESTE NCM NO SEU CATÁLOGO</div>'
+    + skus.map(function(s){ return '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:3px;cursor:pointer;">'
+      + '<input type="checkbox" onchange="aplicarSKUAoItem('+itemId+','+s.id+',this.checked)" style="cursor:pointer;">'
+      + '<span>' + s.nome + '</span>'
+      + '<span style="font-family:var(--mono);color:var(--text3);font-size:10px;">FOB: USD ' + fN(s.fob,2) + ' · ' + s.peso + 'kg · ' + s.cbm + 'm³</span>'
+      + '</label>'; }).join('');
+}
+
+function aplicarSKUAoItem(itemId, skuId, checked){
+  var item = multiNcmItens.find(function(x){ return x.id === itemId; });
+  var sku  = carregarSKUs().find(function(s){ return s.id === skuId; });
+  if(!item || !sku) return;
+  if(checked){
+    item.fob  = sku.fob;
+    item.desc = sku.nome;
+    // Atualizar campo FOB na tela
+    var fobEl = document.getElementById('mn-fob-'+itemId);
+    if(fobEl) fobEl.value = sku.fob;
+    calcMultiNCMResult();
+  }
+}
+
+function renderMultiNCM(){
+  var list = document.getElementById('multi-ncm-list');
+  var area = document.getElementById('multi-ncm-area');
+  if(!list) return;
+  if(multiNcmItens.length === 0){
+    if(area) area.style.display = 'none';
+    calcMultiNCMResult();
+    return;
+  }
+  if(area) area.style.display = 'block';
+
+  list.innerHTML = multiNcmItens.map(function(item){
+    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">'
+      // Linha 1: NCM + botão remover
+      + '<div style="display:grid;grid-template-columns:1fr 26px;gap:6px;align-items:start;margin-bottom:8px;">'
+      + '<div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">NCM / Produto</div>'
+      + '<input type="text" id="mn-inp-'+item.id+'" placeholder="Digite o nome ou código NCM..." value="'+(item.desc||'')+'"'
+      + ' style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;"'
+      + ' oninput="buscarNCMInline('+item.id+',this.value)">'
+      + '<div style="font-size:9px;color:var(--teal);font-family:var(--mono);margin-top:3px;min-height:14px;" id="mn-info-'+item.id+'">'
+      + (item.ncm ? item.ncm + ' · II ' + (item.II*100).toFixed(0) + '% · IPI ' + (item.IPI*100).toFixed(0) + '%' : '')
+      + '</div>'
+      + '</div>'
+      + '<button onclick="removeMultiNCM('+item.id+')" style="background:var(--d2);border:none;border-radius:5px;width:26px;height:26px;color:var(--danger);cursor:pointer;font-size:14px;margin-top:18px;">&times;</button>'
+      + '</div>'
+      // Linha 2: FOB + Qtd
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      + '<div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">FOB por unidade (USD)</div>'
+      + '<input type="number" id="mn-fob-'+item.id+'" value="'+(item.fob||'')+'" placeholder="0.00" step="0.01" min="0"'
+      + ' style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;"'
+      + ' oninput="updateMultiNCM('+item.id+',\'fob\',this.value)">'
+      + '</div>'
+      + '<div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;font-family:var(--mono);text-transform:uppercase;">Quantidade</div>'
+      + '<input type="number" id="mn-qtd-'+item.id+'" value="'+(item.qtd||1)+'" placeholder="1" step="1" min="1"'
+      + ' style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;"'
+      + ' oninput="updateMultiNCM('+item.id+',\'qtd\',this.value)">'
+      + '</div>'
+      + '</div>'
+      // SKUs vinculados (oculto por padrão, aparece se NCM tiver SKUs)
+      + '<div id="mn-sku-'+item.id+'" style="display:none;margin-top:8px;padding:8px;background:var(--a3);border:1px solid var(--a4);border-radius:6px;"></div>'
+      + '</div>';
+  }).join('');
+
+  calcMultiNCMResult();
+}
+
+function calcMultiNCMResult(){
+  var resultEl = document.getElementById('multi-ncm-result');
+  if(!resultEl) return;
+  if(!selNcm || multiNcmItens.length === 0){ resultEl.style.display='none'; return; }
+
+  var cambio   = parseFloat((document.getElementById('cambio')||{}).value) || 5.28;
+  var icms     = parseFloat((document.getElementById('estado')||{}).value) || 0.18;
+  var fobP     = parseFloat((document.getElementById('fob')||{}).value)    || 0;
+  var qtdP     = parseFloat((document.getElementById('qtd')||{}).value)    || 1;
+  var freteBase= parseFloat((document.getElementById('frete')||{}).value)  || 0;
+  var despBase = parseFloat((document.getElementById('desp')||{}).value)   || 0;
+  var capBase  = parseFloat((document.getElementById('cap')||{}).value)    || 0;
+  var armBase  = parseFloat((document.getElementById('arm')||{}).value)    || 0;
+  var fiBase   = parseFloat((document.getElementById('fi')||{}).value)     || 0;
+
+  var itensTodos = [
+    {ncm:selNcm.code, desc:selNcm.desc.substring(0,30), fob:fobP, qtd:qtdP, II:selNcm.II, IPI:selNcm.IPI||0, principal:true}
+  ];
+  multiNcmItens.filter(function(x){ return x.ncm && x.fob > 0; }).forEach(function(x){
+    itensTodos.push({ncm:x.ncm, desc:x.desc, fob:x.fob, qtd:x.qtd, II:x.II, IPI:x.IPI||0, principal:false});
+  });
+
+  if(itensTodos.length < 2){ resultEl.style.display='none'; return; }
+
+  var fobTotal = itensTodos.reduce(function(s,x){ return s + (x.fob * x.qtd); }, 0);
+
+  var rows = itensTodos.map(function(item){
+    var fobItem = item.fob * item.qtd;
+    var prop    = fobTotal > 0 ? fobItem / fobTotal : 1 / itensTodos.length;
+    var fr = freteBase * prop;
+    var sg = (fobItem + fr) * 0.003;
+    var r  = calcT(cambio, icms, fobItem, fr, sg,
+               despBase*prop, capBase*prop, armBase*prop, fiBase*prop,
+               item.II, item.IPI, false);
+    return {
+      ncm:item.ncm, desc:item.desc, qtd:item.qtd,
+      fobItem:fobItem, II:item.II, IPI:item.IPI,
+      principal:item.principal,
+      total:r.total, trib:r.trib,
+      custUn: r.total / Math.max(item.qtd,1)
+    };
+  });
+
+  var grandTotal = rows.reduce(function(s,x){ return s + x.total; }, 0);
+  var tribTotal  = rows.reduce(function(s,x){ return s + x.trib;  }, 0);
+  var fobUSD     = rows.reduce(function(s,x){ return s + x.fobItem; }, 0);
+
+  var html = '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);">Resumo consolidado — ' + itensTodos.length + ' NCMs</div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div style="text-align:center;padding:6px 12px;background:var(--bg2);border-radius:6px;">'
+    + '<div style="font-size:9px;color:var(--text3);">FOB TOTAL</div>'
+    + '<div style="font-family:var(--mono);font-size:13px;color:var(--text);">USD ' + fN(fobUSD/cambio,0) + '</div>'
+    + '</div>'
+    + '<div style="text-align:center;padding:6px 12px;background:var(--d2);border-radius:6px;">'
+    + '<div style="font-size:9px;color:var(--text3);">TRIBUTOS</div>'
+    + '<div style="font-family:var(--mono);font-size:13px;color:var(--danger);">' + R0(tribTotal) + '</div>'
+    + '</div>'
+    + '<div style="text-align:center;padding:6px 12px;background:var(--a3);border:1px solid var(--a4);border-radius:6px;">'
+    + '<div style="font-size:9px;color:var(--text3);">CUSTO TOTAL</div>'
+    + '<div style="font-family:var(--head);font-size:15px;font-weight:700;color:var(--accent);">' + R0(grandTotal) + '</div>'
+    + '</div>'
+    + '</div></div>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">'
+    + '<thead><tr style="background:var(--bg2);">'
+    + '<th style="padding:6px 8px;text-align:left;color:var(--text3);font-weight:500;">Produto</th>'
+    + '<th style="padding:6px 8px;text-align:center;color:var(--text3);font-weight:500;">NCM</th>'
+    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">Qtd</th>'
+    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">FOB R$</th>'
+    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">II%</th>'
+    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">Tributos</th>'
+    + '<th style="padding:6px 8px;text-align:right;color:var(--accent);font-weight:500;">Total</th>'
+    + '<th style="padding:6px 8px;text-align:right;color:var(--text3);font-weight:500;">R$/un</th>'
+    + '</tr></thead><tbody>'
+    + rows.map(function(x,i){ return '<tr style="background:'+(i%2===0?'var(--bg)':'var(--bg3)')+(x.principal?';border-left:3px solid var(--teal)':'')+'">'
+      + '<td style="padding:5px 8px;color:var(--text);">' + x.desc + (x.principal ? ' <span style="font-size:9px;color:var(--teal);">●</span>':'') + '</td>'
+      + '<td style="padding:5px 8px;text-align:center;font-family:var(--mono);color:var(--text3);font-size:10px;">' + x.ncm + '</td>'
+      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + x.qtd + '</td>'
+      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + R0(x.fobItem) + '</td>'
+      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + (x.II*100).toFixed(0) + '%</td>'
+      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);color:var(--danger);">' + R0(x.trib) + '</td>'
+      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);font-weight:600;color:var(--accent);">' + R0(x.total) + '</td>'
+      + '<td style="padding:5px 8px;text-align:right;font-family:var(--mono);">' + R(x.custUn) + '</td>'
+      + '</tr>'; }).join('')
+    + '</tbody><tfoot><tr style="background:var(--bg2);font-weight:600;">'
+    + '<td colspan="5" style="padding:7px 8px;color:var(--text);">TOTAL</td>'
+    + '<td style="padding:7px 8px;text-align:right;color:var(--danger);font-family:var(--mono);">' + R0(tribTotal) + '</td>'
+    + '<td style="padding:7px 8px;text-align:right;color:var(--accent);font-family:var(--mono);font-size:14px;">' + R0(grandTotal) + '</td>'
+    + '<td></td></tr></tfoot></table></div>'
+    + '<button onclick="exportarMultiNCMExcel()" style="width:100%;margin-top:10px;padding:8px;background:var(--success);border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:12px;font-weight:500;">&#128202; Exportar Excel desta simulação</button>'
+    + '</div>';
+
+  resultEl.innerHTML = html;
+  resultEl.style.display = 'block';
+}
+
+function exportarMultiNCMExcel(){
+  if(!selNcm) return;
+  var cambio = parseFloat((document.getElementById('cambio')||{}).value)||5.28;
+  var icms   = parseFloat((document.getElementById('estado')||{}).value)||0.18;
+  var fobP   = parseFloat((document.getElementById('fob')||{}).value)||0;
+  var qtdP   = parseFloat((document.getElementById('qtd')||{}).value)||1;
+  var itens  = [{ncm:selNcm.code,desc:selNcm.desc.substring(0,40),fob:fobP,qtd:qtdP,II:selNcm.II,IPI:selNcm.IPI||0}];
+  multiNcmItens.filter(function(x){return x.ncm&&x.fob>0;}).forEach(function(x){
+    itens.push({ncm:x.ncm,desc:x.desc,fob:x.fob,qtd:x.qtd,II:x.II,IPI:x.IPI||0});
+  });
+  var fobTotal = itens.reduce(function(s,x){return s+(x.fob*x.qtd);},0);
+  var brl = function(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
+  var fr0  = parseFloat((document.getElementById('frete')||{}).value)||0;
+  var rows = itens.map(function(item){
+    var fi=item.fob*item.qtd; var prop=fobTotal>0?fi/fobTotal:1/itens.length;
+    var fr=fr0*prop; var sg=(fi+fr)*0.003;
+    var r=calcT(cambio,icms,fi,fr,sg,
+      (parseFloat((document.getElementById('desp')||{}).value)||0)*prop,
+      (parseFloat((document.getElementById('cap')||{}).value)||0)*prop,
+      (parseFloat((document.getElementById('arm')||{}).value)||0)*prop,
+      (parseFloat((document.getElementById('fi')||{}).value)||0)*prop,
+      item.II,item.IPI,false);
+    return [item.desc,item.ncm,item.qtd,fi,(item.II*100).toFixed(0)+'%',r.trib,r.total,r.total/Math.max(item.qtd,1)];
+  });
+  var grandTotal=rows.reduce(function(s,r){return s+r[6];},0);
+  var dt=new Date().toLocaleDateString('pt-BR');
+  var html='<html><head><meta charset="UTF-8"></head><body>'
+    +'<table border="1" style="border-collapse:collapse;font-family:Calibri;font-size:11pt;">'
+    +'<tr><td colspan="8" style="background:#1e293b;color:#f1f5f9;font-size:14pt;font-weight:bold;padding:10px;">GeoTrade — Simulação Multi-NCM · '+dt+'</td></tr>'
+    +'<tr style="background:#1e40af;color:#fff;"><th>Produto</th><th>NCM</th><th>Qtd</th><th>FOB (USD)</th><th>II%</th><th>Tributos</th><th>Total</th><th>R$/un</th></tr>'
+    +rows.map(function(r,i){ return '<tr style="background:'+(i%2?'#f8fafc':'#fff')+';">'
+      +r.map(function(v,j){ return '<td style="padding:5px 8px;">'+(j>=5?brl(v):j===3?'USD '+fN(v,0):v)+'</td>'; }).join('')+'</tr>'; }).join('')
+    +'<tr style="background:#1e293b;color:#fff;font-weight:bold;"><td colspan="6">TOTAL</td><td style="padding:5px 8px;">'+brl(grandTotal)+'</td><td></td></tr>'
+    +'</table></body></html>';
+  var blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='GeoTrade_MultiNCM_'+dt.replace(/\//g,'-')+'.xls'; a.click();
+}
+
+
+
 function usarSimulacaoDrawback(){
   const s = window._lastSim;
   if(!s) return;
@@ -27882,7 +28190,7 @@ function usarConteinerPackingList(){
   });
   salvarSKUs();
   renderSKUs();
-  showTab('skus');
+  showTab('perfil');
   setTimeout(()=>{ gerarPackingList(); },300);
 }
 
