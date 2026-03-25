@@ -1551,6 +1551,9 @@ iframe{border-radius:var(--r);}
             <div class="rl"><span class="rl-l">Capatazia/THC</span><span class="rl-v" id="r-cap">—</span></div>
             <div class="rl"><span class="rl-l">Armazenagem</span><span class="rl-v" id="r-arm">—</span></div>
             <div class="rl"><span class="rl-l">Frete interno</span><span class="rl-v" id="r-fi">—</span></div>
+            <div class="rl" style="font-size:11px;"><span class="rl-l" style="color:var(--text3);">Taxa SISCOMEX <span class="rl-a">escalonado por CIF</span></span><span class="rl-v" id="r-siscomex" style="color:var(--text2);">—</span></div>
+            <div class="rl" style="font-size:11px;"><span class="rl-l" style="color:var(--text3);">IOF câmbio frete <span class="rl-a">5,3% frete BRL</span></span><span class="rl-v" id="r-iof" style="color:var(--text2);">—</span></div>
+            <div class="rl" style="font-size:11px;"><span class="rl-l" style="color:var(--text3);">Taxas portuárias fixas <span class="rl-a">entrega+acesso</span></span><span class="rl-v" id="r-porto-fixo" style="color:var(--text2);">—</span></div>
             <div class="rl" id="r-dem-row" style="display:none;"><span class="rl-l">Demurrage <span class="rl-a" style="color:var(--warn);">sobreestadia</span></span><span class="rl-v" id="r-dem" style="color:var(--warn);">—</span></div>
             <div class="total-card">
               <div class="tr2"><span>Total tributos</span><span class="v" id="r-trib">—</span></div>
@@ -1558,7 +1561,13 @@ iframe{border-radius:var(--r);}
               <div id="r-unit-row" style="display:none;" class="tr2"><span>Custo por unidade</span><span class="v" id="r-unit" style="color:var(--accent);">—</span></div>
               <div class="bar-w"><div class="bar-l"><span>Carga tributária sobre CIF</span><span id="r-cp">—</span></div><div class="bt"><div class="bf" id="r-bar" style="width:0%"></div></div></div>
               <div class="total-main"><div class="tlbl">Custo total<br>desembaraçado<br><span style="font-size:9px;font-weight:400;color:var(--text3);">tributos + despesas</span></div><div class="tval" id="r-total">—</div></div>
-            </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:6px;">
+                <div>
+                  <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);">Fator de Nacionalização</div>
+                  <div style="font-size:9px;color:var(--text3);margin-top:1px;">custo total ÷ FOB BRL</div>
+                </div>
+                <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--accent);" id="r-fator-nac">—</div>
+              </div>
             <!-- CRÉDITO DE ICMS -->
             <div id="credito-icms-area" style="display:none;margin-top:10px;padding:12px 14px;background:var(--s2);border:1px solid var(--s3);border-radius:var(--r);">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--success);font-weight:500;margin-bottom:8px;">Crédito de ICMS disponível</div>
@@ -13423,20 +13432,17 @@ const DENSIDADE_CBM = {
   '22':500,'02':450,'03':400,'04':400,'17':500,'19':350,'20':420,
 };
 
-// Fretes internos — base R$ para contêiner 20' até 500km
-// Fonte: tabela ANTT 2025 + média praticada por operadoras
-// Para distâncias maiores ou cargas especiais, ajuste manualmente
+// Fretes internos — base R$ calibrada com DIs reais SIGMA/Impera 2026
+// 2 operações reais SC→SP: R$8.056 e R$8.500 (contêiner 20')
 const PORTO_FI={
-  santos:   4800,   // Santos → SP capital ~80km (mas muitos clientes no interior)
-  paranagua:5600,   // Paranaguá → Curitiba 90km / interior PR
-  itajai:   5200,   // Itajaí → Blumenau/Joinville/interior SC
-  rio:      5800,   // Rio → interior RJ/MG
-  suape:    6400,   // Suape → Recife e interior NE
-  vcp:      3200,   // Viracopos → interior SP (já próximo)
-  gru:      3500,   // Guarulhos → SP capital / interior SP
+  santos:   6500,   // Santos → interior SP (média real ~R$6.500)
+  paranagua:7200,   // Paranaguá → interior PR/SP
+  itajai:   8200,   // Itajaí/Navegantes → SP (2 DIs reais: R$8.056 e R$8.500)
+  rio:      7800,   // Rio → interior RJ/MG/SP
+  suape:    9500,   // Suape → NE + logística extra
+  vcp:      4200,   // Viracopos → interior SP (já próximo)
+  gru:      4500,   // Guarulhos → SP capital / interior
 };
-// Fator de ajuste por distância adicional (R$/km para contêiner 20')
-const FRETE_KM = 12.5; // R$ por km adicional acima da base
 
 // ══════════════════════════
 // API SISCOMEX — NCMs completos
@@ -24603,12 +24609,26 @@ function calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,II_a,IPI_a,afrmm,simples){
   const cofinsPct= simples ? 0.030  : 0.0965;
   const PIS=cifBRL*pisPct; const COFINS=cifBRL*cofinsPct;
   const AFRMM=afrmm?(frBRL*.08)+20:0;
+  // Taxa SISCOMEX — escalonada por CIF (base tabela real: 2 DIs confirmadas)
+  // Op1: R$285 / CIF R$587k | Op2: R$154 / CIF R$141k
+  const SISCOMEX = cifBRL <= 50000   ? 100 :
+                   cifBRL <= 100000  ? 140 :
+                   cifBRL <= 200000  ? 175 :
+                   cifBRL <= 400000  ? 235 :
+                   cifBRL <= 600000  ? 290 : 290 + Math.floor((cifBRL-600000)/200000)*30;
+  // IOF sobre frete internacional — 5.3% do frete BRL (padrão real: 5.28-5.34%)
+  const IOF_FR = frBRL * 0.053;
+  // Taxas portuárias fixas — confirmadas IGUAIS nas 2 DIs: R$490 + R$165
+  const TAXAS_PORTO = 655;
   const baseIcms=cifBRL+II+IPI+PIS+COFINS+AFRMM+dep+cap+arm;
   const ICMS=(baseIcms*icms)/(1-icms);
   const trib=II+IPI+PIS+COFINS+AFRMM+ICMS;
-  const dop=dep+cap+arm+fi;
-  return{fobBRL,frBRL,sgBRL,cifBRL,cifUSD,II,IPI,PIS,COFINS,AFRMM,ICMS,trib,dop,
-    total:cifBRL+trib+dop,II_a,IPI_a,icms,cambio,afrmm,pisPct,cofinsPct};
+  const dop=dep+cap+arm+fi+IOF_FR+TAXAS_PORTO+SISCOMEX;
+  const total=cifBRL+trib+dop;
+  const fatorNac = fobBRL > 0 ? total/fobBRL : 0;
+  return{fobBRL,frBRL,sgBRL,cifBRL,cifUSD,II,IPI,PIS,COFINS,AFRMM,ICMS,
+    SISCOMEX,IOF_FR,TAXAS_PORTO,trib,dop,total,fatorNac,
+    II_a,IPI_a,icms,cambio,afrmm,pisPct,cofinsPct};
 }
 
 function autoEstimar(){
@@ -24698,24 +24718,33 @@ function autoEstimar(){
   const sgEl = document.getElementById('seguro');
   if(sgEl && !sgEl.dataset.manual) sgEl.value = Math.round((fob + frVal) * 0.003);
 
-  // 4. Despesas portuárias baseadas em peso
+  // 4. Despesas portuárias — calibradas com 2 DIs reais (Impera/Sigma jan+mar/2026)
   const peso = parseFloat(document.getElementById('peso').value) || pesoEst;
   const porto = document.getElementById('porto')?.value || 'santos';
-  // Bug #1/#2 FIX: valores reais de mercado (mar/2026)
-  // Despacho: R$1.200 base + 0,3% do valor CIF (tabela SINDASP), máx R$6.000
-  // Capatazia/THC: R$600–900 fixo por contêiner (não proporcional ao valor)
-  // Armazenagem: free time 7 dias, estimativa ~3 dias pagos
-  const cifEstBRL = fob * cambio * 1.015; // CIF estimado em BRL
+  const cifEstBRL = (fob + (parseFloat(document.getElementById('frete').value)||0)) * cambio * 1.003;
+
+  // Honorários despacho: média real R$785 (R$759 + R$810,50)
+  // Capatazia: média real R$1.425 (R$1.100 + R$1.750) — varia por porto
+  // Armazenagem: 1.30% do CIF (padrão real: 1.24% e 1.40% nas 2 DIs)
+  // Frete interno: ~R$8.200 médio por contêiner (R$8.500 e R$8.056 reais)
+  // Taxas locais agente: média real R$3.594 (R$3.798 + R$3.389)
+  // Siscarga/Mantra: média R$255 (R$245 + R$265)
+  // Expediente porto: média R$412 (R$395 + R$425)
   ['desp','cap','arm','fi'].forEach((id,i) => {
     const el = document.getElementById(id);
     if(el && !el.dataset.manual){
       const vs = [
-        Math.min(6000, Math.max(1200, 1200 + cifEstBRL * 0.003)), // despacho: tabela SINDASP
-        Math.max(600,  600  + peso * 0.02),                        // capatazia: ~R$600–900
-        Math.max(450,  300  + peso * 0.12),                        // armazenagem: ~R$450–1.500
-        PORTO_FI[porto] || 1800                                    // frete interno
+        // Despacho: honorários + SDA + taxa ADM + siscarga + expediente + taxas locais agente
+        // Real op1: 759+379+759+245+395+3798 = 6.335 | Real op2: 810+405+810+265+425+3389 = 6.104
+        Math.round((785 + 392 + 785 + 255 + 412 + 3594) / 50) * 50,  // ~R$6.223 médio real
+        // Capatazia: média das 2 DIs
+        Math.round(((1100 + 1750) / 2) / 50) * 50,                   // R$1.425
+        // Armazenagem: 1.30% do CIF BRL (média confirmada das 2 DIs)
+        Math.max(500, Math.round(cifEstBRL * 0.013 / 50) * 50),
+        // Frete interno: base por porto (calibrado com dados reais SC→SP)
+        PORTO_FI[porto] || 8200
       ];
-      el.value = Math.round(vs[i] / 50) * 50;
+      el.value = vs[i];
     }
   });
 }
@@ -24784,11 +24813,24 @@ function calcular(){
   set('r-fob',R(r.fobBRL));set('r-fr',R(r.frBRL));set('r-sg',R(r.sgBRL));set('r-cif',R(r.cifBRL));
   set('r-ii',R(r.II));set('r-ipi',R(r.IPI));set('r-pis',R(r.PIS));set('r-cofins',R(r.COFINS));set('r-icms',R(r.ICMS));
   set('r-desp',R(dep));set('r-cap',R(cap));set('r-arm',R(arm));set('r-fi',R(fi));
+
+  // Taxas reais da DI — calculadas dentro do calcT com padrões de 2 DIs reais
+  // SISCOMEX: escalonado por CIF | IOF: 5.3% do frete | Taxas portuárias: R$655 fixo
+  set('r-siscomex', R(r.SISCOMEX));
+  set('r-iof',      R(r.IOF_FR));
+  set('r-porto-fixo', R(r.TAXAS_PORTO));
+
   // Demurrage
   const dem = window._demurrageVal||0;
   if(dem>0){const rd=document.getElementById('r-dem');if(rd)rd.textContent=R(dem);}
+
   const totalComDem = r.total + dem;
   set('r-trib',R(r.trib));set('r-dop',R(r.dop+dem));set('r-total',R0(totalComDem));
+
+  // Fator de Nacionalização — quanto o custo representa do FOB original
+  const fatorNac = r.fobBRL > 0 ? totalComDem / r.fobBRL : 0;
+  const fatorEl = document.getElementById('r-fator-nac');
+  if(fatorEl) fatorEl.textContent = fatorNac > 0 ? fatorNac.toFixed(2)+'x' : '—';
 
   // Alíquotas — mostrar se Drawback zerou o II/IPI
   const iiLabel = useDrawback ? '0% ⚡Drawback' : (selNcm.II*100).toFixed(0)+'%';
