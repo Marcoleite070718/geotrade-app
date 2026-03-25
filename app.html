@@ -236,6 +236,7 @@ function showLoginScreen() {
   if (ls) ls.classList.add('visible');
 }
 window.showLoginScreen = showLoginScreen;
+window.hideSplash = hideSplash;
 function hideLoginScreen() {
   const ls = document.getElementById('login-screen');
   if (ls) ls.classList.remove('visible');
@@ -25979,6 +25980,34 @@ function limparHistorico(){
   if(!confirm('Limpar todo o histórico local?'))return;
   localStorage.removeItem('gt_hist');
   renderHistoricoLocal();
+}
+
+function renderHistoricoLocal(){
+  try{
+    const hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const el=document.getElementById('historico-lista');
+    if(!el)return;
+    const sub=document.getElementById('hist-sub');
+    if(sub) sub.textContent='Últimas 10 simulações salvas localmente. Faça login para salvar na nuvem.';
+    if(!hist.length){
+      el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;">Nenhuma simulação salva ainda.</div>';
+      return;
+    }
+    el.innerHTML=hist.map((h,i)=>`
+      <div class="card" style="cursor:pointer;margin-bottom:10px;" onclick="recarregarSimulacao(${i})">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">${h.ts}</span>
+          <span style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);">${R0(h.total)}</span>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">${h.ncmCode} — ${(h.ncmDesc||'').substring(0,45)}...</div>
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap;">
+          <span>FOB: ${h.moeda} ${fN(h.fob,2)}</span>
+          <span>Câmbio: R$ ${fN(h.cambio,4)}</span>
+          <span>Estado: ${h.estado||''}</span>
+          <span>Carga: ${h.carga||''}</span>
+        </div>
+      </div>`).join('');
+  }catch(e){}
 }
 
 // ══════════════════════════════════════
