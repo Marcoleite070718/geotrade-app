@@ -2535,6 +2535,13 @@ iframe{border-radius:var(--r);}
       <div id="plano-status" style="margin-top:12px;font-size:12px;color:var(--text3);text-align:center;">Carregando plano...</div>
     </div>
 
+    <!-- API Key Claude para Classificador IA -->
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;margin-top:12px;">
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:4px;">🤖 Classificador NCM por IA — API Key Claude</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;">Opcional. Obtenha em <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a> → API Keys. Salva só no seu navegador.</div>
+      <input type="password" id="pf-claude-key" placeholder="sk-ant-..." style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;font-family:var(--mono);">
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">⚠ Nunca compartilhe sua API Key. Não é enviada a nenhum servidor externo.</div>
+    </div>
     <!-- Botões -->
     <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
       <button onclick="salvarPerfil()" style="background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;cursor:pointer;">
@@ -27549,6 +27556,9 @@ function renderPerfil(){
       setChk('pf-recof', p.recof); setChk('pf-simples', p.simples);
     } catch(e){}
   }
+  // Carregar API Key Claude (salva separadamente por segurança)
+  const savedKey = localStorage.getItem('gt_claude_key');
+  if(savedKey){ const kEl=document.getElementById('pf-claude-key'); if(kEl) kEl.value=savedKey; }
 
   // Mostrar plano atual
   const plano = window.gtPlan || 'free';
@@ -27585,6 +27595,15 @@ async function salvarPerfil(){
   };
   localStorage.setItem(PERFIL_KEY, JSON.stringify(perfil));
   window.gtPerfil = perfil;
+  // Salvar API Key Claude separadamente (não vai para o Firestore)
+  const claudeKey = get('pf-claude-key');
+  if(claudeKey && claudeKey.startsWith('sk-ant-')){
+    localStorage.setItem('gt_claude_key', claudeKey);
+    window._claudeApiKey = claudeKey;
+  } else if(!claudeKey){
+    localStorage.removeItem('gt_claude_key');
+    window._claudeApiKey = null;
+  }
 
   // Salvar no Firestore se logado
   if(window.gtUser && window.db && window._getDocs){
@@ -27893,6 +27912,8 @@ loadNcmDB();
 fetchPTAXD1();
 renderHistoricoLocal();
 renderSKUs();
+// Carregar API key Claude salva
+window._claudeApiKey = localStorage.getItem('gt_claude_key') || null;
 setTimeout(iniciarOnboarding, 2000);
 renderMonitorList();
 renderFretesTable('todos');
@@ -27933,11 +27954,20 @@ async function classificarNCMporIA(){
   const sample = pool.slice(0,50).map(n=>`${n.code}: ${n.desc}`).join('\n');
 
   try{
+    // Buscar API key salva no perfil
+    const apiKey = window._claudeApiKey || localStorage.getItem('gt_claude_key') || '';
+    if(!apiKey || !apiKey.startsWith('sk-ant-')){
+      resultado.innerHTML='<div style="font-size:11px;color:var(--warn);padding:8px 10px;background:var(--w2);border-radius:6px;">'
+        +'⚠ Configure sua API Key Claude no <strong>Perfil → API Key Claude</strong> para usar o classificador IA.<br>'
+        +'<a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">Obter chave gratuita →</a>'
+        +'</div>';
+      return;
+    }
     const response = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'x-api-key':'',  // Gerenciado pelo proxy do claude.ai
+        'x-api-key': apiKey,
         'anthropic-version':'2023-06-01',
         'anthropic-dangerous-direct-browser-access':'true'
       },
