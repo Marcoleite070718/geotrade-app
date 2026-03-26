@@ -26187,8 +26187,11 @@ function exportPDF(){
   const cap=parseFloat(document.getElementById('cap').value)||0;
   const arm=parseFloat(document.getElementById('arm').value)||0;
   const fi=parseFloat(document.getElementById('fi').value)||0;
+  const dem=window._demurrageVal||0;
+  const acresBRL=parseFloat(document.getElementById('acrescimos')?.value)||0;
   const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
-  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm,false,0);
+  const useSimples=document.getElementById('simples')?.checked||false;
+  const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm,useSimples,acresBRL);
   const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
   const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
