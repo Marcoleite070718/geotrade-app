@@ -1386,6 +1386,8 @@ iframe{border-radius:var(--r);}
                   <input type="number" id="ncm-p-qtd" value="1" min="1" step="1" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;" oninput="recalcFOBTotal()">
                 </div>
               </div>
+              <!-- SKUs vinculados ao NCM principal -->
+              <div id="ncm-p-sku-area" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border2);"></div>
             </div>
             <div style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;margin-bottom:6px;">Produtos adicionais</div>
             <div id="multi-ncm-list"></div>
@@ -24236,6 +24238,8 @@ function selectNcm(code){
   if(multiItens.length>0){ multiItens=[]; renderMultiNCM(); desativarModoMulti(); }
   mostrarBtnMulti();
   calcular();
+  // SKUs vinculados ao NCM principal
+  verificarSKUsPrincipal(n.code);
   // Busca assíncrona na API TEC para confirmar/atualizar alíquota
   // NUNCA sobrescrever se o usuário tiver editado manualmente
   fetchAliqTEC(n.code).then(res=>{
@@ -24454,6 +24458,45 @@ function buscarNCMMulti(id, query){
       if(info){ info.textContent='NCM não encontrado'; info.style.color='var(--danger)'; }
     }
   }, 350);
+}
+
+function verificarSKUsPrincipal(ncmCode){
+  var area = document.getElementById('ncm-p-sku-area');
+  if(!area) return;
+  var skus = carregarSKUs().filter(function(s){
+    return s.ncm && s.ncm.replace(/\./g,'') === ncmCode.replace(/\./g,'');
+  });
+  if(!skus.length){ area.style.display='none'; return; }
+  area.style.display='block';
+  area.innerHTML = '<div style="font-size:9px;color:var(--teal);font-family:var(--mono);text-transform:uppercase;margin-bottom:6px;">📦 SKUs do seu catálogo para este NCM</div>'
+    + skus.map(function(s){
+      return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);margin-bottom:5px;cursor:pointer;padding:5px 7px;border-radius:6px;background:var(--bg2);border:1px solid var(--border);">'
+        + '<input type="radio" name="ncm-p-sku" onchange="aplicarSKUPrincipal('+s.id+')" style="accent-color:var(--teal);">'
+        + '<span style="flex:1;"><strong style="color:var(--text);">'+s.nome+'</strong>'
+        + (s.fob ? ' · <span style="font-family:var(--mono);font-size:10px;color:var(--teal);">USD '+parseFloat(s.fob).toFixed(2)+'</span>' : '')
+        + (s.peso ? ' · <span style="font-size:10px;color:var(--text3);">'+parseFloat(s.peso).toFixed(3)+' kg</span>' : '')
+        + '</span></label>';
+    }).join('');
+}
+
+function aplicarSKUPrincipal(skuId){
+  var skus = carregarSKUs();
+  var s = skus.find(function(x){ return x.id == skuId; });
+  if(!s) return;
+  // Aplicar FOB unitário e peso no simulador principal
+  var fobEl = document.getElementById('fob');
+  var pesoEl = document.getElementById('peso');
+  var cbmEl  = document.getElementById('cbm');
+  if(fobEl && s.fob) fobEl.value = parseFloat(s.fob).toFixed(2);
+  if(pesoEl && s.peso) pesoEl.value = parseFloat(s.peso).toFixed(3);
+  if(cbmEl && s.cbm)  cbmEl.value  = parseFloat(s.cbm).toFixed(4);
+  // Aplicar também no campo FOB do ncm-p-card (multi-NCM)
+  var pFob = document.getElementById('ncm-p-fob');
+  if(pFob && s.fob) pFob.value = parseFloat(s.fob).toFixed(2);
+  recalcFOBTotal();
+  calcular();
+  // Sugerir contêiner com novo CBM
+  if(s.cbm) sugerirConteiner();
 }
 
 function verificarSKUsNCM(itemId, ncmCode){
