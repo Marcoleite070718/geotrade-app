@@ -1352,6 +1352,10 @@ iframe{border-radius:var(--r);}
               Ajuste manual de alíquotas — <span id="aliq-fonte" style="color:var(--accent);">—</span>
               <span style="float:right;cursor:pointer;color:var(--accent);" onclick="atualizarAliq()" title="Buscar na Receita Federal">↻ atualizar RF</span>
             </div>
+            <div id="aliq-custom-aviso" style="display:none;font-size:10px;color:var(--success,#22c55e);margin-bottom:6px;padding:4px 8px;background:var(--s2,#0f2a1a);border-radius:5px;display:flex;align-items:center;justify-content:space-between;">
+              <span>✏ Alíquota personalizada salva localmente</span>
+              <span style="cursor:pointer;color:var(--danger);font-weight:600;" onclick="restaurarAliqPadrao()" title="Voltar para a alíquota original da TEC">✕ restaurar padrão</span>
+            </div>
             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">II (%)
                 <input type="number" id="aliq-ii" step="0.5" min="0" max="35" style="width:70px;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;font-family:var(--mono);" oninput="aplicarAliqManual()">
@@ -13408,7 +13412,42 @@ async function fetchAliqTEC(code) {
   return null;
 }
 
+// ══════════════════════════════════════════════════
+// ALÍQUOTAS CUSTOMIZADAS — persistência local
+// ══════════════════════════════════════════════════
+const ALIQ_CUSTOM_KEY = 'gt_aliq_custom_v1';
+
+function carregarAliqCustom(){
+  try{ return JSON.parse(localStorage.getItem(ALIQ_CUSTOM_KEY)||'{}'); }
+  catch(e){ return {}; }
+}
+
+function salvarAliqCustom(ncmCode, ii, ipi){
+  var db = carregarAliqCustom();
+  db[ncmCode] = {ii: parseFloat(ii), ipi: parseFloat(ipi), ts: new Date().toISOString()};
+  localStorage.setItem(ALIQ_CUSTOM_KEY, JSON.stringify(db));
+}
+
+function removerAliqCustom(ncmCode){
+  var db = carregarAliqCustom();
+  delete db[ncmCode];
+  localStorage.setItem(ALIQ_CUSTOM_KEY, JSON.stringify(db));
+}
+
+function getIICustom(code){
+  var db = carregarAliqCustom();
+  return db[code] !== undefined ? db[code].ii : null;
+}
+
+function getIPICustom(code){
+  var db = carregarAliqCustom();
+  return db[code] !== undefined ? db[code].ipi : null;
+}
+
 function getII(code) {
+  // 0. Alíquota customizada pelo usuário (prioridade máxima)
+  var custom = getIICustom(code);
+  if(custom !== null) return custom;
   // 1. Base exata de 8 dígitos
   if (ALIQ_DB[code]) return ALIQ_DB[code].ii;
   // 2. Fallback por capítulo
@@ -13416,6 +13455,8 @@ function getII(code) {
   return II_CAP_MAP[cap] ?? 0.14;
 }
 function getIPI(code) {
+  var customIpi = getIPICustom(code);
+  if(customIpi !== null) return customIpi;
   if (ALIQ_DB[code]) return ALIQ_DB[code].ipi;
   const cap = code.substring(0,2);
   return IPI_CAP_MAP[cap] ?? 0;
@@ -24174,10 +24215,11 @@ function selectNcm(code){
   const pool=ncmLoaded&&ncmDB.length>0?ncmDB:NCM_LOCAL;
   const n=pool.find(x=>x.code===code||x.codRaw===code);
   if(!n)return;
-  const iiLocal=getII(n.code);
-  const ipiLocal=getIPI(n.code);
-  const fonteLocal = ALIQ_DB[n.code] ? 'TEC·base' : 'est.capítulo';
-  selNcm={...n,II:iiLocal,IPI:ipiLocal,kgPorUSD:getPeso(n.code),aliqFonte:fonteLocal};
+  const iiLocal=getII(n.code);   // já consulta custom primeiro
+  const ipiLocal=getIPI(n.code); // já consulta custom primeiro
+  const isCustom = getIICustom(n.code) !== null;
+  const fonteLocal = isCustom ? 'editado ✏' : (ALIQ_DB[n.code] ? 'TEC·base' : 'est.capítulo');
+  selNcm={...n,II:iiLocal,IPI:ipiLocal,kgPorUSD:getPeso(n.code),aliqFonte:fonteLocal,isCustom:isCustom};
   document.getElementById('nc').textContent=n.code;
   document.getElementById('nd').textContent=n.desc.substring(0,45)+(n.desc.length>45?'...':'');
   document.getElementById('na').textContent=`II ${(iiLocal*100).toFixed(0)}% · IPI ${(ipiLocal*100).toFixed(0)}% · ${fonteLocal}`;
@@ -24195,8 +24237,12 @@ function selectNcm(code){
   mostrarBtnMulti();
   calcular();
   // Busca assíncrona na API TEC para confirmar/atualizar alíquota
+  // NUNCA sobrescrever se o usuário tiver editado manualmente
   fetchAliqTEC(n.code).then(res=>{
     if(!res||!selNcm||selNcm.code!==n.code)return;
+    // Verificar se há alíquota customizada salva — se sim, NÃO sobrescrever
+    const temCustom = getIICustom(n.code) !== null;
+    if(temCustom) return; // Respeitar edição manual do usuário
     const mudouII=Math.abs(res.ii-selNcm.II)>0.001;
     const mudouIPI=Math.abs(res.ipi-selNcm.IPI)>0.001;
     selNcm.II=res.ii;
@@ -24728,50 +24774,126 @@ function downloadModeloSKU(){
 function processarUploadSKU(input){
   var file = input.files[0];
   if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      var text = e.target.result;
-      var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
-      if(lines.length < 2){ alert('Arquivo vazio ou sem dados.'); return; }
-      // Detectar separador
-      var sep = lines[0].includes(';') ? ';' : ',';
-      var headers = lines[0].split(sep).map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
-      var added = 0;
-      var skus = carregarSKUs();
-      for(var i=1; i<lines.length; i++){
-        var cols = lines[i].split(sep).map(function(c){ return c.trim().replace(/"/g,''); });
-        if(cols.length < 2) continue;
-        var get = function(keys){
-          for(var k=0;k<keys.length;k++){
-            var idx = headers.indexOf(keys[k]);
-            if(idx>=0 && cols[idx]) return cols[idx];
+  var ext = file.name.split('.').pop().toLowerCase();
+  var isExcel = ext==='xlsx'||ext==='xls'||ext==='xlsm';
+
+  function _processar(rows){
+    // rows: array de objetos {coluna: valor}
+    var added=0, skus=carregarSKUs();
+    rows.forEach(function(row, i){
+      // Normalizar chaves
+      var r={};
+      Object.keys(row).forEach(function(k){ r[k.trim().toLowerCase().replace(/"/g,'')]=String(row[k]||'').trim(); });
+      var get=function(keys){
+        for(var k=0;k<keys.length;k++) if(r[keys[k]]&&r[keys[k]]!=='undefined') return r[keys[k]];
+        return '';
+      };
+      var nome=get(['nome','sku','item','produto','description','name']);
+      if(!nome||nome==='0') return;
+      skus.push({
+        id:Date.now()+i,
+        nome:nome,
+        ncm:get(['ncm','ncm_code','codigo_ncm']),
+        unid:get(['unidade','unid','unit'])||'un',
+        peso:parseFloat(get(['peso','peso_kg','weight']))||0,
+        cbm:parseFloat(get(['cbm','cbm_m3','volume']))||0,
+        fob:parseFloat(get(['fob','fob_usd','preco','price']))||0,
+        ts:new Date().toLocaleDateString('pt-BR')
+      });
+      added++;
+    });
+    salvarSKUsStorage(skus);
+    renderSKUs();
+    alert(added+' SKU(s) importado(s) com sucesso!');
+    input.value='';
+  }
+
+  if(isExcel){
+    // Usar SheetJS para ler xlsx
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        // Carregar SheetJS dinamicamente se não estiver carregado
+        function _parseXLSX(data){
+          var XLSX=window.XLSX;
+          var wb=XLSX.read(data,{type:'array'});
+          var ws=wb.Sheets[wb.SheetNames[0]];
+          var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+          // Filtrar linhas de instrução (linha 2 do nosso modelo tem os nomes de campo)
+          // Detectar se a primeira linha é o header real ou um título decorativo
+          if(rows.length>0){
+            var firstKeys=Object.keys(rows[0]);
+            var hasNome=firstKeys.some(function(k){ return ['nome','sku','item','produto','name'].includes(k.toLowerCase()); });
+            if(!hasNome && rows.length>1){
+              // Tentar usar a segunda linha como header (caso do nosso modelo com linha de título)
+              var headerRow=rows[0];
+              var realHeaders=Object.values(headerRow).map(function(v){return String(v).toLowerCase().trim();});
+              rows=rows.slice(1).map(function(row){
+                var obj={};
+                Object.values(row).forEach(function(v,i){ if(realHeaders[i]) obj[realHeaders[i]]=v; });
+                return obj;
+              });
+            }
           }
-          return '';
-        };
-        var nome = get(['nome','sku','item','produto','description','name']);
-        if(!nome) continue;
-        skus.push({
-          id: Date.now()+i,
-          nome: nome,
-          ncm:  get(['ncm','ncm_code','codigo_ncm']),
-          unid: get(['unidade','unid','unit'])||'un',
-          peso: parseFloat(get(['peso','peso_kg','weight']))||0,
-          cbm:  parseFloat(get(['cbm','cbm_m3','volume']))||0,
-          fob:  parseFloat(get(['fob','fob_usd','preco','price']))||0,
-          ts:   new Date().toLocaleDateString('pt-BR')
-        });
-        added++;
-      }
-      salvarSKUsStorage(skus);
-      renderSKUs();
-      alert(added + ' SKU(s) importado(s) com sucesso!');
-    } catch(err){
-      alert('Erro ao ler o arquivo. Use o modelo Excel como referência.');
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
-  input.value='';
+          _processar(rows);
+        }
+        if(window.XLSX){
+          _parseXLSX(new Uint8Array(e.target.result));
+        } else {
+          var s=document.createElement('script');
+          s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          s.onload=function(){ _parseXLSX(new Uint8Array(e.target.result)); };
+          s.onerror=function(){ alert('Erro ao carregar leitor de Excel. Tente usar o arquivo CSV.'); };
+          document.head.appendChild(s);
+        }
+      }catch(err){ alert('Erro ao ler Excel: '+err.message+'\nTente usar o arquivo CSV.'); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // CSV / texto
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var text=e.target.result;
+        var lines=text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+        if(lines.length<2){ alert('Arquivo vazio ou sem dados.'); return; }
+        var sep=lines[0].includes(';')?';':',';
+        var headers=lines[0].split(sep).map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+        var rows=[];
+        for(var i=1;i<lines.length;i++){
+          var cols=lines[i].split(sep).map(function(c){ return c.trim().replace(/"/g,''); });
+          if(cols.length<2) continue;
+          var obj={};
+          headers.forEach(function(h,j){ obj[h]=cols[j]||''; });
+          rows.push(obj);
+        }
+        _processar(rows);
+        input.value='';
+      }catch(err){ alert('Erro ao ler arquivo: '+err.message); }
+    };
+    reader.readAsText(file,'UTF-8');
+  }
+}
+
+function restaurarAliqPadrao(){
+  if(!selNcm) return;
+  removerAliqCustom(selNcm.code);
+  // Recarregar alíquotas originais da TEC
+  selNcm.II  = ALIQ_DB[selNcm.code]?.ii ?? getII(selNcm.code);
+  selNcm.IPI = ALIQ_DB[selNcm.code]?.ipi ?? getIPI(selNcm.code);
+  selNcm.isCustom = false;
+  // Atualizar campos
+  var iiEl=document.getElementById('aliq-ii');
+  var ipiEl=document.getElementById('aliq-ipi');
+  if(iiEl)  iiEl.value  = (selNcm.II*100).toFixed(1);
+  if(ipiEl) ipiEl.value = (selNcm.IPI*100).toFixed(1);
+  var na=document.getElementById('na');
+  if(na) na.textContent='II '+(selNcm.II*100).toFixed(0)+'% · IPI '+(selNcm.IPI*100).toFixed(0)+'% · TEC·base';
+  var aviso=document.getElementById('aliq-custom-aviso');
+  if(aviso) aviso.style.display='none';
+  var fonte=document.getElementById('aliq-fonte');
+  if(fonte) fonte.textContent='TEC·base';
+  calcular();
 }
 
 function toggleAliqEdit(){
@@ -24783,9 +24905,12 @@ function toggleAliqEdit(){
     var iiEl=document.getElementById('aliq-ii');
     var ipiEl=document.getElementById('aliq-ipi');
     var fonteEl=document.getElementById('aliq-fonte');
+    var aviso=document.getElementById('aliq-custom-aviso');
     if(iiEl) iiEl.value=(selNcm.II*100).toFixed(1);
     if(ipiEl) ipiEl.value=(selNcm.IPI*100).toFixed(1);
     if(fonteEl) fonteEl.textContent=selNcm.aliqFonte||'base local';
+    // Mostrar aviso se alíquota é customizada
+    if(aviso) aviso.style.display = selNcm.isCustom ? 'flex' : 'none';
   }
 }
 
@@ -24795,8 +24920,12 @@ function aplicarAliqManual(){
   var ipi=parseFloat(document.getElementById('aliq-ipi')?.value.replace(',','.'));
   if(!isNaN(ii))  selNcm.II  = ii/100;
   if(!isNaN(ipi)) selNcm.IPI = ipi/100;
+  // Persistir no localStorage — sobrevive a reload e nova busca
+  salvarAliqCustom(selNcm.code, selNcm.II, selNcm.IPI);
+  // Enviar para crowdsource Firebase
+  salvarAliqCrowdsource(selNcm.code, selNcm.II*100, selNcm.IPI*100);
   var na=document.getElementById('na');
-  if(na) na.textContent='II '+(selNcm.II*100).toFixed(0)+'% · IPI '+(selNcm.IPI*100).toFixed(0)+'% · editado ✏';
+  if(na) na.textContent='II '+(selNcm.II*100).toFixed(0)+'% · IPI '+(selNcm.IPI*100).toFixed(0)+'% · ✏ salvo';
   var lbl=document.getElementById('ncm-p-label');
   if(lbl) lbl.textContent=selNcm.code+' · II '+(selNcm.II*100).toFixed(0)+'% · IPI '+(selNcm.IPI*100).toFixed(0)+'%';
   var st=document.getElementById('aliq-status');
@@ -24826,6 +24955,8 @@ async function atualizarAliq(){
   const res=await fetchAliqTEC(selNcm.code);
   if(res){
     selNcm.II=res.ii; selNcm.IPI=res.ipi; selNcm.aliqFonte='TEC·oficial';
+    // Salvar como customizada para persistir após nova busca
+    salvarAliqCustom(selNcm.code, res.ii, res.ipi);
     var iiEl=document.getElementById('aliq-ii'); var ipiEl=document.getElementById('aliq-ipi');
     if(iiEl) iiEl.value=(res.ii*100).toFixed(1);
     if(ipiEl) ipiEl.value=(res.ipi*100).toFixed(1);
