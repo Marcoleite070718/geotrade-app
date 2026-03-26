@@ -26068,6 +26068,28 @@ ${[
 ${tr(`<td colspan="3" style="${S.totTrib}">TOTAL TRIBUTOS</td>`,td(S.totTrib,brl(r.trib)))}
 ${tr(sp,sp,sp,sp)}
 
+${window._multiData && window._multiData.extras.length > 0 ? `
+${tr(`<td colspan="4" style="${S.secao}">📊 TRIBUTOS POR NCM</td>`)}
+${tr(td(S.header,'Produto'),td(S.header,'NCM'),td(S.header,'FOB R$'),td(S.header,'II%'),td(S.header,'II'),td(S.header,'IPI'),td(S.header,'PIS+COF'),td(S.header,'ICMS'),td(S.header,'Total Trib.'))}
+${(()=>{
+  const md=window._multiData;
+  const itens=[{ncm:selNcm.code,desc:selNcm.desc.substring(0,35),fob:md.fobP,II:selNcm.II,IPI:selNcm.IPI||0}];
+  md.extras.forEach(x=>itens.push({ncm:x.ncm,desc:(x.desc||x.ncm).substring(0,35),fob:x.fobUnit*x.qtd,II:x.II,IPI:x.IPI||0}));
+  const fobT=itens.reduce((s,x)=>s+x.fob,0);
+  let totII=0,totIPI=0,totPC=0,totICMS=0,totTrib=0,totFOB=0;
+  const rows = itens.map((item,i)=>{
+    const prop=fobT>0?item.fob/fobT:1/itens.length;
+    const ri=calcT(cambio,icms,item.fob,fr*prop,item.fob*0.003,dep*prop,cap*prop,arm*prop,fi*prop,item.II,item.IPI,afrmm,false,0);
+    totII+=ri.II; totIPI+=ri.IPI; totPC+=ri.PIS+ri.COFINS; totICMS+=ri.ICMS; totTrib+=ri.trib; totFOB+=item.fob*cambio;
+    const bg=i%2===0?S.linhaA:S.linhaB;
+    return tr(td(bg,item.desc),td(bg,item.ncm),td(bg,brl(item.fob*cambio)),td(bg,(item.II*100).toFixed(0)+'%'),td(bg,brl(ri.II)),td(bg,brl(ri.IPI)),td(bg,brl(ri.PIS+ri.COFINS)),td(bg,brl(ri.ICMS)),`<td style="${S.formula}">${brl(ri.trib)}</td>`);
+  });
+  rows.push(tr(`<td colspan="2" style="${S.totTrib}"><b>TOTAL</b></td>`,td(S.totTrib,brl(totFOB)),td(S.totTrib,''),td(S.totTrib,brl(totII)),td(S.totTrib,brl(totIPI)),td(S.totTrib,brl(totPC)),td(S.totTrib,brl(totICMS)),`<td style="${S.totTrib}"><b>${brl(totTrib)}</b></td>`));
+  return rows.join('');
+})()}
+${tr(sp,sp,sp,sp)}
+` : ''}
+
 ${tr(`<td colspan="4" style="${S.secao}">📋 DESPESAS OPERACIONAIS</td>`)}
 ${[
   ['Despacho aduaneiro',dep],
@@ -26173,60 +26195,54 @@ function exportPDF(){
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'DM Sans',sans-serif;font-size:13px;color:#1a2035;background:#fff;padding:0;}
-    .page{max-width:720px;margin:0 auto;padding:48px 48px 60px;}
+    body{font-family:'DM Sans',sans-serif;font-size:12px;color:#1a2035;background:#fff;padding:0;}
+    .page{max-width:760px;margin:0 auto;padding:40px 48px 60px;}
     /* HEADER */
-    .header{display:flex;align-items:center;justify-content:space-between;padding-bottom:24px;border-bottom:2px solid #3b82f6;margin-bottom:32px;}
-    .logo{display:flex;align-items:center;gap:10px;}
+    .header{display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:2px solid #3b82f6;margin-bottom:28px;}
     .logo-text{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-1px;color:#1a2035;}
     .logo-text span{color:#3b82f6;}
     .header-meta{text-align:right;font-size:11px;color:#7a90b0;line-height:1.8;}
-    .report-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#3b82f6;margin-bottom:6px;}
-    /* OPERAÇÃO */
-    .op-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
-    .op-box{background:#f8faff;border:1px solid #e2eaf8;border-radius:8px;padding:12px 14px;}
-    .op-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#7a90b0;margin-bottom:4px;}
-    .op-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#1a2035;}
+    .report-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#3b82f6;margin-bottom:4px;}
+    /* KPIs */
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:28px;}
+    .kpi{background:#f8faff;border:1px solid #e2eaf8;border-radius:8px;padding:12px 14px;}
+    .kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#7a90b0;margin-bottom:4px;}
+    .kpi-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#1a2035;}
+    /* SEÇÕES */
+    .section-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#3b82f6;margin:24px 0 10px;padding-bottom:5px;border-bottom:1px solid #e2eaf8;}
     /* TABELAS */
-    .section-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#3b82f6;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #e2eaf8;}
-    table{width:100%;border-collapse:collapse;margin-bottom:8px;}
-    th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#7a90b0;padding:0 10px 8px;border-bottom:1px solid #e2eaf8;}
-    td{padding:8px 10px;border-bottom:1px solid #f5f7ff;font-size:12px;color:#3a4a6a;}
-    td.mono{font-family:'DM Mono',monospace;text-align:right;}
+    table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+    th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#7a90b0;padding:6px 10px 6px;border-bottom:2px solid #e2eaf8;background:#f8faff;}
+    td{padding:7px 10px;border-bottom:1px solid #f0f4ff;font-size:11px;color:#3a4a6a;vertical-align:middle;}
+    td.mono{font-family:'DM Mono',monospace;text-align:right;color:#1a2035;}
+    td.pct{font-family:'DM Mono',monospace;text-align:center;color:#5a6a8a;}
     tr:hover td{background:#fafbff;}
-    .subtotal td{background:#f0f4ff;font-weight:500;}
-    .subtotal td.mono{color:#3b82f6;}
-    /* TOTAL */
-    .total-box{background:linear-gradient(135deg,#eff6ff,#f0fdff);border:2px solid #3b82f6;border-radius:12px;padding:20px 24px;margin:20px 0;display:flex;justify-content:space-between;align-items:center;}
-    .total-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3b82f6;margin-bottom:4px;}
+    .subtotal td{background:#eff6ff;font-weight:600;border-top:1px solid #bfdbfe;}
+    .subtotal td.mono{color:#1d4ed8;}
+    .subtotal-warn td{background:#fef3c7;font-weight:600;border-top:1px solid #fcd34d;}
+    .subtotal-warn td.mono{color:#92400e;}
+    /* TOTAL BOX */
+    .total-box{background:linear-gradient(135deg,#eff6ff,#f0fdff);border:2px solid #3b82f6;border-radius:12px;padding:18px 24px;margin:20px 0;display:flex;justify-content:space-between;align-items:center;}
+    .total-label{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3b82f6;margin-bottom:3px;}
     .total-sub{font-size:11px;color:#7a90b0;}
-    .total-val{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:-1.5px;color:#1a2035;}
-    /* MEMÓRIA */
-    .mem-box{background:#fafbff;border:1px solid #e2eaf8;border-radius:8px;padding:14px;margin-bottom:8px;}
-    .mem-title{font-size:11px;font-weight:500;color:#1a2035;margin-bottom:3px;}
-    .mem-formula{font-family:'DM Mono',monospace;font-size:10px;color:#7a90b0;margin-bottom:3px;}
-    .mem-explain{font-size:11px;color:#5a6a8a;line-height:1.5;}
-    /* FOOTER */
-    .footer{margin-top:40px;padding-top:16px;border-top:1px solid #e2eaf8;display:flex;justify-content:space-between;align-items:center;}
-    .footer-text{font-size:10px;color:#aab0c0;line-height:1.6;}
-    .footer-badge{background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:4px 10px;font-size:10px;font-family:'DM Mono',monospace;color:#3b82f6;}
+    .total-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;letter-spacing:-1px;color:#1a2035;}
+    /* FATOR NAC */
+    .fator-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0 24px;}
+    .fator-box{background:#f8faff;border:1px solid #e2eaf8;border-radius:8px;padding:10px 12px;text-align:center;}
+    .fator-label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#7a90b0;margin-bottom:4px;}
+    .fator-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#1a2035;}
+    /* DISCLAIMER */
+    .footer{margin-top:36px;padding-top:14px;border-top:1px solid #e2eaf8;display:flex;justify-content:space-between;align-items:center;}
+    .disclaimer{font-size:9px;color:#aab0c0;line-height:1.6;max-width:500px;}
+    .badge{background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:4px 10px;font-size:10px;font-family:'DM Mono',monospace;color:#3b82f6;}
     @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}
   </style></head><body><div class="page">
+
   <!-- HEADER -->
   <div class="header">
-    <div class="logo">
-      <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
-        <polygon points="24,4 44,24 24,44 4,24" fill="url(#lg)" opacity="0.15" stroke="url(#lg)" stroke-width="1.5"/>
-        <line x1="24" y1="4" x2="24" y2="44" stroke="url(#lg)" stroke-width="1" opacity="0.5"/>
-        <line x1="4" y1="24" x2="44" y2="24" stroke="url(#lg)" stroke-width="1" opacity="0.5"/>
-        <circle cx="24" cy="24" r="5" fill="url(#lg)"/>
-        <circle cx="24" cy="24" r="2.5" fill="#fff" opacity="0.9"/>
-      </svg>
-      <div>
-        <div class="logo-text">Geo<span>Trade</span></div>
-        <div style="font-size:9px;letter-spacing:.12em;color:#7a90b0;text-transform:uppercase;">Inteligência de Importação</div>
-      </div>
+    <div>
+      <div class="logo-text">Geo<span>Trade</span></div>
+      <div style="font-size:9px;letter-spacing:.12em;color:#7a90b0;text-transform:uppercase;">Inteligência de Importação</div>
     </div>
     <div class="header-meta">
       <div class="report-title">${T.titulo}</div>
@@ -26234,77 +26250,119 @@ function exportPDF(){
       <div>Gerado por ${userName}</div>
     </div>
   </div>
-  <!-- DADOS DA OPERAÇÃO -->
-  <div class="section-title">${T.operacao}</div>
-  <div class="op-grid">
-    <div class="op-box"><div class="op-label">NCM</div><div class="op-val">${selNcm.code}</div></div>
-    <div class="op-box"><div class="op-label">Produto</div><div class="op-val" style="font-size:11px;font-family:'DM Sans',sans-serif;">${selNcm.desc?.substring(0,40)||'—'}</div></div>
-    <div class="op-box"><div class="op-label">Modal</div><div class="op-val">${modal}</div></div>
-    <div class="op-box"><div class="op-label">Valor FOB</div><div class="op-val">${fN(fob,2)} ${moedaSel}</div></div>
-    <div class="op-box"><div class="op-label">Câmbio ${moedaSel}/BRL</div><div class="op-val">R$ ${fN(cambio,4)}</div></div>
-    <div class="op-box"><div class="op-label">Estado destino</div><div class="op-val">${estadoTxt}</div></div>
+
+  <!-- KPIs PRINCIPAIS -->
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">NCM</div><div class="kpi-val">${selNcm.code}</div></div>
+    <div class="kpi"><div class="kpi-label">Produto</div><div class="kpi-val" style="font-size:11px;font-family:'DM Sans',sans-serif;">${selNcm.desc?.substring(0,35)||'—'}</div></div>
+    <div class="kpi"><div class="kpi-label">Modal</div><div class="kpi-val">${modal}</div></div>
+    <div class="kpi"><div class="kpi-label">Valor FOB</div><div class="kpi-val">${fN(fob,2)} ${moedaSel}</div></div>
+    <div class="kpi"><div class="kpi-label">Câmbio ${moedaSel}/BRL</div><div class="kpi-val">R$ ${fN(cambio,4)}</div></div>
+    <div class="kpi"><div class="kpi-label">Estado destino</div><div class="kpi-val">${estadoTxt}</div></div>
   </div>
-  <!-- TRIBUTOS -->
-  <div class="section-title">${T.tributos}</div>
-  <table><thead><tr><th>Tributo</th><th>Base de cálculo</th><th>Alíquota</th><th>Valor</th></tr></thead><tbody>
-  <tr><td>Valor CIF (base)</td><td>FOB + Frete + Seguro × Câmbio</td><td>—</td><td class="mono">${R(r.cifBRL)}</td></tr>
-  <tr><td>II — Imposto de Importação</td><td>CIF</td><td class="mono">${(selNcm.II*100).toFixed(0)}%</td><td class="mono">${R(r.II)}</td></tr>
-  <tr><td>IPI</td><td>CIF + II</td><td class="mono">${(selNcm.IPI*100).toFixed(0)}%</td><td class="mono">${R(r.IPI)}</td></tr>
-  <tr><td>PIS</td><td>CIF + II + IPI</td><td class="mono">2,10%</td><td class="mono">${R(r.PIS)}</td></tr>
-  <tr><td>COFINS</td><td>CIF + II + IPI</td><td class="mono">9,65%</td><td class="mono">${R(r.COFINS)}</td></tr>
-  ${afrmm?`<tr><td>AFRMM</td><td>8% frete + R$ 20</td><td class="mono">8%</td><td class="mono">${R(r.AFRMM)}</td></tr>`:''}
-  <tr><td>ICMS (por dentro)</td><td>CIF + II + IPI + PIS + COFINS + desp.</td><td class="mono">${pct(icms*100)}</td><td class="mono">${R(r.ICMS)}</td></tr>
-  <tr class="subtotal"><td><b>${T.total_trib}</b></td><td colspan="2"><b>${pct(r.trib/r.cifBRL*100)} do CIF</b></td><td class="mono"><b>${R(r.trib)}</b></td></tr>
-  </tbody></table>
-  <!-- MULTI-NCM no PDF -->
+
+  <!-- COMPOSIÇÃO TRIBUTÁRIA -->
+  <div class="section-title">Composição Tributária</div>
+  <table>
+    <thead><tr><th>Tributo</th><th>Base de Cálculo</th><th style="text-align:center">Alíquota</th><th style="text-align:right">Valor</th></tr></thead>
+    <tbody>
+      <tr><td>Valor CIF (base)</td><td>FOB + Frete + Seguro × Câmbio</td><td class="pct">—</td><td class="mono">${R(r.cifBRL)}</td></tr>
+      <tr><td>II — Imposto de Importação</td><td>CIF</td><td class="pct">${(selNcm.II*100).toFixed(0)}%</td><td class="mono">${R(r.II)}</td></tr>
+      <tr><td>IPI</td><td>CIF + II</td><td class="pct">${(selNcm.IPI*100).toFixed(0)}%</td><td class="mono">${R(r.IPI)}</td></tr>
+      <tr><td>PIS/PASEP</td><td>CIF + II + IPI</td><td class="pct">2,10%</td><td class="mono">${R(r.PIS)}</td></tr>
+      <tr><td>COFINS</td><td>CIF + II + IPI</td><td class="pct">9,65%</td><td class="mono">${R(r.COFINS)}</td></tr>
+      ${afrmm?`<tr><td>AFRMM</td><td>8% frete + R$ 20</td><td class="pct">8%</td><td class="mono">${R(r.AFRMM)}</td></tr>`:''}
+      <tr><td>ICMS (por dentro)</td><td>CIF + II + IPI + PIS + COFINS + desp.</td><td class="pct">${pct(icms*100)}</td><td class="mono">${R(r.ICMS)}</td></tr>
+      <tr class="subtotal"><td><b>Total Tributos</b></td><td colspan="2"><b>${pct(r.cifBRL>0?r.trib/r.cifBRL*100:0)} do CIF</b></td><td class="mono"><b>${R(r.trib)}</b></td></tr>
+    </tbody>
+  </table>
+
+  <!-- TRIBUTOS POR NCM (multi-NCM) -->
   ${window._multiData && window._multiData.extras.length > 0 ? `
   <div class="section-title">Tributos por NCM</div>
-  <table><thead><tr><th>Produto</th><th>NCM</th><th>FOB R$</th><th>II%</th><th>II</th><th>IPI</th><th>PIS+COF</th><th>ICMS</th><th>Total trib.</th></tr></thead><tbody>
-  ${(()=>{
-    const md=window._multiData; const c=cambio; const ic=icms;
-    const itens=[{ncm:selNcm.code,desc:selNcm.desc.substring(0,30),fob:md.fobP,II:selNcm.II,IPI:selNcm.IPI||0}];
-    md.extras.forEach(x=>itens.push({ncm:x.ncm,desc:x.desc,fob:x.fobUnit*x.qtd,II:x.II,IPI:x.IPI||0}));
-    const fobT=itens.reduce((s,x)=>s+x.fob,0);
-    return itens.map(item=>{
-      const prop=fobT>0?item.fob/fobT:1/itens.length;
-      const ri=calcT(c,ic,item.fob,fr*prop,item.fob*0.003,dep*prop,cap*prop,arm*prop,fi*prop,item.II,item.IPI,afrmm,false);
-      return `<tr><td>${item.desc}</td><td style="font-family:monospace">${item.ncm}</td><td class="mono">${R(item.fob*c)}</td><td class="mono">${(item.II*100).toFixed(0)}%</td><td class="mono">${R(ri.II)}</td><td class="mono">${R(ri.IPI)}</td><td class="mono">${R(ri.PIS+ri.COFINS)}</td><td class="mono">${R(ri.ICMS)}</td><td class="mono"><b>${R(ri.trib)}</b></td></tr>`;
-    }).join('');
-  })()}
-  </tbody></table>` : ''}
-  
-    <!-- DESPESAS -->
-  <div class="section-title">${T.despesas}</div>
-  <table><thead><tr><th>Despesa</th><th>Observação</th><th>Valor</th></tr></thead><tbody>
-  <tr><td>${T.despacho}</td><td>Honorários do despachante</td><td class="mono">${R(dep)}</td></tr>
-  <tr><td>${T.capatazia}</td><td>Terminal Handling Charge</td><td class="mono">${R(cap)}</td></tr>
-  <tr><td>${T.armazenagem}</td><td>Porto / CDA</td><td class="mono">${R(arm)}</td></tr>
-  <tr><td>Frete interno</td><td>${T.frete_int}</td><td class="mono">${R(fi)}</td></tr>
-  <tr class="subtotal"><td><b>Total despesas</b></td><td></td><td class="mono"><b>${R(dep+cap+arm+fi)}</b></td></tr>
-  </tbody></table>
+  <table>
+    <thead><tr><th>Produto</th><th>NCM</th><th style="text-align:right">FOB R$</th><th style="text-align:center">II%</th><th style="text-align:right">II</th><th style="text-align:right">IPI</th><th style="text-align:right">PIS+COF</th><th style="text-align:right">ICMS</th><th style="text-align:right">Total Trib.</th></tr></thead>
+    <tbody>
+    ${(()=>{
+      const md=window._multiData; const c=cambio; const ic=icms;
+      const itens=[{ncm:selNcm.code,desc:selNcm.desc.substring(0,30),fob:md.fobP,II:selNcm.II,IPI:selNcm.IPI||0}];
+      md.extras.forEach(x=>itens.push({ncm:x.ncm,desc:x.desc.substring(0,28),fob:x.fobUnit*x.qtd,II:x.II,IPI:x.IPI||0}));
+      const fobT=itens.reduce((s,x)=>s+x.fob,0);
+      let totalII=0,totalIPI=0,totalPC=0,totalICMS=0,totalTrib=0,totalFOB=0;
+      const rows = itens.map((item,i)=>{
+        const prop=fobT>0?item.fob/fobT:1/itens.length;
+        const ri=calcT(c,ic,item.fob,fr*prop,item.fob*0.003,dep*prop,cap*prop,arm*prop,fi*prop,item.II,item.IPI,afrmm,false,0);
+        totalII+=ri.II; totalIPI+=ri.IPI; totalPC+=ri.PIS+ri.COFINS; totalICMS+=ri.ICMS; totalTrib+=ri.trib; totalFOB+=item.fob*c;
+        return `<tr>
+          <td>${item.desc}</td>
+          <td style="font-family:'DM Mono',monospace;color:#5a6a8a">${item.ncm}</td>
+          <td class="mono">${R(item.fob*c)}</td>
+          <td class="pct">${(item.II*100).toFixed(0)}%</td>
+          <td class="mono">${R(ri.II)}</td>
+          <td class="mono">${R(ri.IPI)}</td>
+          <td class="mono">${R(ri.PIS+ri.COFINS)}</td>
+          <td class="mono">${R(ri.ICMS)}</td>
+          <td class="mono"><b>${R(ri.trib)}</b></td>
+        </tr>`;
+      });
+      rows.push(`<tr class="subtotal">
+        <td colspan="2"><b>TOTAL</b></td>
+        <td class="mono"><b>${R(totalFOB)}</b></td>
+        <td></td>
+        <td class="mono"><b>${R(totalII)}</b></td>
+        <td class="mono"><b>${R(totalIPI)}</b></td>
+        <td class="mono"><b>${R(totalPC)}</b></td>
+        <td class="mono"><b>${R(totalICMS)}</b></td>
+        <td class="mono"><b>${R(totalTrib)}</b></td>
+      </tr>`);
+      return rows.join('');
+    })()}
+    </tbody>
+  </table>` : ''}
+
+  <!-- DESPESAS OPERACIONAIS -->
+  <div class="section-title">Despesas Operacionais</div>
+  <table>
+    <thead><tr><th>Despesa</th><th>Observação</th><th style="text-align:right">Valor</th></tr></thead>
+    <tbody>
+      <tr><td>${T.despacho}</td><td>Honorários do despachante</td><td class="mono">${R(dep)}</td></tr>
+      <tr><td>${T.capatazia}</td><td>Terminal Handling Charge</td><td class="mono">${R(cap)}</td></tr>
+      <tr><td>${T.armazenagem}</td><td>Porto / CDA</td><td class="mono">${R(arm)}</td></tr>
+      <tr><td>Frete Interno</td><td>${T.frete_int}</td><td class="mono">${R(fi)}</td></tr>
+      ${r.SISCOMEX>0?`<tr><td>SISCOMEX</td><td>Taxa escalonada por CIF</td><td class="mono">${R(r.SISCOMEX)}</td></tr>`:''}
+      ${r.IOF_FR>0?`<tr><td>IOF Câmbio Frete</td><td>5,3% do frete BRL</td><td class="mono">${R(r.IOF_FR)}</td></tr>`:''}
+      ${r.TAXAS_PORTO>0?`<tr><td>Taxas Portuárias</td><td>Entrega + Controle de Acesso</td><td class="mono">${R(r.TAXAS_PORTO)}</td></tr>`:''}
+      ${dem>0?`<tr><td>Demurrage</td><td>Sobreestadia</td><td class="mono">${R(dem)}</td></tr>`:''}
+      <tr class="subtotal-warn"><td colspan="2"><b>Total Despesas</b></td><td class="mono"><b>${R(r.dop+dem)}</b></td></tr>
+    </tbody>
+  </table>
+
   <!-- TOTAL -->
   <div class="total-box">
     <div>
-      <div class="total-label">Custo total desembaraçado</div>
-      <div class="total-sub">Tributos + despesas operacionais · sem margem</div>
+      <div class="total-label">${T.custo_total}</div>
+      <div class="total-sub">Tributos + Despesas Operacionais · sem margem</div>
     </div>
-    <div class="total-val">${R0(r.total)}</div>
+    <div class="total-val">${R0(r.total+dem)}</div>
   </div>
-  <!-- DADOS ADICIONAIS -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px;">
-    <div class="op-box"><div class="op-label">Peso estimado</div><div class="op-val">${fN(peso,0)} kg</div></div>
-    <div class="op-box"><div class="op-label">Custo / kg</div><div class="op-val">R$ ${fN(r.total/Math.max(peso,1),2)}</div></div>
-    <div class="op-box"><div class="op-label">Markup s/ FOB</div><div class="op-val">${pct((r.total/(fob*cambio)-1)*100)}</div></div>
+
+  <!-- FATOR DE NACIONALIZAÇÃO -->
+  <div class="fator-grid">
+    <div class="fator-box"><div class="fator-label">Fator de Nacionalização</div><div class="fator-val">${r.fobBRL>0?fN((r.total+dem)/r.fobBRL,2)+'x':'—'}</div></div>
+    <div class="fator-box"><div class="fator-label">Carga Tributária s/ CIF</div><div class="fator-val">${pct(r.cifBRL>0?r.trib/r.cifBRL*100:0)}</div></div>
+    <div class="fator-box"><div class="fator-label">Custo por kg estimado</div><div class="fator-val">${peso>0?R((r.total+dem)/peso)+'/kg':'—'}</div></div>
   </div>
+
   <!-- FOOTER -->
   <div class="footer">
-    <div class="footer-text">
-      Simulação estimativa gerada pelo GeoTrade · geotrade.com.br<br>
-      Alíquotas baseadas na TEC vigente. ICMS calculado "por dentro" conforme legislação de importação.<br>
-      <b>Este documento é uma ferramenta de planejamento. Consulte um despachante aduaneiro habilitado para a DI.</b>
+    <div class="disclaimer">
+      Simulação estimativa gerada pelo GeoTrade · geotradeapp.com.br<br>
+      Alíquotas baseadas na TEC vigente. ICMS calculado "por dentro" conforme legislação.<br>
+      <b>${T.disclaimer}</b>
     </div>
-    <div class="footer-badge">GeoTrade v11</div>
+    <div class="badge">GeoTrade</div>
   </div>
+
   </div></body></html>`);
   w.document.close();
   setTimeout(()=>w.print(),800);
@@ -27877,7 +27935,12 @@ async function classificarNCMporIA(){
   try{
     const response = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':'',  // Gerenciado pelo proxy do claude.ai
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:1000,
