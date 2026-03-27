@@ -24527,17 +24527,23 @@ function verificarSKUsNCM(itemId, ncmCode){
   var skus = carregarSKUs().filter(function(s){ return s.ncm && s.ncm.replace(/\./g,'') === ncmCode.replace(/\./g,''); });
   if(!skus.length){ skuArea.style.display='none'; return; }
   skuArea.style.display='block';
-  skuArea.innerHTML='<div style="font-size:9px;color:var(--teal);font-family:var(--mono);margin-bottom:5px;text-transform:uppercase;">SKUs deste NCM no seu catálogo</div>'
+  skuArea.innerHTML='<div style="font-size:9px;color:var(--teal);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;">📦 SKUs do catálogo para este NCM</div>'
     +skus.map(function(s){
-      return '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:4px;cursor:pointer;">'
-        +'<input type="radio" name="mn-sku-'+itemId+'" onchange="aplicarSKUNoItem('+itemId+','+s.id+')">'
-        +'<span>'+s.nome+'</span>'
-        +'<span style="font-family:var(--mono);font-size:10px;color:var(--text3);">USD '+fN(s.fob,2)+' · '+s.peso+'kg</span>'
-        +'</label>';
+      return '<div onclick="aplicarSKUNoItem('+itemId+','+s.id+',this)" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;margin-bottom:5px;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor=\'var(--teal)\'" onmouseout="if(!this.classList.contains(\'sel-sku-mn\')) this.style.borderColor=\'var(--border2)\'">'
+        +'<div style="display:flex;align-items:center;gap:8px;">'
+        +'<div style="width:8px;height:8px;border-radius:50%;border:2px solid var(--teal);flex-shrink:0;" class="sku-radio-dot-mn"></div>'
+        +'<div><div style="font-size:12px;font-weight:500;color:var(--text);">'+s.nome+'</div>'
+        +'<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:1px;">'
+        +(s.fob ? 'USD '+fN(s.fob,2)+'/un' : '')
+        +(s.peso ? ' · '+parseFloat(s.peso).toFixed(3)+' kg' : '')
+        +(s.cbm  ? ' · '+parseFloat(s.cbm).toFixed(4)+' m³' : '')
+        +'</div></div></div>'
+        +'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="sku-check-mn" style="display:none;"><path d="M2 7l4 4 6-6" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        +'</div>';
     }).join('');
 }
 
-function aplicarSKUNoItem(itemId, skuId){
+function aplicarSKUNoItem(itemId, skuId, el){
   var item = multiItens.find(function(x){return x.id===itemId;});
   var sku  = carregarSKUs().find(function(s){return s.id===skuId;});
   if(!item||!sku) return;
@@ -24545,7 +24551,21 @@ function aplicarSKUNoItem(itemId, skuId){
   item.desc    = sku.nome;
   var fobEl = document.getElementById('mn-fob-'+itemId);
   if(fobEl) fobEl.value = sku.fob;
+  // Marcar visual — desmarcar todos os itens do mesmo NCM
+  var skuArea = document.getElementById('mn-sku-'+itemId);
+  if(skuArea){
+    skuArea.querySelectorAll('[class*="sel-sku-mn"]').forEach(function(d){ d.classList.remove('sel-sku-mn'); d.style.borderColor='var(--border2)'; });
+    skuArea.querySelectorAll('.sku-check-mn').forEach(function(c){ c.style.display='none'; });
+    skuArea.querySelectorAll('.sku-radio-dot-mn').forEach(function(d){ d.style.background='transparent'; });
+  }
+  if(el){
+    el.classList.add('sel-sku-mn');
+    el.style.borderColor='var(--teal)';
+    var check=el.querySelector('.sku-check-mn'); if(check) check.style.display='block';
+    var dot=el.querySelector('.sku-radio-dot-mn'); if(dot) dot.style.background='var(--teal)';
+  }
   recalcFOBTotal();
+  calcular();
 }
 
 function toggleAliqMulti(id){
