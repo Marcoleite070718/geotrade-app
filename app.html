@@ -24468,34 +24468,56 @@ function verificarSKUsPrincipal(ncmCode){
   });
   if(!skus.length){ area.style.display='none'; return; }
   area.style.display='block';
-  area.innerHTML = '<div style="font-size:9px;color:var(--teal);font-family:var(--mono);text-transform:uppercase;margin-bottom:6px;">📦 SKUs do seu catálogo para este NCM</div>'
+  area.innerHTML = '<div style="font-size:9px;color:var(--teal);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;">📦 SKUs do catálogo para este NCM</div>'
     + skus.map(function(s){
-      return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);margin-bottom:5px;cursor:pointer;padding:5px 7px;border-radius:6px;background:var(--bg2);border:1px solid var(--border);">'
-        + '<input type="radio" name="ncm-p-sku" onchange="aplicarSKUPrincipal('+s.id+')" style="accent-color:var(--teal);">'
-        + '<span style="flex:1;"><strong style="color:var(--text);">'+s.nome+'</strong>'
-        + (s.fob ? ' · <span style="font-family:var(--mono);font-size:10px;color:var(--teal);">USD '+parseFloat(s.fob).toFixed(2)+'</span>' : '')
-        + (s.peso ? ' · <span style="font-size:10px;color:var(--text3);">'+parseFloat(s.peso).toFixed(3)+' kg</span>' : '')
-        + '</span></label>';
+      return '<div onclick="aplicarSKUPrincipal('+s.id+',this)" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;margin-bottom:5px;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor=\'var(--teal)\'" onmouseout="if(!this.classList.contains(\'sel-sku\')) this.style.borderColor=\'var(--border2)\'">'
+        + '<div style="display:flex;align-items:center;gap:8px;">'
+        + '<div style="width:8px;height:8px;border-radius:50%;border:2px solid var(--teal);flex-shrink:0;" class="sku-radio-dot"></div>'
+        + '<div><div style="font-size:12px;font-weight:500;color:var(--text);">'+s.nome+'</div>'
+        + '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:1px;">'
+        + (s.fob ? 'USD '+parseFloat(s.fob).toFixed(2)+'/un' : '')
+        + (s.peso ? ' · '+parseFloat(s.peso).toFixed(3)+' kg' : '')
+        + (s.cbm  ? ' · '+parseFloat(s.cbm).toFixed(4)+' m³' : '')
+        + '</div></div></div>'
+        + '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="sku-check" style="display:none;"><path d="M2 7l4 4 6-6" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        + '</div>';
     }).join('');
 }
 
-function aplicarSKUPrincipal(skuId){
+function aplicarSKUPrincipal(skuId, el){
   var skus = carregarSKUs();
   var s = skus.find(function(x){ return x.id == skuId; });
   if(!s) return;
-  // Aplicar FOB unitário e peso no simulador principal
-  var fobEl = document.getElementById('fob');
+
+  // Marcar visualmente o selecionado
+  var area = document.getElementById('ncm-p-sku-area');
+  if(area){
+    area.querySelectorAll('[class*="sel-sku"]').forEach(function(d){ d.classList.remove('sel-sku'); d.style.borderColor='var(--border2)'; });
+    area.querySelectorAll('.sku-check').forEach(function(c){ c.style.display='none'; });
+    area.querySelectorAll('.sku-radio-dot').forEach(function(d){ d.style.background='transparent'; });
+  }
+  if(el){
+    el.classList.add('sel-sku');
+    el.style.borderColor='var(--teal)';
+    var check = el.querySelector('.sku-check');
+    if(check) check.style.display='block';
+    var dot = el.querySelector('.sku-radio-dot');
+    if(dot) dot.style.background='var(--teal)';
+  }
+
+  // Preencher FOB UNITÁRIO no ncm-p-fob — recalcFOBTotal multiplica pela qtd
+  var pFob = document.getElementById('ncm-p-fob');
+  if(pFob && s.fob){ pFob.value = parseFloat(s.fob).toFixed(2); }
+
+  // Peso e CBM no simulador principal
   var pesoEl = document.getElementById('peso');
   var cbmEl  = document.getElementById('cbm');
-  if(fobEl && s.fob) fobEl.value = parseFloat(s.fob).toFixed(2);
   if(pesoEl && s.peso) pesoEl.value = parseFloat(s.peso).toFixed(3);
-  if(cbmEl && s.cbm)  cbmEl.value  = parseFloat(s.cbm).toFixed(4);
-  // Aplicar também no campo FOB do ncm-p-card (multi-NCM)
-  var pFob = document.getElementById('ncm-p-fob');
-  if(pFob && s.fob) pFob.value = parseFloat(s.fob).toFixed(2);
+  if(cbmEl  && s.cbm)  cbmEl.value  = parseFloat(s.cbm).toFixed(4);
+
+  // Recalcular FOB total (unitário × qtd) e disparar cálculo
   recalcFOBTotal();
   calcular();
-  // Sugerir contêiner com novo CBM
   if(s.cbm) sugerirConteiner();
 }
 
