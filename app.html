@@ -13539,7 +13539,7 @@ function ativarBaseNCM(db, fonte) {
 
 async function loadNcmDB(){
   // 1. Carregar base local IMEDIATAMENTE — 8.290 NCMs com alíquotas reais TEC
-  ativarBaseNCM(NCM_LOCAL, 'TEC 2015 · base local');
+  ativarBaseNCM(NCM_LOCAL, 'base local');
 
   // 2. Tentar API Siscomex em background (silencioso, sem bloquear a UI)
   // Se retornar mais NCMs ou mais recentes, atualiza automaticamente
