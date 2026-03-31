@@ -24310,35 +24310,39 @@ async function fetchCambio(){
 
   // API 1 — AwesomeAPI (principal — retorna bid E pctChange para as setas ▲▼)
   try{
-    const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL');
+    const r = await fetch('https://sparkling-bar-b059.marcoagleite97.workers.dev/cambio');
     const d = await r.json();
     if(d.USDBRL && d.USDBRL.bid){
       const pairs = {USD:'USDBRL', EUR:'EURBRL', CNY:'CNYBRL', HKD:'HKDBRL'};
       for(const [m,key] of Object.entries(pairs)){
-        if(!d[key]) continue;
-        const v = parseFloat(d[key].bid);
-        const p = parseFloat(d[key].pctChange||0);
-        const anterior = taxas[m];
-        taxas[m] = v;
-        const vEl  = document.getElementById('v-'+m);
-        const varEl = document.getElementById('var-'+m);
-        const pill  = document.getElementById('pill-'+m);
-        if(vEl){
-          if(anterior && anterior !== v && pill){
-            const cor = v>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
-            pill.style.transition='none'; pill.style.background=cor;
-            setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+        try{
+          if(!d[key]) continue;
+          const v = parseFloat(d[key].bid);
+          const p = parseFloat(d[key].pctChange||0);
+          const anterior = taxas[m];
+          taxas[m] = v;
+          const vEl  = document.getElementById('v-'+m);
+          const varEl = document.getElementById('var-'+m);
+          const pill  = document.getElementById('pill-'+m);
+          if(vEl){
+            if(anterior && anterior !== v && pill){
+              const cor = v>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
+              pill.style.transition='none'; pill.style.background=cor;
+              setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+            }
+            vEl.textContent = v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
           }
-          vEl.textContent = v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-        }
-        if(varEl){
-          const sobe = p>0;
-          varEl.innerHTML = `<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
-        }
+          if(varEl){
+            const sobe = p>0;
+            varEl.innerHTML = `<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
+          }
+        }catch(_){}
       }
-      document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      document.getElementById('cambio-src').textContent = 'ao vivo · 30s';
-      syncMoeda(); buildSpark(taxas.USD||5.22); buildImpTab(taxas.USD||5.22);
+      try{ document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }catch(_){}
+      try{ document.getElementById('cambio-src').textContent = 'ao vivo · 30s'; }catch(_){}
+      try{ syncMoeda(); }catch(_){}
+      try{ buildSpark(taxas.USD||5.22); }catch(_){}
+      try{ buildImpTab(taxas.USD||5.22); }catch(_){}
       return;
     }
   }catch(e1){}
