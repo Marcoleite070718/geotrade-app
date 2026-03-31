@@ -24286,104 +24286,82 @@ document.addEventListener('click',e=>{if(!e.target.closest('.nw'))document.getEl
 // CÂMBIO AO VIVO
 // ══════════════════════════
 async function fetchCambio(){
-  // Aplicar valores recebidos nos badges — usado pelos fallbacks sem pctChange
-  const aplicar = (vals) => {
-    ['USD','EUR','CNY','HKD'].forEach(m => {
-      if(!vals[m]) return;
-      const anterior = taxas[m];
-      taxas[m] = vals[m];
-      const vEl  = document.getElementById('v-'+m);
-      const pill = document.getElementById('pill-'+m);
-      if(vEl){
-        if(anterior && anterior !== vals[m] && pill){
-          const cor = vals[m]>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
-          pill.style.transition='none'; pill.style.background=cor;
-          setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+  const aplicarDados = (d) => {
+    const pairs = {USD:'USDBRL', EUR:'EURBRL', CNY:'CNYBRL', HKD:'HKDBRL'};
+    let ok = false;
+    for(const [m,key] of Object.entries(pairs)){
+      try{
+        if(!d[key] || !d[key].bid) continue;
+        const v = parseFloat(d[key].bid);
+        const p = parseFloat(d[key].pctChange||0);
+        if(!v || isNaN(v)) continue;
+        const anterior = taxas[m];
+        taxas[m] = v;
+        const vEl   = document.getElementById('v-'+m);
+        const varEl = document.getElementById('var-'+m);
+        const pill  = document.getElementById('pill-'+m);
+        if(vEl){
+          if(anterior && anterior !== v && pill){
+            const cor = v>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
+            pill.style.transition='none'; pill.style.background=cor;
+            setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+          }
+          vEl.textContent = v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+          ok = true;
         }
-        vEl.textContent = vals[m].toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-      }
-    });
-    document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('cambio-src').textContent = 'ao vivo · 30s';
-    syncMoeda(); buildSpark(taxas.USD||5.22); buildImpTab(taxas.USD||5.22);
-  };
-
-  // API 1 — AwesomeAPI (principal — retorna bid E pctChange para as setas ▲▼)
-  try{
-    const r = await fetch('https://sparkling-bar-b059.marcoagleite97.workers.dev/cambio');
-    const d = await r.json();
-    if(d.USDBRL && d.USDBRL.bid){
-      const pairs = {USD:'USDBRL', EUR:'EURBRL', CNY:'CNYBRL', HKD:'HKDBRL'};
-      for(const [m,key] of Object.entries(pairs)){
-        try{
-          if(!d[key]) continue;
-          const v = parseFloat(d[key].bid);
-          const p = parseFloat(d[key].pctChange||0);
-          const anterior = taxas[m];
-          taxas[m] = v;
-          const vEl  = document.getElementById('v-'+m);
-          const varEl = document.getElementById('var-'+m);
-          const pill  = document.getElementById('pill-'+m);
-          if(vEl){
-            if(anterior && anterior !== v && pill){
-              const cor = v>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
-              pill.style.transition='none'; pill.style.background=cor;
-              setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
-            }
-            vEl.textContent = v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-          }
-          if(varEl){
-            const sobe = p>0;
-            varEl.innerHTML = `<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
-          }
-        }catch(_){}
-      }
+        if(varEl && p !== 0){
+          const sobe = p>0;
+          varEl.innerHTML = `<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
+        }
+      }catch(_){}
+    }
+    if(ok){
       try{ document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }catch(_){}
       try{ document.getElementById('cambio-src').textContent = 'ao vivo · 30s'; }catch(_){}
       try{ syncMoeda(); }catch(_){}
       try{ buildSpark(taxas.USD||5.22); }catch(_){}
       try{ buildImpTab(taxas.USD||5.22); }catch(_){}
-      return;
     }
-  }catch(e1){}
+    return ok;
+  };
 
-  // API 2 — open.er-api.com (fallback 1 — sem pctChange, mas mostra ao vivo)
+  // Tentar via Worker (proxy sem CORS)
   try{
-    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const r = await fetch('https://sparkling-bar-b059.marcoagleite97.workers.dev/cambio', {cache:'no-store'});
+    if(r.ok){
+      const d = await r.json();
+      if(aplicarDados(d)) return;
+    }
+  }catch(_){}
+
+  // Fallback direto (pode funcionar dependendo do browser/rede)
+  try{
+    const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL', {cache:'no-store'});
+    const d = await r.json();
+    if(aplicarDados(d)) return;
+  }catch(_){}
+
+  // Fallback 2
+  try{
+    const r = await fetch('https://open.er-api.com/v6/latest/USD', {cache:'no-store'});
     const d = await r.json();
     const brl = d.rates?.BRL;
     if(brl){
-      aplicar({
-        USD: brl,
-        EUR: d.rates.EUR ? brl/d.rates.EUR : null,
-        CNY: d.rates.CNY ? brl/d.rates.CNY : null,
-        HKD: d.rates.HKD ? brl/d.rates.HKD : null,
-      });
-      return;
+      const fake = {
+        USDBRL:{bid:String(brl),pctChange:'0'},
+        EURBRL:{bid:String(brl/(d.rates?.EUR||1)),pctChange:'0'},
+        CNYBRL:{bid:String(brl/(d.rates?.CNY||1)),pctChange:'0'},
+        HKDBRL:{bid:String(brl/(d.rates?.HKD||1)),pctChange:'0'},
+      };
+      if(aplicarDados(fake)) return;
     }
-  }catch(e2){}
+  }catch(_){}
 
-  // API 3 — exchangerate-api (fallback 2)
-  try{
-    const r = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-    const d = await r.json();
-    const brl = d.rates?.BRL;
-    if(brl){
-      aplicar({
-        USD: brl,
-        EUR: d.rates.EUR ? brl/d.rates.EUR : null,
-        CNY: d.rates.CNY ? brl/d.rates.CNY : null,
-        HKD: d.rates.HKD ? brl/d.rates.HKD : null,
-      });
-      return;
-    }
-  }catch(e3){}
-
-  // Todas falharam — retry em 20s
-  document.getElementById('lst').textContent = 'Reconectando...';
-  buildSpark(taxas.USD||5.22);
-  setTimeout(()=>fetchCambio(), 20000);
+  // Tudo falhou
+  try{ document.getElementById('lst').textContent = 'Reconectando...'; }catch(_){}
+  setTimeout(fetchCambio, 15000);
 }
+
 
 // ══════════════════════════
 // MULTI-NCM
