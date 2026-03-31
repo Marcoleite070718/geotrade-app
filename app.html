@@ -434,10 +434,10 @@ window.updateUserPlan = async function(docId, uid, newPlan) {
 // Expor funções locais de fallback quando não logado
 window.salvarHistoricoLocal = window.salvarHistoricoLocal || function(dados) {
   try {
-    let hist = JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    let hist = JSON.parse(localStorage.getItem(_lsKey('gt_hist'))||'[]');
     hist.unshift({...dados, ts: new Date().toLocaleString('pt-BR')});
     hist = hist.slice(0,10);
-    localStorage.setItem('gt_hist', JSON.stringify(hist));
+    localStorage.setItem(_lsKey('gt_hist'), JSON.stringify(hist));
     renderHistoricoLocal();
   } catch(e){}
 };
@@ -13426,23 +13426,21 @@ async function fetchAliqTEC(code) {
 // ══════════════════════════════════════════════════
 // ALÍQUOTAS CUSTOMIZADAS — persistência local
 // ══════════════════════════════════════════════════
-const ALIQ_CUSTOM_KEY = 'gt_aliq_custom_v1';
-
 function carregarAliqCustom(){
-  try{ return JSON.parse(localStorage.getItem(ALIQ_CUSTOM_KEY)||'{}'); }
+  try{ return JSON.parse(localStorage.getItem(_lsKey(ALIQ_CUSTOM_KEY))||'{}'); }
   catch(e){ return {}; }
 }
 
 function salvarAliqCustom(ncmCode, ii, ipi){
   var db = carregarAliqCustom();
   db[ncmCode] = {ii: parseFloat(ii), ipi: parseFloat(ipi), ts: new Date().toISOString()};
-  localStorage.setItem(ALIQ_CUSTOM_KEY, JSON.stringify(db));
+  localStorage.setItem(_lsKey(ALIQ_CUSTOM_KEY), JSON.stringify(db));
 }
 
 function removerAliqCustom(ncmCode){
   var db = carregarAliqCustom();
   delete db[ncmCode];
-  localStorage.setItem(ALIQ_CUSTOM_KEY, JSON.stringify(db));
+  localStorage.setItem(_lsKey(ALIQ_CUSTOM_KEY), JSON.stringify(db));
 }
 
 function getIICustom(code){
@@ -24288,55 +24286,79 @@ document.addEventListener('click',e=>{if(!e.target.closest('.nw'))document.getEl
 // CÂMBIO AO VIVO
 // ══════════════════════════
 async function fetchCambio(){
-  const apis = [
-    () => fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL', {mode:'cors', cache:'no-store'}),
-    () => fetch('https://open.er-api.com/v6/latest/USD', {mode:'cors', cache:'no-store'}),
-    () => fetch('https://api.exchangerate-api.com/v4/latest/USD', {mode:'cors', cache:'no-store'}),
-  ];
-  const parseAwesome = async (r) => {
-    const d = await r.json();
-    if(!d.USDBRL) throw new Error('invalid');
-    return { USD: parseFloat(d.USDBRL.bid), EUR: parseFloat(d.EURBRL?.bid||0), CNY: parseFloat(d.CNYBRL?.bid||0), HKD: parseFloat(d.HKDBRL?.bid||0) };
+  // Atualizar badges com valores recebidos
+  const aplicar = (vals) => {
+    ['USD','EUR','CNY','HKD'].forEach(m => {
+      if(!vals[m]) return;
+      const anterior = taxas[m];
+      taxas[m] = vals[m];
+      const vEl = document.getElementById('v-'+m);
+      const pill = document.getElementById('pill-'+m);
+      if(vEl){
+        if(anterior && anterior !== vals[m] && pill){
+          const cor = vals[m]>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
+          pill.style.transition='none'; pill.style.background=cor;
+          setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+        }
+        vEl.textContent = vals[m].toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+      }
+    });
+    document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('cambio-src').textContent = 'ao vivo · 30s';
+    syncMoeda(); buildSpark(taxas.USD||5.22); buildImpTab(taxas.USD||5.22);
   };
-  const parseER = async (r) => {
-    const d = await r.json();
-    const brl = d.rates?.BRL || d.conversion_rates?.BRL;
-    if(!brl) throw new Error('invalid');
-    const rates = d.rates || d.conversion_rates;
-    return { USD: brl, EUR: brl/(rates.EUR||1)*1, CNY: brl/(rates.CNY||1)*1, HKD: brl/(rates.HKD||1)*1 };
-  };
-  const parsers = [parseAwesome, parseER, parseER];
 
-  const tryNext = async (i) => {
-    if(i >= apis.length){
-      document.getElementById('lst').textContent = 'Reconectando...';
-      setTimeout(() => fetchCambio(), 20000);
+  // API 1 — AwesomeAPI (principal)
+  try{
+    const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL');
+    const d = await r.json();
+    if(d.USDBRL && d.USDBRL.bid){
+      aplicar({
+        USD: parseFloat(d.USDBRL.bid),
+        EUR: parseFloat(d.EURBRL?.bid||0)||null,
+        CNY: parseFloat(d.CNYBRL?.bid||0)||null,
+        HKD: parseFloat(d.HKDBRL?.bid||0)||null,
+      });
       return;
     }
-    try{
-      const r = await apis[i]();
-      const vals = await parsers[i](r);
-      ['USD','EUR','CNY','HKD'].forEach(m => {
-        if(!vals[m]) return;
-        const anterior = taxas[m];
-        taxas[m] = vals[m];
-        const vEl = document.getElementById('v-'+m);
-        const pill = document.getElementById('pill-'+m);
-        if(vEl){
-          if(anterior && anterior !== vals[m] && pill){
-            const cor = vals[m]>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
-            pill.style.transition='none'; pill.style.background=cor;
-            setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
-          }
-          vEl.textContent = vals[m].toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-        }
+  }catch(e1){}
+
+  // API 2 — open.er-api.com (fallback 1)
+  try{
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const d = await r.json();
+    const brl = d.rates?.BRL;
+    if(brl){
+      aplicar({
+        USD: brl,
+        EUR: d.rates.EUR ? brl/d.rates.EUR : null,
+        CNY: d.rates.CNY ? brl/d.rates.CNY : null,
+        HKD: d.rates.HKD ? brl/d.rates.HKD : null,
       });
-      document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      document.getElementById('cambio-src').textContent = 'ao vivo · 30s';
-      syncMoeda(); buildSpark(taxas.USD||5.22); buildImpTab(taxas.USD||5.22);
-    } catch(e){ tryNext(i+1); }
-  };
-  tryNext(0);
+      return;
+    }
+  }catch(e2){}
+
+  // API 3 — exchangerate-api (fallback 2)
+  try{
+    const r = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const d = await r.json();
+    const brl = d.rates?.BRL;
+    if(brl){
+      aplicar({
+        USD: brl,
+        EUR: d.rates.EUR ? brl/d.rates.EUR : null,
+        CNY: d.rates.CNY ? brl/d.rates.CNY : null,
+        HKD: d.rates.HKD ? brl/d.rates.HKD : null,
+      });
+      return;
+    }
+  }catch(e3){}
+
+  // Todas falharam — retry em 20s
+  document.getElementById('lst').textContent = 'Reconectando...';
+  buildSpark(taxas.USD||5.22);
+  setTimeout(()=>fetchCambio(), 20000);
 }
 
 // ══════════════════════════
@@ -24722,9 +24744,13 @@ function renderResultadoMultiNCM(cambio, icms, fr, dep, cap, arm, fi, afrmm, tot
 // SKUs DA EMPRESA
 // ══════════════════════════
 const SKU_KEY='gt_skus_v2';
+const ALIQ_CUSTOM_KEY = 'gt_aliq_custom_v1';
+
+// Chave localStorage prefixada com UID — garante isolamento entre usuários
+function _lsKey(base){ return base+'_'+(window.gtUser?.uid||'anon'); }
 
 function carregarSKUs(){
-  try{ return JSON.parse(localStorage.getItem(SKU_KEY)||'[]'); }catch(e){return[];}
+  try{ return JSON.parse(localStorage.getItem(_lsKey(SKU_KEY))||'[]'); }catch(e){return[];}
 }
 
 function salvarSKUsStorage(skus){
@@ -25078,7 +25104,7 @@ async function atualizarAliq(){
 
 function carregarSimNoSBS(idx, lado){
   try{
-    const hist = JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const hist = JSON.parse(localStorage.getItem(_lsKey('gt_hist'))||'[]');
     const h = hist[idx]; if(!h) return;
     window['_sbsSim'+lado] = h;
     renderSBS();
@@ -25630,7 +25656,7 @@ function autoEstimar(){
 function calcular(){
   // Controle de limite Free — 5 simulações/mês
   if((window.gtPlan||'free')==='free'){
-    const mesKey='gt_sim_count_'+new Date().toISOString().slice(0,7);
+    const mesKey='gt_sim_count_'+(window.gtUser?.uid||'anon')+'_'+new Date().toISOString().slice(0,7);
     const count=parseInt(localStorage.getItem(mesKey)||'0');
     if(count>=PLAN_LIMITS.free){
       const resCorpo=document.getElementById('res-corpo');
@@ -25959,7 +25985,7 @@ function calcular(){
     window.salvarHistoricoLocal(dadosSim);
     // Incrementar contador de simulações Free
     if((window.gtPlan||'free')==='free'){
-      const mesKey='gt_sim_count_'+new Date().toISOString().slice(0,7);
+      const mesKey='gt_sim_count_'+(window.gtUser?.uid||'anon')+'_'+new Date().toISOString().slice(0,7);
       const count=parseInt(localStorage.getItem(mesKey)||'0');
       localStorage.setItem(mesKey, String(count+1));
       // Aviso ao usar a 4ª simulação (penúltima)
@@ -26977,17 +27003,17 @@ function calcIncoterm(){
 // ══════════════════════════════════════
 window.salvarHistoricoLocal = function(dados){
   try{
-    let hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    let hist=JSON.parse(localStorage.getItem(_lsKey('gt_hist'))||'[]');
     hist.unshift({...dados,ts:new Date().toLocaleString('pt-BR')});
     hist=hist.slice(0,10);
-    localStorage.setItem('gt_hist',JSON.stringify(hist));
+    localStorage.setItem(_lsKey('gt_hist'),JSON.stringify(hist));
     renderHistoricoLocal();
   }catch(e){}
 };
 
 window.renderHistoricoLocal = function(){
   try{
-    const hist = JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const hist = JSON.parse(localStorage.getItem(_lsKey('gt_hist'))||'[]');
     const el = document.getElementById('historico-lista');
     if(!el) return;
     const sub = document.getElementById('hist-sub');
@@ -27044,7 +27070,7 @@ function renderHistorico(){
 
 function recarregarSimulacao(idx){
   try{
-    const hist=JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const hist=JSON.parse(localStorage.getItem(_lsKey('gt_hist'))||'[]');
     const h=hist[idx];if(!h)return;
     const pool=ncmLoaded&&ncmDB.length>0?ncmDB:NCM_LOCAL;
     const n=pool.find(x=>x.code===h.ncmCode);
@@ -27060,7 +27086,7 @@ function recarregarSimulacao(idx){
 
 function renderHistoricoLocal(){
   try{
-    const hist = JSON.parse(localStorage.getItem('gt_hist')||'[]');
+    const hist = JSON.parse(localStorage.getItem(_lsKey('gt_hist'))||'[]');
     const el = document.getElementById('historico-lista');
     if(!el) return;
     const sub = document.getElementById('hist-sub');
@@ -27087,7 +27113,7 @@ function renderHistoricoLocal(){
 
 function limparHistorico(){
   if(!confirm('Limpar todo o histórico local?'))return;
-  localStorage.removeItem('gt_hist');
+  localStorage.removeItem(_lsKey('gt_hist'));
   renderHistoricoLocal();
 }
 
@@ -27387,10 +27413,10 @@ function renderFretesTable(cat){
 // MONITOR DE NCMs
 // ══════════════════════════════════════════
 function getMonitorList(){
-  try{return JSON.parse(localStorage.getItem('gt_monitor')||'[]');}catch(e){return[];}
+  try{return JSON.parse(localStorage.getItem(_lsKey('gt_monitor'))||'[]');}catch(e){return[];}
 }
 function saveMonitorList(list){
-  localStorage.setItem('gt_monitor',JSON.stringify(list));
+  localStorage.setItem(_lsKey('gt_monitor'),JSON.stringify(list));
   renderMonitorList();
   // Atualizar badge no menu
   const dot=document.getElementById('monitor-dot');
@@ -27830,7 +27856,7 @@ async function recuperarSenha(){
 }
 
 // ── PERFIL DA EMPRESA ──
-const PERFIL_KEY = 'gt_perfil_v1';
+const PERFIL_KEY = _lsKey('gt_perfil_v1');
 
 function perfilAlterado(){
   const msg = document.getElementById('pf-msg');
@@ -27849,7 +27875,7 @@ function mascaraCNPJ(el){
 }
 
 // Carregar perfil salvo ao iniciar
-window.gtPerfil = (()=>{ try{ return JSON.parse(localStorage.getItem('gt_perfil_v1')||'{}'); }catch(e){ return {}; }})();
+window.gtPerfil = (()=>{ try{ return JSON.parse(localStorage.getItem(_lsKey('gt_perfil_v1'))||'{}'); }catch(e){ return {}; }})();
 
 function renderPerfil(){
   // Mostrar nav perfil quando logado
@@ -27871,7 +27897,7 @@ function renderPerfil(){
     } catch(e){}
   }
   // Carregar API Key Claude (salva separadamente por segurança)
-  const savedKey = localStorage.getItem('gt_claude_key');
+  const savedKey = localStorage.getItem(_lsKey('gt_claude_key'));
   if(savedKey){ const kEl=document.getElementById('pf-claude-key'); if(kEl) kEl.value=savedKey; }
 
   // Mostrar plano atual
@@ -27912,10 +27938,10 @@ async function salvarPerfil(){
   // Salvar API Key Claude separadamente (não vai para o Firestore)
   const claudeKey = get('pf-claude-key');
   if(claudeKey && claudeKey.startsWith('sk-ant-')){
-    localStorage.setItem('gt_claude_key', claudeKey);
+    localStorage.setItem(_lsKey('gt_claude_key'), claudeKey);
     window._claudeApiKey = claudeKey;
   } else if(!claudeKey){
-    localStorage.removeItem('gt_claude_key');
+    localStorage.removeItem(_lsKey('gt_claude_key'));
     window._claudeApiKey = null;
   }
 
@@ -28228,7 +28254,7 @@ fetchPTAXD1();
 renderHistoricoLocal();
 renderSKUs();
 // Carregar API key Claude salva
-window._claudeApiKey = localStorage.getItem('gt_claude_key') || null;
+window._claudeApiKey = localStorage.getItem(_lsKey('gt_claude_key')) || null;
 setTimeout(iniciarOnboarding, 2000);
 renderMonitorList();
 renderFretesTable('todos');
@@ -28271,7 +28297,7 @@ async function classificarNCMporIA(){
 
   try{
     // Buscar API key salva no perfil
-    const apiKey = window._claudeApiKey || localStorage.getItem('gt_claude_key') || '';
+    const apiKey = window._claudeApiKey || localStorage.getItem(_lsKey('gt_claude_key')) || '';
     if(!apiKey || !apiKey.startsWith('sk-ant-')){
       resultado.innerHTML='<div style="font-size:11px;color:var(--warn);padding:8px 10px;background:var(--w2);border-radius:6px;">'
         +'⚠ Configure sua API Key Claude no <strong>Perfil → API Key Claude</strong> para usar o classificador IA.<br>'
