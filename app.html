@@ -24286,80 +24286,63 @@ document.addEventListener('click',e=>{if(!e.target.closest('.nw'))document.getEl
 // CÂMBIO AO VIVO
 // ══════════════════════════
 async function fetchCambio(){
-  const aplicarDados = (d) => {
-    const pairs = {USD:'USDBRL', EUR:'EURBRL', CNY:'CNYBRL', HKD:'HKDBRL'};
-    let ok = false;
-    for(const [m,key] of Object.entries(pairs)){
-      try{
-        if(!d[key] || !d[key].bid) continue;
-        const v = parseFloat(d[key].bid);
-        const p = parseFloat(d[key].pctChange||0);
-        if(!v || isNaN(v)) continue;
-        const anterior = taxas[m];
-        taxas[m] = v;
-        const vEl   = document.getElementById('v-'+m);
-        const varEl = document.getElementById('var-'+m);
-        const pill  = document.getElementById('pill-'+m);
-        if(vEl){
-          if(anterior && anterior !== v && pill){
-            const cor = v>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
-            pill.style.transition='none'; pill.style.background=cor;
-            setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
-          }
-          vEl.textContent = v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-          ok = true;
+  try{
+    const r=await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL');
+    const d=await r.json();
+    const pairs={USD:'USDBRL',EUR:'EURBRL',CNY:'CNYBRL',HKD:'HKDBRL'};
+    for(const[m,key] of Object.entries(pairs)){
+      if(!d[key])continue;
+      const v=parseFloat(d[key].bid);
+      const p=parseFloat(d[key].pctChange);
+      const anterior=taxas[m];
+      taxas[m]=v;
+      const vEl=document.getElementById('v-'+m);
+      const varEl=document.getElementById('var-'+m);
+      const pill=document.getElementById('pill-'+m);
+      if(vEl){
+        const novoVal=v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+        if(anterior&&anterior!==v&&pill){
+          const cor=v>anterior?'rgba(239,68,68,.25)':'rgba(16,185,129,.25)';
+          pill.style.transition='none';
+          pill.style.background=cor;
+          setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
         }
-        if(varEl && p !== 0){
-          const sobe = p>0;
-          varEl.innerHTML = `<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
-        }
-      }catch(_){}
+        vEl.textContent=novoVal;
+      }
+      if(varEl){
+        const sobe=p>0;
+        varEl.innerHTML=`<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
+      }
     }
-    if(ok){
-      try{ document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }catch(_){}
-      try{ document.getElementById('cambio-src').textContent = 'ao vivo · 30s'; }catch(_){}
-      try{ syncMoeda(); }catch(_){}
-      try{ buildSpark(taxas.USD||5.22); }catch(_){}
-      try{ buildImpTab(taxas.USD||5.22); }catch(_){}
+    document.getElementById('lst').textContent='Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('cambio-src').textContent='ao vivo · 30s';
+    syncMoeda();
+    buildSpark(taxas.USD||5.22);
+    buildImpTab(taxas.USD||5.22);
+  }catch(e){
+    // Fallback via Worker (resolve CORS em contas novas)
+    try{
+      const r2=await fetch('https://sparkling-bar-b059.marcoagleite97.workers.dev/cambio');
+      const d2=await r2.json();
+      const pairs={USD:'USDBRL',EUR:'EURBRL',CNY:'CNYBRL',HKD:'HKDBRL'};
+      for(const[m,key] of Object.entries(pairs)){
+        if(!d2[key]||!d2[key].bid)continue;
+        const v=parseFloat(d2[key].bid);
+        taxas[m]=v;
+        const vEl=document.getElementById('v-'+m);
+        if(vEl) vEl.textContent=v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+      }
+      document.getElementById('lst').textContent='Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('cambio-src').textContent='ao vivo · 30s';
+      syncMoeda();
+      buildSpark(taxas.USD||5.22);
+      buildImpTab(taxas.USD||5.22);
+    }catch(e2){
+      document.getElementById('lst').textContent='Reconectando...';
+      buildSpark(taxas.USD||5.22);
+      setTimeout(fetchCambio,15000);
     }
-    return ok;
-  };
-
-  // Tentar via Worker (proxy sem CORS)
-  try{
-    const r = await fetch('https://sparkling-bar-b059.marcoagleite97.workers.dev/cambio', {cache:'no-store'});
-    if(r.ok){
-      const d = await r.json();
-      if(aplicarDados(d)) return;
-    }
-  }catch(_){}
-
-  // Fallback direto (pode funcionar dependendo do browser/rede)
-  try{
-    const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL', {cache:'no-store'});
-    const d = await r.json();
-    if(aplicarDados(d)) return;
-  }catch(_){}
-
-  // Fallback 2
-  try{
-    const r = await fetch('https://open.er-api.com/v6/latest/USD', {cache:'no-store'});
-    const d = await r.json();
-    const brl = d.rates?.BRL;
-    if(brl){
-      const fake = {
-        USDBRL:{bid:String(brl),pctChange:'0'},
-        EURBRL:{bid:String(brl/(d.rates?.EUR||1)),pctChange:'0'},
-        CNYBRL:{bid:String(brl/(d.rates?.CNY||1)),pctChange:'0'},
-        HKDBRL:{bid:String(brl/(d.rates?.HKD||1)),pctChange:'0'},
-      };
-      if(aplicarDados(fake)) return;
-    }
-  }catch(_){}
-
-  // Tudo falhou
-  try{ document.getElementById('lst').textContent = 'Reconectando...'; }catch(_){}
-  setTimeout(fetchCambio, 15000);
+  }
 }
 
 
