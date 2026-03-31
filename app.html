@@ -345,7 +345,7 @@ window.loadAdminData = async function() {
 
     // KPIs
     const paid = users.filter(u => ['starter','pro','enterprise'].includes(u.plan)).length;
-    const mrrMap = {starter:197, pro:497, enterprise:1497};
+    const mrrMap = {starter:247, pro:497, enterprise:1497};
     const mrr = users.reduce((s,u) => s + (mrrMap[u.plan]||0), 0);
     document.getElementById('adm-total-users').textContent = users.length;
     document.getElementById('adm-paid-users').textContent = paid;
@@ -1096,71 +1096,80 @@ iframe{border-radius:var(--r);}
     <div class="pm-plans" style="grid-template-columns:repeat(4,1fr);gap:8px;">
 
       <!-- FREE -->
-      <div class="pm-plan" style="opacity:.8;">
+      <div class="pm-plan" style="opacity:.85;">
         <div class="pm-plan-name" style="color:var(--text3);">Free</div>
         <div class="pm-plan-price" style="color:var(--text3);">R$ 0</div>
         <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para conhecer</div>
-        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.9;">
           ✓ 5 simulações/mês<br>
-          ✓ 10.515 NCMs<br>
+          ✓ 10.515 NCMs offline<br>
           ✓ Câmbio ao vivo<br>
+          ✓ Ex-Tarifário automático<br>
           ✗ Histórico na nuvem<br>
-          ✗ Excel / PDF<br>
-          ✗ Dashboard<br>
-          ✗ WhatsApp
+          ✗ PDF + Excel + WPP<br>
+          ✗ SKUs + Packing List<br>
+          ✗ Multi-NCM<br>
+          ✗ Dashboard
         </div>
       </div>
 
       <!-- STARTER -->
       <div class="pm-plan featured" style="border-color:var(--accent);">
-        <div style="font-size:9px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:8px;margin-bottom:6px;text-align:center;font-weight:700;">RECOMENDADO</div>
+        <div style="font-size:9px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:8px;margin-bottom:6px;text-align:center;font-weight:700;">MAIS POPULAR</div>
         <div class="pm-plan-name" style="color:var(--accent);">Starter</div>
-        <div class="pm-plan-price" style="color:var(--accent);">R$ 197<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
+        <div class="pm-plan-price" style="color:var(--accent);">R$ 247<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
         <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para importadores PME</div>
-        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.9;">
           ✓ Simulações ilimitadas<br>
+          ✓ Multi-NCM (carga mista)<br>
+          ✓ SKUs + Packing List<br>
+          ✓ PDF + Excel + WPP<br>
+          ✓ PDF bilíngue PT/EN<br>
           ✓ Histórico na nuvem<br>
-          ✓ Export PDF + Excel<br>
-          ✓ Compartilhar WhatsApp<br>
           ✓ Dashboard + relatórios<br>
-          ✓ Demurrage<br>
+          ✓ Hedge cambial<br>
           ✓ Suporte por e-mail
         </div>
-        <button onclick="window.open('mailto:contato@geotradeapp.com.br?subject=Quero o Starter','_blank')" style="margin-top:10px;width:100%;background:var(--accent);border:none;border-radius:7px;padding:8px;cursor:pointer;color:#fff;font-size:11px;font-weight:700;">Assinar Starter</button>
+        <button onclick="window.open('https://pay.kiwify.com.br/7PJhAFE','_blank')" style="margin-top:10px;width:100%;background:var(--accent);border:none;border-radius:7px;padding:8px;cursor:pointer;color:#fff;font-size:11px;font-weight:700;">Assinar Starter →</button>
       </div>
 
       <!-- PRO -->
       <div class="pm-plan" style="border-color:var(--warn)44;">
+        <div style="font-size:9px;color:var(--warn);margin-bottom:6px;font-weight:700;letter-spacing:.04em;">PRO</div>
         <div class="pm-plan-name" style="color:var(--warn);">Pro</div>
         <div class="pm-plan-price" style="color:var(--warn);">R$ 497<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
-        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para times e traders</div>
-        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para times e despachantes</div>
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.9;">
           ✓ Tudo do Starter<br>
+          ✓ Classificador NCM por IA<br>
+          ✓ Benchmark de mercado<br>
           ✓ Comparador de origens<br>
+          ✓ Antecipação cambial<br>
+          ✓ Monitor de alertas NCM<br>
           ✓ Side-by-side avançado<br>
-          ✓ Antecipação de estoque<br>
-          ✓ Monitor de NCMs<br>
-          ✓ Alertas cambiais<br>
           ✓ Suporte prioritário
         </div>
-        <button onclick="window.open('mailto:contato@geotradeapp.com.br?subject=Quero o Pro','_blank')" style="margin-top:10px;width:100%;background:var(--w2);border:1px solid var(--w3);border-radius:7px;padding:8px;cursor:pointer;color:var(--warn);font-size:11px;font-weight:700;">Assinar Pro</button>
+        <button onclick="window.open('https://pay.kiwify.com.br/0jAa4QY','_blank')" style="margin-top:10px;width:100%;background:var(--w2);border:1px solid var(--w3);border-radius:7px;padding:8px;cursor:pointer;color:var(--warn);font-size:11px;font-weight:700;">Assinar Pro →</button>
       </div>
 
       <!-- ENTERPRISE -->
       <div class="pm-plan">
+        <div style="font-size:9px;color:var(--teal);margin-bottom:6px;font-weight:700;letter-spacing:.04em;">ENTERPRISE</div>
         <div class="pm-plan-name" style="color:var(--teal);">Enterprise</div>
         <div class="pm-plan-price" style="color:var(--teal);">R$ 1.497<span style="font-size:10px;font-weight:400;color:var(--text2);">/mês</span></div>
         <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">para grandes operações</div>
-        <div class="pm-plan-feat" style="font-size:10px;line-height:1.8;">
+        <div class="pm-plan-feat" style="font-size:10px;line-height:1.9;">
           ✓ Tudo do Pro<br>
-          ✓ Multi-usuários (até 10)<br>
+          ✓ Múltiplos usuários<br>
           ✓ Perfis por importador<br>
           ✓ Relatórios por CNPJ<br>
-          ✓ API de integração<br>
+          ✓ Onboarding personalizado<br>
           ✓ SLA 99,9%<br>
-          ✓ Suporte direto WhatsApp
+          ✓ Suporte direto WhatsApp<br>
+          ✓ API de integração (em breve)
         </div>
-        <button onclick="window.open('mailto:contato@geotradeapp.com.br?subject=Quero o Enterprise','_blank')" style="margin-top:10px;width:100%;background:var(--teal2);border:1px solid rgba(6,182,212,.3);border-radius:7px;padding:8px;cursor:pointer;color:var(--teal);font-size:11px;font-weight:700;">Falar com time</button>
+        <button onclick="window.open('https://api.whatsapp.com/send?phone=55'+encodeURIComponent('&text=Olá, tenho interesse no plano Enterprise do GeoTrade'),'_blank')" style="margin-top:10px;width:100%;background:var(--teal2);border:1px solid rgba(6,182,212,.3);border-radius:7px;padding:8px;cursor:pointer;color:var(--teal);font-size:11px;font-weight:700;">Falar com especialista →</button>
+      </div>00;">Falar com time</button>
       </div>
     </div>
     <div class="pm-close" onclick="closePlanModal()">Continuar no plano atual</div>
@@ -2523,7 +2532,7 @@ iframe{border-radius:var(--r);}
         </div>
         <div id="plano-card-starter" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;">
           <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">STARTER</div>
-          <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 197</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 247</div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px;">/mês · ilimitado</div>
         </div>
         <div id="plano-card-pro" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;position:relative;">
@@ -24339,6 +24348,7 @@ function mostrarBtnMulti(){
 }
 
 function addMultiNCM(){
+  if(!checkPlanoFeature('multi_ncm')) return _bloquearFeature('multi_ncm','starter','Multi-NCM para cargas mistas está disponível no plano <strong>Starter</strong> e superiores.');
   var id = multiNextId++;
   multiItens.push({id:id, ncm:'', desc:'', II:0.14, IPI:0, fobUnit:0, qtd:1});
   renderMultiNCM();
@@ -24820,6 +24830,7 @@ function renderPLItens(){
 }
 
 function exportarPackingListExcel(){
+  if(!checkPlanoFeature('packing_list')) return _bloquearFeature('packing_list','starter','Packing List Excel está disponível no plano <strong>Starter</strong> e superiores.');
   if(!plItens.length){alert('Adicione itens ao Packing List.');return;}
   var forn=document.getElementById('pl-fornecedor')?.value||'—';
   var comp=document.getElementById('pl-comprador')?.value||'—';
@@ -25608,6 +25619,18 @@ function autoEstimar(){
 }
 
 function calcular(){
+  // Controle de limite Free — 5 simulações/mês
+  if((window.gtPlan||'free')==='free'){
+    const mesKey='gt_sim_count_'+new Date().toISOString().slice(0,7);
+    const count=parseInt(localStorage.getItem(mesKey)||'0');
+    if(count>=PLAN_LIMITS.free){
+      const resCorpo=document.getElementById('res-corpo');
+      if(!resCorpo||resCorpo.style.display==='none'){
+        _bloquearFeature('sim_basico','starter','Você atingiu o limite de <strong>5 simulações gratuitas</strong> este mês. Faça upgrade para simular sem limites.');
+        return;
+      }
+    }
+  }
   if(modoAuto)autoEstimar();
   const fob=parseFloat(document.getElementById('fob').value);
   const fr=parseFloat(document.getElementById('frete').value)||0;
@@ -25925,6 +25948,23 @@ function calcular(){
       icms:r.ICMS, fatorNac
     };
     window.salvarHistoricoLocal(dadosSim);
+    // Incrementar contador de simulações Free
+    if((window.gtPlan||'free')==='free'){
+      const mesKey='gt_sim_count_'+new Date().toISOString().slice(0,7);
+      const count=parseInt(localStorage.getItem(mesKey)||'0');
+      localStorage.setItem(mesKey, String(count+1));
+      // Aviso ao usar a 4ª simulação (penúltima)
+      if(count+1===4){
+        setTimeout(function(){
+          const aviso=document.createElement('div');
+          aviso.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--warn);color:#1a1a1a;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;z-index:999;cursor:pointer;max-width:300px;box-shadow:0 4px 16px rgba(0,0,0,.3);';
+          aviso.innerHTML='⚠ Você usou 4 de 5 simulações gratuitas este mês.<br><span style="font-weight:400;">Faça upgrade para simular sem limites →</span>';
+          aviso.onclick=function(){ verPlanos(); aviso.remove(); };
+          document.body.appendChild(aviso);
+          setTimeout(function(){ if(aviso.parentNode) aviso.remove(); }, 8000);
+        }, 800);
+      }
+    }
     if(window.gtUser) window.salvarHistoricoCloud && window.salvarHistoricoCloud(dadosSim);
     // Benchmark crowdsource — salvar custo/kg anonimizado por NCM
     const pesoB = parseFloat(document.getElementById('peso')?.value)||0;
@@ -26155,6 +26195,7 @@ function showTab(name){
 
 // ── EXPORTAR EXCEL #5 ──
 function exportExcel(){
+  if(!checkPlanoFeature('excel')) return _bloquearFeature('excel','starter','Exportação em Excel está disponível no plano <strong>Starter</strong> e superiores.');
   if(!selNcm||!parseFloat(document.getElementById('fob')?.value)){
     alert('Preencha o simulador antes de exportar.');return;
   }
@@ -26392,6 +26433,7 @@ ${tr(`<td colspan="4" style="${S.rodape}">GeoTrade · geotradeapp.com.br · Plat
 
 
 function exportPDF(){
+  if(!checkPlanoFeature('pdf')) return _bloquearFeature('pdf','starter','Exportação em PDF está disponível no plano <strong>Starter</strong> e superiores.');
   const fob=parseFloat(document.getElementById('fob').value)||0;
   if(!fob||!selNcm){alert('Preencha o simulador antes de exportar.');return;}
   const T = TRADUCOES[pdfLang] || TRADUCOES.pt; // sistema de tradução
@@ -26406,7 +26448,7 @@ function exportPDF(){
   const dem=window._demurrageVal||0;
   const acresBRL=parseFloat(document.getElementById('acrescimos')?.value)||0;
   const afrmm=document.getElementById('afrmm').checked&&modalAtual==='m';
-  const useSimples=document.getElementById('simples')?.checked||false;
+  const useSimples=(window.gtPerfil&&window.gtPerfil.simples)||false; // lê do perfil igual ao calcular()
   const r=calcT(cambio,icms,fob,fr,sg,dep,cap,arm,fi,selNcm.II,selNcm.IPI,afrmm,useSimples,acresBRL);
   const peso=parseFloat(document.getElementById('peso').value)||fob*selNcm.kgPorUSD;
   const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
@@ -26822,6 +26864,7 @@ function calcPV(){
 // COMPARAR ORIGENS
 // ══════════════════════════
 function calcOrigens(){
+  if(!checkPlanoFeature('origens')) return _bloquearFeature('origens','pro','Comparador de Origens está disponível no plano <strong>Pro</strong> e superiores.');
   const fob=parseFloat(document.getElementById('orig-fob').value)||0;
   const cambio=parseFloat(document.getElementById('orig-cambio').value)||5.22;
   if(!fob||!selNcm){document.getElementById('origens-result').innerHTML='<div style="color:var(--text3);font-size:12px;padding:12px 0;">Selecione um NCM no Simulador e preencha o FOB.</div>';return;}
@@ -27043,6 +27086,7 @@ function limparHistorico(){
 // SIDE-BY-SIDE
 // ══════════════════════════════════════
 function calcSBS(){
+  if(!checkPlanoFeature('sbs')) return _bloquearFeature('sbs','pro','Comparador Side-by-Side está disponível no plano <strong>Pro</strong> e superiores.');
   ['a','b'].forEach(s=>{
     const fob=parseFloat(document.getElementById(`sbs-fob-${s}`).value)||0;
     const cambio=parseFloat(document.getElementById(`sbs-cambio-${s}`).value)||0;
@@ -27133,6 +27177,7 @@ function usarSimulacaoAntecip(){
 }
 
 function calcAntecip(){
+  if(!checkPlanoFeature('antecip')) return _bloquearFeature('antecip','starter','Antecipação Cambial está disponível no plano <strong>Starter</strong> e superiores.');
   const fob         = parseFloat(document.getElementById('ant-fob').value)||0;
   const cambio      = parseFloat(document.getElementById('ant-cambio').value)||0;
   const custoTotal  = parseFloat(document.getElementById('ant-custo-total').value)||0;
@@ -27457,6 +27502,7 @@ function calcDemurrage(){
 let dashPeriodo = 30;
 
 async function renderDashboard(){
+  if(!checkPlanoFeature('dashboard')) return _bloquearFeature('dashboard','starter','Dashboard de análises está disponível no plano <strong>Starter</strong> e superiores.');
   const el = document.getElementById('dash-tabela');
   if(!el) return;
   if(!window.gtUser){
@@ -27626,6 +27672,7 @@ function dashExportarCSV(){
 
 // ── WHATSAPP #6 ──
 function compartilharWhatsApp(){
+  if(!checkPlanoFeature('whatsapp')) return _bloquearFeature('whatsapp','starter','Compartilhar via WhatsApp está disponível no plano <strong>Starter</strong> e superiores.');
   if(!selNcm||!parseFloat(document.getElementById('fob')?.value)){
     alert('Faça uma simulação antes de compartilhar.');return;
   }
@@ -27658,14 +27705,53 @@ function compartilharWhatsApp(){
 // Enterprise (R$1.497): multi-usuário, API, suporte prioritário
 
 function checkPlanoFeature(feature){
+  if(window.gtIsAdmin) return true; // Admin tem acesso total
   const plano = window.gtPlan || 'free';
-  const features = {
-    free:       ['sim_basico'],
-    starter:    ['sim_basico','historico','excel','whatsapp','dashboard'],
-    pro:        ['sim_basico','historico','excel','whatsapp','dashboard','sbs','origens','antecip','relatorios'],
-    enterprise: ['sim_basico','historico','excel','whatsapp','dashboard','sbs','origens','antecip','relatorios','api','multi_user'],
+  const PLANO_FEATURES = {
+    free:       ['sim_basico','ncm_busca','cambio_live','ptax','ex_tarifario','noticias'],
+    starter:    ['sim_basico','ncm_busca','cambio_live','ptax','ex_tarifario','noticias',
+                 'historico','excel','pdf','whatsapp','multi_ncm','skus','packing_list',
+                 'dashboard','monitor','fretes','rastreio','hedge','drawback','antecip','alerta'],
+    pro:        ['sim_basico','ncm_busca','cambio_live','ptax','ex_tarifario','noticias',
+                 'historico','excel','pdf','whatsapp','multi_ncm','skus','packing_list',
+                 'dashboard','monitor','fretes','rastreio','hedge','drawback','antecip','alerta',
+                 'ia_ncm','benchmark','sbs','origens'],
+    enterprise: ['*'], // tudo
   };
-  return (features[plano]||features.free).includes(feature);
+  const allowed = PLANO_FEATURES[plano] || PLANO_FEATURES.free;
+  return allowed.includes('*') || allowed.includes(feature);
+}
+
+function _bloquearFeature(feature, nomePlano, msg){
+  // Mostra modal de upgrade quando feature está bloqueada
+  const nomes = { starter:'Starter', pro:'Pro', enterprise:'Enterprise' };
+  const precos = { starter:'R$ 247/mês', pro:'R$ 497/mês', enterprise:'R$ 1.497/mês' };
+  const links  = { starter:'https://pay.kiwify.com.br/7PJhAFE', pro:'https://pay.kiwify.com.br/0jAa4QY', enterprise:'#' };
+  const nome   = nomes[nomePlano] || 'Starter';
+  const preco  = precos[nomePlano] || 'R$ 247/mês';
+  const link   = links[nomePlano] || '#';
+  const msgFinal = msg || `Esta funcionalidade está disponível no plano <strong>${nome}</strong>.`;
+
+  // Reutilizar modal existente ou criar overlay simples
+  const existing = document.getElementById('plan-gate-modal');
+  if(existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'plan-gate-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px 32px;max-width:380px;width:90%;text-align:center;position:relative;">
+      <div style="font-size:28px;margin-bottom:12px;">🔒</div>
+      <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Recurso exclusivo</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;">${msgFinal}</div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('plan-gate-modal').remove()" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);cursor:pointer;font-size:13px;">Fechar</button>
+        <button onclick="window.open('${link}','_blank');document.getElementById('plan-gate-modal').remove()" style="flex:2;padding:10px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Fazer upgrade → ${preco}</button>
+      </div>
+    </div>`;
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  return false; // indica bloqueado
 }
 
 // ── LOGIN EMAIL/SENHA #9 ──
@@ -28007,6 +28093,7 @@ function usarSimulacaoDrawback(){
 }
 
 function calcDrawback(){
+  if(!checkPlanoFeature('drawback')) return _bloquearFeature('drawback','starter','Calculadora Drawback está disponível no plano <strong>Starter</strong> e superiores.');
   const fob       = parseFloat(document.getElementById('db-fob')?.value)||0;
   const cambio    = parseFloat(document.getElementById('db-cambio')?.value)||5.28;
   const ii_pct    = parseFloat(document.getElementById('db-ii')?.value)||14;
@@ -28158,6 +28245,7 @@ renderFretesTable('todos');
 // NCM POR IA — Classificador com Claude
 // ══════════════════════════════════════════════════
 async function classificarNCMporIA(){
+  if(!checkPlanoFeature('ia_ncm')) return _bloquearFeature('ia_ncm','pro','O Classificador NCM por IA está disponível no plano <strong>Pro</strong> e superiores.');
   const input = document.getElementById('ncm-ia-input');
   const resultado = document.getElementById('ncm-ia-resultado');
   const query = input?.value?.trim();
@@ -28405,6 +28493,7 @@ async function exibirBenchmark(ncmCode){
 // HEDGE CAMBIAL
 // ══════════════════════════════════════════════════
 function calcHedge(){
+  if(!checkPlanoFeature('hedge')) return _bloquearFeature('hedge','starter','Hedge Cambial está disponível no plano <strong>Starter</strong> e superiores.');
   const fob=parseFloat(document.getElementById('hedge-fob')?.value)||0;
   const cambioHoje=parseFloat(document.getElementById('hedge-cambio-spot')?.value)||taxas.USD||5.22;
   const prazo=parseFloat(document.getElementById('hedge-prazo')?.value)||60;
