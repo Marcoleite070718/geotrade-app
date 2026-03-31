@@ -24744,7 +24744,6 @@ function renderResultadoMultiNCM(cambio, icms, fr, dep, cap, arm, fi, afrmm, tot
 // SKUs DA EMPRESA
 // ══════════════════════════
 const SKU_KEY='gt_skus_v2';
-const ALIQ_CUSTOM_KEY = 'gt_aliq_custom_v1';
 
 // Chave localStorage prefixada com UID — garante isolamento entre usuários
 function _lsKey(base){ return base+'_'+(window.gtUser?.uid||'anon'); }
@@ -24754,7 +24753,7 @@ function carregarSKUs(){
 }
 
 function salvarSKUsStorage(skus){
-  localStorage.setItem(SKU_KEY, JSON.stringify(skus));
+  localStorage.setItem(_lsKey(SKU_KEY), JSON.stringify(skus));
 }
 
 function salvarSKU(){
