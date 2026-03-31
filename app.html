@@ -2530,13 +2530,13 @@ iframe{border-radius:var(--r);}
           <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 0</div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px;">5 simulações/mês</div>
         </div>
-        <div id="plano-card-starter" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;">
+        <div id="plano-card-starter" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;position:relative;">
+          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">MAIS POPULAR</div>
           <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">STARTER</div>
           <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 247</div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px;">/mês · ilimitado</div>
         </div>
         <div id="plano-card-pro" class="plano-card" onclick="verPlanos()" style="border-radius:10px;padding:14px;border:2px solid var(--border2);cursor:pointer;text-align:center;position:relative;">
-          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;">MAIS POPULAR</div>
           <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">PRO</div>
           <div style="font-size:20px;font-weight:800;color:var(--text);">R$ 497</div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px;">/mês · multi-usuário</div>
@@ -24288,69 +24288,55 @@ document.addEventListener('click',e=>{if(!e.target.closest('.nw'))document.getEl
 // CÂMBIO AO VIVO
 // ══════════════════════════
 async function fetchCambio(){
-  try{
-    const r=await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL');
-    const d=await r.json();
-    const pairs={USD:'USDBRL',EUR:'EURBRL',CNY:'CNYBRL',HKD:'HKDBRL'};
-    for(const[m,key] of Object.entries(pairs)){
-      if(!d[key])continue;
-      const v=parseFloat(d[key].bid);
-      const p=parseFloat(d[key].pctChange);// >0 = subiu = ruim pro importador
-      const anterior=taxas[m];
-      taxas[m]=v;
-      const vEl=document.getElementById('v-'+m);
-      const varEl=document.getElementById('var-'+m);
-      const pill=document.getElementById('pill-'+m);
-      // Flash na pill quando valor muda
-      if(vEl){
-        const novoVal=v.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-        if(anterior&&anterior!==v&&pill){
-          // Cor do flash: vermelho se subiu, verde se caiu
-          const cor=v>anterior?'rgba(239,68,68,.25)':'rgba(16,185,129,.25)';
-          pill.style.transition='none';
-          pill.style.background=cor;
-          setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
-        }
-        vEl.textContent=novoVal;
-      }
-      if(varEl){
-        // ▲ vermelho = subiu = ruim | ▼ verde = caiu = bom
-        const sobe=p>0;
-        varEl.innerHTML=`<span class="${sobe?'cu':'cd'}">${sobe?'▲':'▼'} ${Math.abs(p).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;
-      }
+  const apis = [
+    () => fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CNY-BRL,HKD-BRL', {mode:'cors', cache:'no-store'}),
+    () => fetch('https://open.er-api.com/v6/latest/USD', {mode:'cors', cache:'no-store'}),
+    () => fetch('https://api.exchangerate-api.com/v4/latest/USD', {mode:'cors', cache:'no-store'}),
+  ];
+  const parseAwesome = async (r) => {
+    const d = await r.json();
+    if(!d.USDBRL) throw new Error('invalid');
+    return { USD: parseFloat(d.USDBRL.bid), EUR: parseFloat(d.EURBRL?.bid||0), CNY: parseFloat(d.CNYBRL?.bid||0), HKD: parseFloat(d.HKDBRL?.bid||0) };
+  };
+  const parseER = async (r) => {
+    const d = await r.json();
+    const brl = d.rates?.BRL || d.conversion_rates?.BRL;
+    if(!brl) throw new Error('invalid');
+    const rates = d.rates || d.conversion_rates;
+    return { USD: brl, EUR: brl/(rates.EUR||1)*1, CNY: brl/(rates.CNY||1)*1, HKD: brl/(rates.HKD||1)*1 };
+  };
+  const parsers = [parseAwesome, parseER, parseER];
+
+  const tryNext = async (i) => {
+    if(i >= apis.length){
+      document.getElementById('lst').textContent = 'Reconectando...';
+      setTimeout(() => fetchCambio(), 20000);
+      return;
     }
-    document.getElementById('lst').textContent='Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('cambio-src').textContent='ao vivo · 30s';
-    syncMoeda();
-    buildSpark(taxas.USD||5.22);
-    buildImpTab(taxas.USD||5.22);
-  }catch(e){
-    // Tentar API de fallback (exchangerate-api)
     try{
-      const r2=await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-      const d2=await r2.json();
-      if(d2.rates){
-        const map={USD:1,EUR:d2.rates.EUR?1/d2.rates.EUR*d2.rates.BRL:null,CNY:d2.rates.CNY?1/d2.rates.CNY*d2.rates.BRL:null,HKD:d2.rates.HKD?1/d2.rates.HKD*d2.rates.BRL:null};
-        const usdBRL=d2.rates.BRL||5.22;
-        taxas.USD=usdBRL;
-        if(map.EUR) taxas.EUR=map.EUR;
-        if(map.CNY) taxas.CNY=map.CNY;
-        if(map.HKD) taxas.HKD=map.HKD;
-        const vEl=document.getElementById('v-USD');
-        if(vEl) vEl.textContent=usdBRL.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
-        document.getElementById('lst').textContent='Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-        document.getElementById('cambio-src').textContent='ao vivo · 30s';
-        syncMoeda();
-        buildSpark(usdBRL);
-        buildImpTab(usdBRL);
-        return;
-      }
-    }catch(e2){}
-    // Ambas APIs falharam — retry em 15s
-    document.getElementById('lst').textContent='Reconectando...';
-    buildSpark(taxas.USD||5.22);
-    setTimeout(()=>fetchCambio(), 15000);
-  }
+      const r = await apis[i]();
+      const vals = await parsers[i](r);
+      ['USD','EUR','CNY','HKD'].forEach(m => {
+        if(!vals[m]) return;
+        const anterior = taxas[m];
+        taxas[m] = vals[m];
+        const vEl = document.getElementById('v-'+m);
+        const pill = document.getElementById('pill-'+m);
+        if(vEl){
+          if(anterior && anterior !== vals[m] && pill){
+            const cor = vals[m]>anterior ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)';
+            pill.style.transition='none'; pill.style.background=cor;
+            setTimeout(()=>{pill.style.transition='background .8s ease';pill.style.background='';},50);
+          }
+          vEl.textContent = vals[m].toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4});
+        }
+      });
+      document.getElementById('lst').textContent = 'Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('cambio-src').textContent = 'ao vivo · 30s';
+      syncMoeda(); buildSpark(taxas.USD||5.22); buildImpTab(taxas.USD||5.22);
+    } catch(e){ tryNext(i+1); }
+  };
+  tryNext(0);
 }
 
 // ══════════════════════════
